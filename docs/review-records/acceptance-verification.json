@@ -1,0 +1,45 @@
+{
+  "source_system": "mystery-school-main-review",
+  "source_event_id": "acceptance-attribution-verified-3a92273",
+  "observed_at": "2026-09-10T16:58:27Z",
+  "actor_kind": "agent_review",
+  "actor_id": "main-builder-declared",
+  "actor_role": "integration_verifier",
+  "reviewed_sha": "3a922730dbbe142eac0dfac694e045956e671fcd",
+  "session_id": "issue-1-acceptance-audit",
+  "task_id": "acceptance-attribution-verification",
+  "capture_method": "imported",
+  "parent_finding_ids": ["45311774-a06c-4c9e-a676-a037c0da931e"],
+  "input": {"finding": "acceptance-attribution-ed29f6c", "checks": "Separate author and decision identity, timestamps and readback."},
+  "output": {
+    "result": "Verified for the tested paths.",
+    "suggestion_id": "agent-qa-decision-ui-20260910",
+    "original_author": "agent-qa-original-author",
+    "original_timestamp": "2026-09-10T16:56:06.956Z",
+    "decision_actor": "agent_review",
+    "decision_producer": "agent-qa-browser-decider",
+    "decision_timestamp": "2026-09-10T16:56:42.787Z",
+    "limits": "Browser interaction was performed by an agent. Human acceptance was tested only with isolated synthetic data. Declarations are not authenticated identities."
+  },
+  "events": [
+    {"type": "command_result", "command": "npm test", "exit_code": 0, "passed": 58},
+    {"type": "command_result", "command": "python -m unittest discover -s tests -p test_backend.py", "exit_code": 0, "passed": 17},
+    {"type": "api_readback", "route": "/api/suggestions", "observed": "Original author and separate agent decision fields match the values above."},
+    {"type": "agent_browser_report", "observed": "Specialist reported explicit agent-QA acceptance and both identities visible after reload. Main independently read back the persisted suggestion."}
+  ],
+  "decision": "The observed missing-attribution defect is fixed for explicit decisions. Keep historical unknowns unchanged. Independent M4 review remains separate.",
+  "checks": [
+    {"name": "decision_preserves_source_author", "status": "passed", "method": "isolated_tests_and_live_agent_QA_readback"},
+    {"name": "real_human_acceptance", "status": "not_observed", "method": "not_claimed"}
+  ],
+  "source_refs": [
+    {"url": "https://github.com/ChaiWithJai/mystery-school/blob/3a922730dbbe142eac0dfac694e045956e671fcd/public/review.js", "label": "Verified implementation"},
+    {"url": "https://github.com/ChaiWithJai/mystery-school/blob/3a922730dbbe142eac0dfac694e045956e671fcd/tests/review-decision.test.mjs", "label": "Decision regression tests"},
+    {"url": "/review.html?sample=45311774-a06c-4c9e-a676-a037c0da931e", "label": "Original finding on the M5 runtime"}
+  ],
+  "model": null,
+  "usage": null,
+  "cost_usd": null,
+  "invocation_id": null,
+  "timing": {"source_time_kind": "completed_integration_audit", "browser_action_time": "2026-09-10T16:56:42.787Z"}
+}

@@ -105,6 +105,25 @@ the import; it does not reconstruct the original invocation. Model, usage, and
 dollar cost are null. Imported JSON is collapsed in Trajectory Studio, with its
 original text offsets retained for annotations.
 
+## Observed finding and verification
+
+The acceptance-attribution audit now has a recorded failure and a completed
+verification, rather than only proposed probes. Source envelopes are in
+`docs/review-records/`. Their parent IDs refer to this M5 runtime.
+
+| Record | ID | Trace |
+| --- | --- | --- |
+| Missing decision identity at `ed29f6c` | `45311774-a06c-4c9e-a676-a037c0da931e` | `tr-cb7a71f2502844f8899fe72b5aa9a0f9` |
+| Verification of `3a92273` | `adb6aade-3c8d-4e3e-9ba4-f93ca6ebe37f` | `tr-e37c971c39a04c21beec26f8b5a460f9` |
+
+The second record links to the first through `parent_finding_ids`. Identical
+reimport and API readback preserve the record; direct MLflow readback reports
+OK and the same parent ID. The accepted suggestion
+`agent-qa-decision-ui-20260910` retains its original agent author and timestamp
+alongside a separate agent decision. Browser reload and API readback were checked.
+Human acceptance is covered by isolated synthetic tests only, not a live human
+action. Missing historical decision attribution remains unknown.
+
 ## Remaining evidence
 
 - Deterministic music, movement, and interpretation interactions now support
