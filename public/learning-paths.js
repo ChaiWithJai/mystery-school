@@ -7,6 +7,7 @@ import { mountBoxingJourney, BOXING_JOURNEY_LESSONS as BOXING_LESSONS } from './
 import { mountRealWorldReflection } from './real-world-reflection.js';
 import { mountStoryWorld } from './story-world.js';
 import {createBoxingMemory,appendMemory} from './learning-memory.js';
+import { showLearningWorldTour } from './learning-world-tour.js';
 import { showMovieOpening } from './movie-opening.js';
 
 const PATHS={
@@ -87,8 +88,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     openDrawer('learning',({music:'Play. Listen. Try again.',movement:'Feel what time changes.',ideas:'Make a thought your own.'})[pathway],person.name.toUpperCase()+' / THE LIVING SCHOOL');
     const token=++opening;
     document.querySelector('#drawer').classList.add('learning-drawer');
-    let experimentDispose=null,musicScene=null,pianoScene=null,boxingGame=null,boxingMirror=null,worldReflection=null,storyWorld=null,storyHost=null;
-    const cleanup=()=>{opening++;storyWorld?.dispose();boxingMirror?.dispose();worldReflection?.dispose();boxingGame?.dispose();pianoScene?.dispose();musicScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
+    let tourCleanup=null,experimentDispose=null,musicScene=null,pianoScene=null,boxingGame=null,boxingMirror=null,worldReflection=null,storyWorld=null,storyHost=null;
+    const cleanup=()=>{opening++;tourCleanup?.();tourCleanup=null;storyWorld?.dispose();boxingMirror?.dispose();worldReflection?.dispose();boxingGame?.dispose();pianoScene?.dispose();musicScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
     onCleanup(cleanup);
     const fresh=!drafts[pathway];
     let draft=drafts[pathway]||={lab:{},explanation:'',question:'',parentId:null,stage:'try'};
@@ -188,7 +189,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       });
       if(pathway==='music'){
         musicScene=mountMusicScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}));
-        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');await open('movement');});
+        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');if(token!==opening)return;tourCleanup?.();events.track('learning.tour.open',{actor_kind:actorKind,from:'music'});tourCleanup=showLearningWorldTour({onContinue:()=>{if(token!==opening)return;events.track('learning.tour.continue',{actor_kind:actorKind,to:'movement'});open('movement');},onCancel:()=>events.track('learning.tour.cancel',{actor_kind:actorKind})});});
       }
       ready=true;saveButtons.forEach(button=>{button.disabled=false;});
     }catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
