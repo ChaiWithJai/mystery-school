@@ -25,7 +25,20 @@ try{
  const take=await page.evaluate(()=>JSON.parse(localStorage.getItem('astral.learning-path-drafts.v1')||'{}').music?.lab?.practice);
  record('physical L captures E6 without piano focus',take?.events?.some(e=>e.type==='on'&&e.midi===88)&&take.events.some(e=>e.type==='off'&&e.midi===88),take);await shot('02-piano');
  const intoRing=page.getByRole('button',{name:'Keep this. Into the ring →',exact:true});
- if(await intoRing.isVisible()){await intoRing.click();const tour=page.getByRole('dialog',{name:/tour|three modes|learning journey/i});record('guided three-mode tour',await tour.isVisible().catch(()=>false),'Manual transition alone is not a guided explanation of simulation, mirror, and reflection.');await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});}else record('manual advance piano to boxing',false,'No visible explicit transition. No guessed tour controls invoked.');
+ if(await intoRing.isVisible()){
+  await intoRing.click();const tour=page.locator('.learning-world-tour');
+  const shown=await tour.isVisible().catch(()=>false);record('guided three-mode tour',shown,'Manual transition alone does not prove the tour.');
+  if(shown){
+   await page.keyboard.press('Escape');await tour.waitFor({state:'hidden'});
+   const cancelled=await visible('.piano-roll')&&await intoRing.isVisible()&&await intoRing.isEnabled();
+   record('tour Escape retains piano and permits saving again',cancelled,{url:page.url()});
+   if(!cancelled)throw Error('Tour cancel did not restore the playable piano and retry control.');
+   await intoRing.click();await tour.waitFor({state:'visible'});
+   record('repeat Save reopens tour after cancellation',true,{url:page.url()});
+   await tour.getByRole('button').click();await tour.waitFor({state:'hidden'});
+  }
+  await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});
+ }else record('manual advance piano to boxing',false,'No visible explicit transition.');
  if(await visible('.boxing-journey-intro')){
   await page.locator('.boxing-journey-intro [data-try]').click();await page.locator('.boxing-mirror').waitFor({state:'visible'});record('body map opens mirror',true);
  }
