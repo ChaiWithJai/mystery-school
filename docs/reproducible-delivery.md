@@ -35,7 +35,7 @@ The setup check refuses an occupied port, creates temporary empty data, selects
 a nonexistent model executable and local temporary MLflow database, starts its
 own server, and checks empty API collections, including saved artifacts and
 imported sidecar records. It compares served tracked HTML, JavaScript, CSS,
-JSON, PNG and GLB bytes with the checkout. JSON includes the bundled music
+JSON, PNG, GLB, audio and attribution text bytes with the checkout. JSON includes the bundled music
 replay fixture. It requests all three pathway documents and verifies Three.js
 is served. It prints the Git commit and file
 hashes and Git worktree status, shuts down only its own server, and removes its temporary data. It makes

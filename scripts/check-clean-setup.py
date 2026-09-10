@@ -71,7 +71,8 @@ def main():
                 hashes = {}
                 for relative in files:
                     local = ROOT / relative
-                    if local.suffix not in (".html", ".js", ".css", ".json", ".glb", ".png"):
+                    if local.suffix not in (".html", ".js", ".css", ".json", ".glb", ".png",
+                                            ".mp3", ".wav", ".ogg", ".m4a", ".txt", ".md"):
                         continue
                     served = get("/" + relative.removeprefix("public/"))
                     if served != local.read_bytes():
@@ -82,6 +83,7 @@ def main():
                         raise RuntimeError(f"Pathway document failed: {pathway}")
                 get("/vendor/three/three.module.js")
                 report["checks"].append("three pathway documents and Three.js dependency served")
+                report["checks"].append("tracked audio and attribution bytes match checkout; audible playback not evaluated")
                 report["served_sha256"] = hashes
                 report["result"] = "STARTUP_CHECKS_PASSED; replay and product acceptance remain open"
             except Exception as error:
