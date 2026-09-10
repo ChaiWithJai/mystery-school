@@ -41,7 +41,7 @@ The hosted frontend can render without a companion, but existing server-backed s
 
 ## GitHub → Netlify
 
-`netlify.toml` builds with `npm run build:netlify`, publishes only `dist/`, and bundles `netlify/functions/companion.mjs`. The build copies public assets plus the pinned Three.js package; no Python environment, data directory, notebook, credentials, or model weights go into the deployment. `/deployment.json` identifies the built commit. `/api/*` goes to the authenticated relay with no caching. Missing secrets/companion yield a truthful 503 instead of simulated live coaching.
+`netlify.toml` uses `deployment/` as its dependency-discovery base so Netlify does not install the local Python/MLflow requirements. It installs the locked root JavaScript dependencies explicitly, builds with `npm run build:netlify`, publishes only `dist/`, and bundles `netlify/functions/companion.mjs`. The build copies public assets plus the pinned Three.js package; no Python environment, data directory, notebook, credentials, or model weights go into the deployment. `/deployment.json` identifies the built commit. `/api/*` goes to the authenticated relay with no caching. Missing secrets/companion yield a truthful 503 instead of simulated live coaching.
 
 Use the existing Netlify GitHub App integration with `ChaiWithJai/mystery-school`, main as the production branch and deploy previews for PRs. Main needs this PR's build command before its first successful production build. M5 owns final merge, tunnel and live-machine activation. No secrets belong in netlify.toml. Provisioning/preview evidence is recorded in the PR rather than inferred from this configuration.
 
