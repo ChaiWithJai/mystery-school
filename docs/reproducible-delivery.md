@@ -80,3 +80,16 @@ unexpected learner intent changing the playable experiment across the required
 music, movement and ideas pathways. Fixed widgets and narration are insufficient.
 Audio responsiveness and the clarity of the visual journey require direct
 observation. Synthetic checks are not participant learning results.
+
+## Current clean-checkout startup
+
+Main builder ran `scripts/check-clean-setup.py --require-clean --port 5203`
+at `c29d5f9d0cd3894e22ef6fe292cc8431d2338e05`, using the installed Python 3.11
+environment. The checkout was clean. Empty API, artifact and imported sidecar
+collections passed. All tracked public assets, including the recorded JSON
+fixture, matched served bytes. All three pathway documents and Three.js served.
+The temporary server disabled inference and stopped after the check.
+
+Port 5197 was occupied on the first attempt. Its process was left untouched.
+The successful check used 5203. This proves empty-data startup from the current
+clean checkout, not a new dependency installation or browser experience acceptance.
