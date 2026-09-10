@@ -26,11 +26,26 @@ than leaving a large error frame.
 Official audio source: https://www.youtube.com/watch?v=VhEoCOWUtcU
 API contract: https://developers.google.com/youtube/iframe_api_reference
 
-The next reliable option is a rights-cleared local recording supplied for this
-demo, or an authorized embeddable source. Do not download around embed controls.
+## Local source support
+
+Use local audio accepts a presenter-selected audio file without uploading it.
+It uses a browser object URL, releases the source on Stop, and does not record
+the filename or bytes in telemetry. Selection is session-only, not durable.
+The recording must still be supplied. Do not download around embed controls.
+
+Verified in BrowserOS Neo on localhost:5188:
+
+- A twelve-second repeated licensed piano sample was selected as a test fixture.
+- The player reached `playing`, then `opening-ended` at the media cutoff.
+- Keep playing resumed the source and the same player survived music to boxing.
+- Stop removed the player. No test fixture is represented as Runaway.
+
+The fixture is `/tmp/astral-soundtrack-qa.mp3`, generated from the bundled
+Alexander Holm sample. It is not a product soundtrack and is not committed.
 
 ## Checks
 
-266 JavaScript tests pass. These cover the request cutoff and continuity
-parameters, plus scene cleanup. They do not prove provider playback, audible
-quality, cross-world sound continuity, or browser autoplay permission.
+270 JavaScript tests pass. Local-media tests cover the seven-second boundary,
+continuous position and volume, disposal, and denied autoplay. Browser checks
+verify the local source and pathway transition. They do not prove that the
+actual Runaway recording plays or establish subjective acoustic quality.
