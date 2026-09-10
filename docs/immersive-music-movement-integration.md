@@ -14,3 +14,6 @@ All linked event IDs were resolved through API and MLflow, with correct agent_re
 Rendered Studio Related records showed all four movement action links. Clicking the parameter event opened `?sample=9b575487-1132-4683-8e47-97a839dd7a0c`; URL assertion passed. A preliminary attempt became stale after automatic refresh closed the details; reopening and clicking immediately succeeded.
 
 Raw evidence: `output/playwright/merged-integration/evidence.json`, `key-events.json`, fresh-context result files and `event-link.txt`. The root separately ran the merged JavaScript/backend suites; this document reports browser and readback checks only. No additional product edits were made during this verification.
+
+
+Correction from final-circle audit: music parameter values persisted, but `changeAttack` did not emit its own action event at this earlier checkpoint. Its observed music action was help, not the parameter change. The missing emission was fixed and browser/API/MLflow/Studio-retested; see `final-music-movement-golden-circle.md`. Do not infer a separate attack event from this older evidence.
