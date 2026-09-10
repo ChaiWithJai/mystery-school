@@ -21,6 +21,23 @@ For this version, Bonsai selects one of two authored cues per pathway and cites 
 
 Astra remains the existing explicit `/api/project` flow with frozen artifact context, validation, preview/apply/undo, and existing Codex sign-in. No new Codex agent, login, API key, shell endpoint or subscription proxy protocol is added. A local companion is still a server and Astra still requires network access and available usage.
 
+## Local-machine demo (no Netlify or tunnel required)
+
+Start the existing loopback school and Bonsai runtime, then the private companion.
+Set the same `MYSTERY_COMPANION_TOKEN` in the **school server and companion launch environments**.
+The school now implements same-origin `POST /api/coach` and forwards server-to-server
+to `http://127.0.0.1:5199/api/coach`; override that loopback origin with
+`MYSTERY_COMPANION_LOCAL_URL` if needed. The browser never receives the gateway token,
+and the gateway still rejects direct browser Origins. The school's existing
+same-origin write protection remains active. Missing setup, busy or offline responses
+return explicit errors without blocking the animation loop.
+
+Use the normal localhost school and local Trajectory Studio for this mode. Hosting,
+cloud secrets and a public tunnel are optional distribution infrastructure, not local-demo
+prerequisites. M5 still needs to wire the helper to its actual webcam attempt/feedback
+UI and record delivered feedback plus the next attempt; this route alone does not
+claim that interaction is complete.
+
 ## Reproduce on M5
 
 1. Review/merge this PR into the current integrated main, preserving M5's foreground changes. Install the existing Python requirements and `npm ci --include=dev`.
@@ -37,7 +54,7 @@ Astra remains the existing explicit `/api/project` flow with frozen artifact con
 7. In the linked Netlify site's Functions environment, set `MYSTERY_COMPANION_URL` to that HTTPS origin, `MYSTERY_COMPANION_TOKEN` to the matching local token, and the separate `MYSTERY_DEMO_CODE` and `MYSTERY_SESSION_SECRET`. Scope these to the intended trusted demo deploy context; do not grant unknown PR previews access to the live companion. Redeploy after configuring.
 8. Open `/connect.html` on the presenter browser or approved phone and enter the generated demo code. This issues a four-hour HttpOnly/Secure/SameSite cookie. Open the school normally. The current demo shares records among connected devices; this is **not per-student authentication or multi-tenant storage**.
 
-The hosted frontend can render without a companion, but existing server-backed saves/projections return explicit unavailable/connection errors. This PR does not add a full offline persistence/sync subsystem. Browser drafts and local interactions retain their existing behavior. References/uploads, diagnostics, review mutation, and raw job files are intentionally not exposed; use the local Trajectory Studio on M5. Remote links to those unsupported features must not be presented as working during the demo.
+The hosted frontend can render without a companion, but existing server-backed saves/projections return explicit unavailable/connection errors. This PR does not add a full offline persistence/sync subsystem. Browser drafts and local interactions retain their existing behavior. References/uploads, diagnostics, review mutation, and raw job files are intentionally not exposed; use the local Trajectory Studio on M5. The hosted build applies explicit capabilities: reference-upload and trajectory links are hidden/disabled, including dynamically created links. Direct hosted review URLs show a local-only explanation instead of starting the review client. The local school retains its complete controls.
 
 ## GitHub → Netlify
 
@@ -104,3 +121,20 @@ Chromium `151.0.7922.34`, 1080×592: the built static music route entered with n
 A real local MLflow store accepted and read back synthetic fixture trace `tr-12fe23006d7f101a7ce69c8e70f906e1` with span `bonsai.local_cue`, state OK. Its model response was a deterministic test fixture, **not live Bonsai inference**. The raw request/result trajectory was checked separately. No live Astra invocation was made for this PR.
 
 Netlify site `mystery-school-demo-jai` (`fd11c3dc-11cf-45c6-ace8-c3b68342b21b`) was created and its GitHub repository/main branch association read back. No model credentials or companion secrets were added. Production activation and M5 verification remain pending.
+
+
+## PR review corrections
+
+The first-run installer now distinguishes a fresh no-checkout clone from a dirty
+existing checkout. Two actual local-Git regression tests verify initialization and
+preservation of existing edits. Bonsai token counts are mapped from provider
+prompt/completion fields to MLflow input/output fields; missing counts and cost stay
+unknown. The raw provider usage remains in the journal. A same-origin school route
+is covered by an HTTP integration test through the authenticated gateway, including
+cross-origin rejection, busy and missing configuration. Hosted capabilities and the
+local-only review landing page are separately checked in the built browser experience.
+
+These corrections do not establish a successful live Bonsai/Astra call or physical
+camera accuracy; those remain M5 activation gates.
+
+Review-fix verification: 183 JS tests; 29 existing backend tests; 8 companion tests; 2 installer tests; and 2 local-route/usage tests passed. Real MLflow readback for synthetic fixture trace `tr-c8a7788cd54b3640416cafdae286ba74` reports 40 input and 12 output tokens (52 aggregate); returned unreported total and cost remain null. Run the local-route tests with the project Python environment: `.venv/bin/python -m unittest discover -s tests -p test_local_coach.py -v`. Installer tests use disposable local Git repositories and do not download weights.

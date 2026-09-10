@@ -50,3 +50,10 @@ test('unit: cue client discards wrong or superseded attempt identity',async()=>{
  assert.equal((await requestLocalCue(attempt,{fetchImpl,isCurrent:()=>false})).status,'stale');
  assert.equal((await requestLocalCue(attempt,{fetchImpl:async()=>Response.json({...attempt,state_version:2})})).status,'stale');
 });
+test('unit: hosted capabilities disable local-only controls without exposing APIs',async()=>{
+ const {applyHostedCapabilities,HOSTED_CAPABILITIES}=await import('../public/hosted-capabilities.js');
+ const link={dataset:{},tagName:'A',setAttribute(){},removeAttribute(name){this.removed=name;}};
+ const button={dataset:{},tagName:'BUTTON',disabled:false,setAttribute(){}};
+ applyHostedCapabilities({querySelectorAll:()=>[link,button]});
+ assert.equal(HOSTED_CAPABILITIES.referenceUploads,false);assert.equal(link.hidden,true);assert.equal(link.removed,'href');assert.equal(button.disabled,true);
+});

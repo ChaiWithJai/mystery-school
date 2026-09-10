@@ -82,6 +82,29 @@ def http_json(url, body=None, timeout=15):
         if len(data)>2*1024*1024: raise Problem(502,'Upstream response too large')
         return json.loads(data)
 
+def model_usage(value):
+    if not isinstance(value, dict): return None
+    mapping={'input_tokens':'prompt_tokens','output_tokens':'completion_tokens','total_tokens':'total_tokens'}
+    result={key:value.get(source) if type(value.get(source)) is int and value[source]>=0 else None for key,source in mapping.items()}
+    return result if any(v is not None for v in result.values()) else None
+
+def forward_local_coach(body):
+    """School-origin adapter: private service credentials never enter the browser."""
+    token=os.environ.get('MYSTERY_COMPANION_TOKEN','')
+    if len(token)<32: raise Problem(503,'Local coach is not configured')
+    origin=local_url(os.environ.get('MYSTERY_COMPANION_LOCAL_URL','http://127.0.0.1:5199'))
+    request=Request(origin+'/api/coach',data=encoded(validate_attempt(body)),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+    try:
+        with OPENER.open(request,timeout=18) as response:
+            raw=response.read(2*1024*1024+1)
+            if len(raw)>2*1024*1024: raise Problem(502,'Coach response too large')
+            return json.loads(raw)
+    except HTTPError as exc:
+        status=exc.code;exc.close()
+        raise Problem(status if status in (400,401,403,413,429,502,503) else 503,'Local coach rejected the request; keep playing and retry later') from exc
+    except Problem:raise
+    except Exception as exc:raise Problem(503,'Local coach unavailable; keep playing and retry later') from exc
+
 class Companion:
     def __init__(self, token, school, model_url, data, tracing=None, model_request=None):
         if len(token)<32: raise ValueError('MYSTERY_COMPANION_TOKEN must contain at least 32 characters')
@@ -122,10 +145,10 @@ class Companion:
                 # The runtime must be launched with --alias prism-ml/Bonsai-4B-gguf.
                 if response.get('model') != MODEL: raise Problem(502,'Local runtime returned a different model identity')
                 choice=validate_selection(json.loads(content),attempt)
-                result=dict(identity,request_id=request_id,status='completed',provider='local_bonsai',model=MODEL,cue_id=choice['cue_id'],cue=CUES[attempt['pathway']][choice['cue_id']],evidence_ids=choice['evidence_ids'],usage=response.get('usage'),cost_usd=None,trace_id=trace)
+                result=dict(identity,request_id=request_id,status='completed',provider='local_bonsai',model=MODEL,cue_id=choice['cue_id'],cue=CUES[attempt['pathway']][choice['cue_id']],evidence_ids=choice['evidence_ids'],usage=model_usage(response.get('usage')),cost_usd=None,trace_id=trace)
             result['latency_ms']=round((time.monotonic()-start)*1000)
             self.record(dict(event,event='coach.completed',timestamp=time.time(),result=result))
-            if trace: self.tracing.end(trace,{'result':result,'usage':None})
+            if trace: self.tracing.end(trace,{'result':result,'usage':result['usage']})
             temp=cache.with_suffix('.tmp');temp.write_bytes(encoded(result));temp.replace(cache)
             return result
         except Exception as exc:

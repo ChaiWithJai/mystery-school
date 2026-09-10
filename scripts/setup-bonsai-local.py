@@ -12,6 +12,16 @@ def run(*args):subprocess.run(args,check=True)
 def digest(path):
     with path.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 
+def prepare_runtime(runtime, lock):
+    if runtime.exists():
+        if subprocess.check_output(['git','-C',str(runtime),'status','--porcelain']).strip():
+            raise SystemExit('Runtime checkout has local changes; refusing to overwrite')
+    else:
+        # --no-checkout intentionally has no worktree yet. Its deleted-file status
+        # is not a user edit; initialize it before applying existing-tree checks.
+        run('git','clone','--no-checkout',lock['runtime_repository'],str(runtime))
+    run('git','-C',str(runtime),'checkout','--detach',lock['runtime_commit'])
+
 def main():
     lock=json.loads((ROOT/'deployment/bonsai-model.json').read_text())
     for program in ('git','cmake'):
@@ -28,9 +38,7 @@ def main():
         partial.replace(weights)
     if weights.stat().st_size!=lock['size_bytes'] or digest(weights)!=lock['sha256']:raise SystemExit('Existing weight checksum mismatch; refusing to run')
     runtime=target/'llama.cpp'
-    if not runtime.exists():run('git','clone','--no-checkout',lock['runtime_repository'],str(runtime))
-    if subprocess.check_output(['git','-C',str(runtime),'status','--porcelain']).strip():raise SystemExit('Runtime checkout has local changes; refusing to overwrite')
-    run('git','-C',str(runtime),'checkout','--detach',lock['runtime_commit'])
+    prepare_runtime(runtime, lock)
     run('cmake','-S',str(runtime),'-B',str(runtime/'build'),'-DCMAKE_BUILD_TYPE=Release','-DLLAMA_CURL=OFF')
     run('cmake','--build',str(runtime/'build'),'--target','llama-server','-j','2')
     command=[str(runtime/'build/bin/llama-server'),'-m',str(weights),'--alias',lock['model_id'],'--host','127.0.0.1','--port','8080','-c','4096','-ngl','99']
