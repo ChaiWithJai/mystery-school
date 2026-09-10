@@ -9,7 +9,7 @@ import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -551,6 +551,55 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(len(trace.data.spans), 1)
         self.assertEqual(trace.data.spans[0].outputs["record"], saved)
         self.assertEqual(sum(r["source_event_id"] == "partial-export" for r in recovered.sidecar_records), 1)
+
+    def assert_sidecar_readback_retry(self, source_event_id, readback, error_message):
+        payload = self.sidecar_payload(source_event_id)
+        before = len(self.app.sidecar_records)
+        with patch.object(self.app.tracing.client, "get_trace", **readback) as reader, \
+                patch.object(self.app.tracing, "import_sidecar", wraps=self.app.tracing.import_sidecar) as exporter:
+            status, error = self.request("/api/sidecar-records", payload)
+            self.assertEqual(status, 503)
+            record = self.app.sidecar_records[-1]
+            self.assertIn(record["id"], error["error"])
+            self.assertIn(error_message, error["error"])
+            self.assertEqual(self.request("/api/sidecar-records/" + record["id"]), (200, record))
+            persisted = self.app.sidecar_path.read_bytes()
+            self.assertEqual(json.loads(persisted)[-1], record)
+            status, error = self.request("/api/sidecar-records", payload)
+            self.assertEqual(status, 503)
+            self.assertIn(record["id"], error["error"])
+            self.assertIn(error_message, error["error"])
+            self.assertEqual(reader.call_count, 4)
+            self.assertEqual(exporter.call_count, 2)
+            for call in exporter.call_args_list:
+                self.assertEqual(call.args, (record,))
+            for call in reader.call_args_list:
+                self.assertEqual(call.args, (record["trace_id"],))
+            self.assertEqual(self.app.sidecar_path.read_bytes(), persisted)
+            self.assertEqual(len(self.app.sidecar_records), before + 1)
+
+        # Export succeeded despite failed readback; recovery must acknowledge it without re-export.
+        reopened = App(self.temp.name)
+        trace = reopened.tracing.client.get_trace(record["trace_id"])
+        self.assertEqual(len(trace.data.spans), 1)
+        self.assertEqual(trace.data.spans[0].outputs, {"record": record, "persisted": True})
+        with patch.object(reopened.tracing, "import_sidecar", side_effect=AssertionError("No duplicate export")), \
+                patch.object(reopened.tracing, "start", side_effect=AssertionError("No new trace")):
+            self.assertEqual(reopened.import_sidecar(payload), (record, False))
+        with patch.object(self.app.tracing, "import_sidecar", side_effect=AssertionError("No duplicate export")):
+            self.assertEqual(self.request("/api/sidecar-records", payload), (200, record))
+        self.assertEqual(reopened.tracing.client.get_trace(record["trace_id"]).to_dict(), trace.to_dict())
+        self.assertEqual(self.app.sidecar_path.read_bytes(), persisted)
+        self.assertEqual(sum(r["source_event_id"] == source_event_id for r in reopened.sidecar_records), 1)
+
+    def test_sidecar_readback_failure_blocks_ack_until_recovery(self):
+        self.assert_sidecar_readback_retry("readback-failure",
+            {"side_effect": RuntimeError("Synthetic readback outage")}, "Synthetic readback outage")
+
+    def test_sidecar_readback_mismatch_blocks_ack_until_recovery(self):
+        trace = Mock()
+        trace.data.spans = [Mock(outputs={"record": {"id": "wrong-record"}, "persisted": True})]
+        self.assert_sidecar_readback_retry("readback-mismatch", {"return_value": trace}, "Trace readback differs")
 
     def test_projection_learning_artifact_snapshot(self):
         _, artifact = self.request("/api/artifacts", {"pathway": "music", "session_id": "synthetic-bridge",

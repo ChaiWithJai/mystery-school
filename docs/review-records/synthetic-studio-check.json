@@ -1,0 +1,28 @@
+{
+  "source_system": "mystery-school-synthetic-qa",
+  "source_event_id": "synthetic-studio-check-c8cd7dc-v1",
+  "observed_at": "2026-09-10T17:30:15Z",
+  "actor_kind": "agent_review",
+  "actor_id": "synthetic-studio-fixture",
+  "actor_role": "evaluator_sidecar",
+  "reviewed_sha": "c8cd7dc21d606cdef3449faa5480b1a7772063e6",
+  "session_id": "synthetic-studio-check",
+  "task_id": "issue-1-synthetic-render",
+  "capture_method": "imported",
+  "input": {"synthetic": true, "task": "Check that a synthetic sidecar record renders with explicit provenance."},
+  "events": [{
+    "type": "tool.result",
+    "synthetic": true,
+    "input": "SYNTHETIC TOOL INPUT: inspect fixture value 2 + 2",
+    "output": "SYNTHETIC TOOL RESULT: 4. Fixture content, not an executed tool call."
+  }],
+  "output": {"synthetic": true, "conclusion": "SYNTHETIC CONCLUSION: this fixture tests import and display, not learning or model performance."},
+  "decision": "Render and inspect this synthetic fixture. No human judgment or model invocation is represented.",
+  "checks": [{"name": "synthetic_fixture_render", "status": "pending", "basis": "Verification occurs after importing this immutable source."}],
+  "source_refs": [{"label": "Pinned implementation under review", "url": "https://github.com/ChaiWithJai/mystery-school/tree/c8cd7dc21d606cdef3449faa5480b1a7772063e6"}],
+  "model": null,
+  "usage": null,
+  "cost_usd": null,
+  "invocation_id": null,
+  "timing": {"source_time_kind": "fixture_preparation", "original_tool_execution": "not_executed"}
+}
