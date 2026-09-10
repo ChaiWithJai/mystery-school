@@ -1,5 +1,6 @@
 import { validateExperimentProposal, proposedLabState } from './experiment-proposal.js';
 import { normalizeSongState } from './song-lab.js';
+import { validateIdeasState } from './ideas-lab.js';
 
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -20,7 +21,7 @@ export function describeExperimentValue(key, value) {
 export function experimentDefinition(pathway, state) {
   if (pathway === 'music') return normalizeSongState(state);
   if (pathway === 'ideas') {
-    const { helpOpen, helpSeen, sourceOpened, ...content } = state;
+    const { helpOpen, helpSeen, sourceOpened, ...content } = validateIdeasState(state);
     return structuredClone(content);
   }
   return pathway === 'movement' ? Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])) : structuredClone(state);

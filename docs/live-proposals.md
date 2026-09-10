@@ -70,3 +70,27 @@ rest of the job and private runtime paths. `npm test` validates the recorded
 proposal and retained performance state without network access or inference.
 The preservation test uses a labeled synthetic take. Browser replay on a fresh
 checkout remains a separate delivery requirement.
+
+## Ideas, September 10, 2026
+
+- Starting artifact: `c93965f0-1f46-4fd7-8d6f-3e33f77e403c`.
+- Job: `370e6041-30ef-4946-8e87-17ae65bffa9d`.
+- Trace: `tr-f3c49523ae4c69c5d2be23d7327a4053`.
+- Reported input tokens: 16,428. Reported output tokens: 918. Cost unknown.
+
+The agent-QA request asked for a story about a friend excluded by a club rule.
+Astra returned a comparison between accepting the outcome and challenging the
+rule together. It quoted only the captured Epictetus sentence and did not claim
+video understanding. The artifact, invocation, output and review record passed
+the GET-only integrity verifier.
+
+Neo page 102 exposed a replay defect: a legacy artifact without `modelComparison`
+was rejected because mounting adds a null default. The controller now normalizes
+ideas state before comparing it. A regression retains checks for changed words
+and changed comparisons. After the fix, the same recorded output previewed and
+applied in the browser. The scenario appeared in the existing lab. Undo removed
+the model comparison. No additional model call was made for replay.
+
+The current comparison is still text. It does not establish the requested
+playable story, a completed classics curriculum, or a learning result. The visual
+renderer must make the choice actionable rather than merely restyle the prose.

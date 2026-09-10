@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountLearningExperiment, experimentDefinition, describeExperimentValue } from '../public/learning-experiment.js';
+import { validateIdeasState } from '../public/ideas-lab.js';
+
+test('legacy ideas artifact matches its mounted defaults without discarding changed words', () => {
+  const legacy = {version:1, sourceId:'epictetus-enchiridion-1', interpretation:'My words', revisedInterpretation:'My revision'};
+  const mounted = validateIdeasState(legacy);
+  assert.deepEqual(experimentDefinition('ideas', legacy), experimentDefinition('ideas', mounted));
+  assert.notDeepEqual(experimentDefinition('ideas', legacy), experimentDefinition('ideas', {...mounted, interpretation:'Different'}));
+  assert.notDeepEqual(experimentDefinition('ideas', legacy), experimentDefinition('ideas', {...mounted, modelComparison:{scenario:'New', question:'Why?',source_quote:'in our control',source_ref_index:0}}));
+});
 
 test('preview names notes and durations rather than displaying MIDI JSON', () => {
   assert.equal(describeExperimentValue('notes', [{midi:64,beats:2},{midi:60,beats:4}]), 'E4 for 2 beats, then C4 for 4 beats');
