@@ -8,11 +8,13 @@ APP_CAPTURE_SCOPE = (
     "and persistence outcome. This is not a model call or continuous browser recording."
 )
 PROJECTION_CAPTURE_SCOPE = (
-    "One Codex CLI subprocess: submitted project data and attached reference IDs, CLI JSONL "
+    "One Codex CLI subprocess: submitted project data, exact UTF-8 stdin prompt, CLI argv, "
+    "and reference manifest with filenames, SHA256 and MIME. Environment and credentials "
+    "are not collected. CLI JSONL "
     "stdout events, stderr, server observation timestamps, reported token usage, final JSON, "
     "validation and process outcome. Raw stdout/stderr are saved locally; API text is limited "
     "to the last 200000 characters per stream. MLflow event spans are exported at job completion; "
-    "their span durations are export time, not model or tool execution time. This does not "
+    "their span durations are event recording time, not model or tool execution time. This does not "
     "capture hidden reasoning, provider HTTP requests, unreported tools, or billing."
 )
 
@@ -36,13 +38,13 @@ class Tracing:
         self.experiment_id = existing.experiment_id if existing else self.client.create_experiment(experiment, artifact_location=artifact_location)
         self.build_id = build_id
 
-    def start(self, name, inputs):
+    def start(self, name, inputs, start_time_ns=None):
         scope = PROJECTION_CAPTURE_SCOPE if name == "astra.projection" else APP_CAPTURE_SCOPE
         attributes = {"astral.capture_scope": scope, "astral.cost_source": "unreported; no pricing estimate"}
         if self.build_id:
             attributes["astral.build_id"] = self.build_id
         span = self.client.start_trace(name=name, inputs=inputs, attributes=attributes,
-                                      experiment_id=self.experiment_id)
+                                      experiment_id=self.experiment_id, start_time_ns=start_time_ns)
         return span.trace_id, span.span_id
 
     def event(self, trace_id, parent_id, event):

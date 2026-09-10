@@ -20,14 +20,16 @@
       <div class="eyebrow"><span class="small-star">✳</span> THE FIRST DAY OF A DIFFERENT SCHOOL</div>
       <h1>What comes<br><em>next for us?</em></h1>
       <p class="intro">My name is Jai. I want to run a whole school on my computer.</p>
-      <p class="invitation">A place to follow a question. Step inside a possibility. Discover something about the world, and yourself.</p>
+      <label class="desire-label" for="learner-desire">What do you want to make, understand, or try?</label>
+      <input id="learner-desire" class="desire-input" placeholder="A few words are enough. Any language." autocomplete="off">
+      <details class="starting-points"><summary>Try a starting point</summary><div><button data-desire="I want to understand the gears on my bike. Can we start with the bike?">My bike's gears</button><button data-desire="Quiero hacer una cometa con mi prima. ¿Por dónde empezamos?">Una cometa</button><button data-desire="I want to understand my basketball bounce. Let me try something first.">A basketball bounce</button></div></details>
       <button id="enter" class="primary">Enter the school <span>↗</span></button>
       <div class="welcome-foot"><span class="dot"></span> An explorable sketch of a possible future.</div>
     </section>
     <div id="world-labels" class="world-labels" aria-label="Explore the school"></div>
     <aside id="lesson" class="lesson hidden" aria-live="polite">
       <div class="lesson-top"><span id="lesson-number" class="eyebrow"></span><button id="overview" class="icon-button" aria-label="Return to school overview">↙</button></div>
-      <h2 id="lesson-title"></h2><p id="lesson-story" class="lesson-story"></p>
+      <h2 id="lesson-title"></h2><div id="lesson-story" class="lesson-story"></div>
       <div class="question-card"><span class="eyebrow">A QUESTION TO CARRY</span><p id="lesson-question"></p></div>
       <div id="choices" class="choices"></div><p id="consequence" class="consequence hidden"></p>
       <div class="lesson-actions"><button id="imagine-open" class="primary">Imagine another way <span>✳</span></button><button id="reflect-open" class="text-button">Keep a thought <span>+</span></button></div>

@@ -168,7 +168,7 @@
     }
     if (!state.active && state.samples.length) {
       const requested = new URLSearchParams(location.search).get('sample');
-      state.active = state.samples.some(sample => sample.id === requested) ? requested : state.samples[0].id;
+      state.active = state.samples.some(sample => sample.id === requested) ? requested : orderedSamples()[0].id;
     }
     const signature = JSON.stringify([state.samples, state.annotations, state.patterns, state.suggestions, state.graph, state.app.jobs, state.app.mlflow_url, state.errors]);
     const editing = document.activeElement?.tagName === 'TEXTAREA' || $('#note-editor').open;
@@ -185,6 +185,10 @@
   function noteCount(sampleId) { return state.annotations.filter(note => note.sample_id === sampleId).length; }
   function pending() { return state.suggestions.filter(item => item.status === 'pending'); }
   function modelJob(sample) { return Array.isArray(state.app.jobs) && state.app.jobs.some(job => job.id === sample.id); }
+  function orderedSamples() {
+    const jobs = new Set((Array.isArray(state.app.jobs) ? state.app.jobs : []).map(job => job.id));
+    return [...state.samples.filter(sample => jobs.has(sample.id)), ...state.samples.filter(sample => !jobs.has(sample.id))];
+  }
   function sampleTitle(sample) { return sample?.title || sample?.id || 'Untitled trajectory'; }
   function dateLabel(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Date unavailable' : date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
   function roleKind(role) { const value = String(role || 'event').toLowerCase(); return /tool|function/.test(value) ? 'tool' : /thinking|reasoning/.test(value) ? 'thinking' : /human|user|input/.test(value) ? 'user' : /output|result/.test(value) ? 'output' : /system|developer/.test(value) ? 'system' : /assistant|agent/.test(value) ? 'assistant' : 'event'; }
@@ -197,7 +201,7 @@
 
   function renderList() {
     const query = $('#record-search').value.trim().toLowerCase();
-    const filtered = state.samples.filter(sample => [sample.title, sample.id, sample.model, typeof sample.world === 'object' ? JSON.stringify(sample.world) : sample.world].join(' ').toLowerCase().includes(query));
+    const filtered = orderedSamples().filter(sample => [sample.title, sample.id, sample.model, typeof sample.world === 'object' ? JSON.stringify(sample.world) : sample.world].join(' ').toLowerCase().includes(query));
     $('#record-count').textContent = `${filtered.length} of ${state.samples.length} trajectories`;
     $('#record-list').replaceChildren();
     for (const sample of filtered) {
@@ -281,6 +285,8 @@
     else actions.append(el('span', 'correction-help', 'Corrections are available for model jobs.'));
     if (sample.parent_job_id) { const parent = button('View previous version', () => openSample(sample.parent_job_id), 'text-button'); actions.append(parent); }
     header.append(actions, el('p', 'read-hint', 'Select a passage to leave a free-text note. Saved notes appear in the margin. Corrections create a new version.'));
+    const job = Array.isArray(state.app.jobs) ? state.app.jobs.find(item => item.id === sample.id) : null;
+    if (job) header.append(renderExecutionFiles(job));
     $('#trajectory-header').append(header);
     const items = [...state.annotations.filter(note => note.sample_id === sample.id).map(note => ({ ...note, kind: 'annotation' })), ...pending().filter(note => note.sample_id === sample.id).map(note => ({ ...note, kind: 'suggestion' }))];
     const anchors = new Map(items.map(item => [item.id, resolveAnchor(sample, item)]));
@@ -313,10 +319,71 @@
     if (!messages(sample).length) $('#messages').append(el('p', 'compact-empty', 'No observable messages are available for this record.'));
     for (const item of items) $('#margin-notes').append(renderMarginNote(item, anchors.get(item.id)));
     if (!items.length) $('#margin-notes').append(el('p', 'fine-print', 'Your observations belong here. Select text to begin.'));
-    const index = state.samples.findIndex(item => item.id === sample.id);
+    const index = orderedSamples().findIndex(item => item.id === sample.id);
     $('#record-position').textContent = `${index + 1} / ${state.samples.length}`;
     $('#previous-record').disabled = index <= 0; $('#next-record').disabled = index >= state.samples.length - 1;
     scheduleLayout();
+  }
+
+  function artifactUrl(value, jobId, filename) {
+    if (typeof value !== 'string' || !value.trim() || typeof filename !== 'string' || !filename || /[/\\\u0000-\u001f]/.test(filename) || ['.', '..'].includes(filename)) return null;
+    try {
+      const url = new URL(value, location.origin);
+      const parts = url.pathname.split('/').map(part => decodeURIComponent(part));
+      if (!['http:', 'https:'].includes(url.protocol) || url.origin !== location.origin || url.username || url.password || url.search || url.hash) return null;
+      if (parts.length !== 6 || parts[1] !== 'api' || parts[2] !== 'jobs' || parts[3] !== jobId || parts[4] !== 'artifacts' || parts[5] !== filename) return null;
+      return url.href;
+    } catch { return null; }
+  }
+
+  function artifactLink(url, label) {
+    const link = el('a', '', label);
+    link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    return link;
+  }
+
+  function renderExecutionFiles(job) {
+    const details = el('details', 'execution-files');
+    const detailKey = `execution-files:${job.id}`;
+    details.open = expandedMessages.get(detailKey) ?? false;
+    details.append(el('summary', '', 'Execution files'));
+    details.addEventListener('toggle', () => { expandedMessages.set(detailKey, details.open); scheduleLayout(); });
+    const invocation = job.invocation;
+    if (!invocation || typeof invocation !== 'object' || Array.isArray(invocation)) {
+      const waiting = ['queued', 'pending', 'running'].includes(job.status);
+      details.append(el('p', 'execution-empty', waiting ? 'Execution files are not available yet. No invocation has been captured for this job.' : 'Historical execution files are unavailable. This job has no saved invocation capture.'));
+      return details;
+    }
+    details.append(el('p', 'execution-intro', 'Exact files from this job. Output files become available as execution writes them.'));
+    const files = el('ul', 'execution-file-list');
+    for (const filename of ['prompt.txt', 'argv.json', 'references.json', 'stdout.log', 'stderr.log', 'result.json']) {
+      const item = el('li');
+      const url = artifactUrl(invocation.artifacts?.[filename], job.id, filename);
+      if (url) item.append(artifactLink(url, filename));
+      else item.append(el('span', 'execution-unavailable', `${filename} / unavailable`));
+      files.append(item);
+    }
+    details.append(files, el('h3', 'execution-reference-heading', 'Reference manifest'));
+    if (!Array.isArray(invocation.references)) details.append(el('p', 'execution-empty', 'Reference manifest unavailable for this invocation.'));
+    else if (!invocation.references.length) details.append(el('p', 'execution-empty', 'No reference files were attached to this invocation.'));
+    else {
+      const references = el('ul', 'execution-references');
+      for (const reference of invocation.references) {
+        if (!reference || typeof reference !== 'object') continue;
+        const item = el('li');
+        const name = reference.name || reference.filename || 'Unnamed reference';
+        const url = artifactUrl(reference.url, job.id, reference.filename);
+        item.append(url ? artifactLink(url, name) : el('span', 'execution-unavailable', `${name} / file unavailable`));
+        const metadata = el('dl', 'execution-reference-metadata');
+        for (const [label, value] of [['File', reference.filename], ['Type', reference.mime], ['Size', Number.isFinite(reference.bytes) ? `${reference.bytes.toLocaleString()} bytes` : null], ['SHA-256', reference.sha256]]) {
+          if (value == null) continue;
+          metadata.append(el('dt', '', label), el('dd', label === 'SHA-256' ? 'execution-hash' : '', value));
+        }
+        item.append(metadata); references.append(item);
+      }
+      details.append(references);
+    }
+    return details;
   }
 
   function resolveAnchor(sample, item) {
@@ -593,8 +660,8 @@
   $('#record-search').addEventListener('input', renderList);
   $('#record-search').addEventListener('change', () => track('search', { query: $('#record-search').value }));
   $('#refresh').addEventListener('click', () => refresh(true));
-  $('#previous-record').addEventListener('click', () => { const index = state.samples.findIndex(sample => sample.id === state.active); if (index > 0) openSample(state.samples[index - 1].id); });
-  $('#next-record').addEventListener('click', () => { const index = state.samples.findIndex(sample => sample.id === state.active); if (index < state.samples.length - 1) openSample(state.samples[index + 1].id); });
+  $('#previous-record').addEventListener('click', () => { const samples = orderedSamples(); const index = samples.findIndex(sample => sample.id === state.active); if (index > 0) openSample(samples[index - 1].id); });
+  $('#next-record').addEventListener('click', () => { const samples = orderedSamples(); const index = samples.findIndex(sample => sample.id === state.active); if (index < samples.length - 1) openSample(samples[index + 1].id); });
   $('#messages').addEventListener('mouseup', () => setTimeout(captureSelection, 0));
   $('#messages').addEventListener('keyup', event => { if (event.key === 'Shift') captureSelection(); });
   $('#messages').addEventListener('touchend', () => setTimeout(captureSelection, 100));

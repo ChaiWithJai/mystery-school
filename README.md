@@ -58,15 +58,30 @@ not prove authentication or model access.
 - Syntax and backend integration checks cover persistence, cancellation,
   timeouts, invalid outputs, source preservation, uploads, and review APIs.
 - The first real Astra attempt failed because the shell CLI was outdated.
-  Its failure trace is retained locally. A successful model projection and
-  end-to-end corrected child are not yet verified at this checkpoint.
+  Its failure trace is retained locally. The app-bundled CLI then completed
+  a reference-based projection and a corrected child with the original preserved.
+- A third successful projection starts with a synthetic learner's bike question.
+  Its exact prompt, command arguments, reference bytes, and explicitly selected
+  notebook note are captured. Historical jobs do not have exact invocation files.
+- The opening preserves a learner's short request. Suggested questions require
+  explicit confirmation before a model request. Prediction is optional.
+- Browser checks verified that question, prediction, and premise drafts survive
+  closing Imagine, visiting References, and reopening. Drafts are separate for
+  each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
 
 ```sh
 npm run check
 .venv/bin/python -m unittest discover -s tests -v
+node scripts/verify_demo.mjs
+node scripts/verify_capture.mjs
 ```
+
+The Node verification scripts inspect existing local jobs; they do not call a
+model. They require the corresponding completed walkthroughs in the local data
+directory and intentionally fail on a fresh clone. See
+[verification evidence](docs/verification.md) for their scope and remaining checks.
 
 Tracing covers app events, submitted model inputs, observable CLI events,
 outputs, errors, reported usage, and review feedback. It does not expose hidden

@@ -1,5 +1,6 @@
 """Integration tests use real HTTP, disk, subprocesses, and MLflow, never a model."""
 import base64
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -183,6 +184,81 @@ class BackendTests(unittest.TestCase):
         self.assertIn("hidden reasoning", diagnostics["capture_scope"]["projection"])
         build = json.loads((self.app.data / "builds" / (diagnostics["build"]["id"] + ".json")).read_text())
         self.assertEqual(build, diagnostics["build"])
+
+    def test_exact_invocation_and_reference_artifacts(self):
+        picture = io.BytesIO()
+        Image.new("RGB", (3, 2), "blue").save(picture, format="PNG")
+        _, ref = self.request("/api/references", {"name": "test-reference.png", "mime": "image/png",
+                             "data_base64": base64.b64encode(picture.getvalue()).decode()})
+        # The child echoes bytes it actually received; no model is invoked.
+        script = "import sys,json; print(json.dumps({'type':'test.stdin','received':sys.stdin.read(),'args':sys.argv[1:]})); sys.exit(2)"
+        self.app.command_builder = lambda folder, images: [sys.executable, "-c", script, "literal argument", str(images[0])]
+        before = {j["id"]: json.loads(json.dumps(j)) for j in self.app.state["jobs"]}
+        with patch.dict("os.environ", {"ASTRAL_TEST_PRIVATE": "secret-not-to-be-recorded"}):
+            status, queued = self.request("/api/project", {"session_id": "test-session", "question": "A quoted question?",
+                "premise": "Line one\nLine two with a literal $HOME", "world": "forest", "reference_ids": [ref["id"]]})
+            self.assertEqual(status, 202)
+            ended = self.wait_job(queued["id"])
+        folder = self.app.data / "jobs" / ended["id"]
+        invocation = ended["invocation"]
+        event = next(e for e in ended["events"] if e["type"] == "test.stdin")
+        self.assertEqual((folder / "prompt.txt").read_bytes(), event["received"].encode("utf-8"))
+        self.assertEqual(invocation["stdin"], event["received"])
+        self.assertEqual(invocation["argv"], self.app.command_builder(folder, [folder / (ref["id"] + ".png")]))
+        self.assertEqual(invocation["argv"][3:], event["args"])
+        self.assertEqual(json.loads((folder / "argv.json").read_text()), invocation["argv"])
+        self.assertEqual(json.loads((folder / "invocation.json").read_text()), invocation)
+        manifest = json.loads((folder / "references.json").read_text())
+        self.assertEqual(manifest, invocation["references"])
+        self.assertEqual(manifest[0]["sha256"], hashlib.sha256(picture.getvalue()).hexdigest())
+        self.assertEqual(manifest[0]["mime"], "image/png")
+        self.assertEqual((folder / manifest[0]["filename"]).read_bytes(), picture.getvalue())
+        trace = self.app.tracing.client.get_trace(ended["trace_id"])
+        self.assertEqual(trace.data.spans[0].inputs["invocation"], invocation)
+        self.assertIn("event recording time", trace.data.spans[0].attributes["astral.capture_scope"])
+        self.assertNotIn("secret-not-to-be-recorded", json.dumps(invocation))
+        for name in ("prompt.txt", "argv.json", "references.json", "stdout.log", "stderr.log"):
+            self.assertEqual(self.request(invocation["artifacts"][name])[0], 200)
+        self.assertEqual(self.request(manifest[0]["url"])[1], picture.getvalue())
+        for suffix in ("%2e%2e/state.json", "%2e%2e%2fstate.json", "unknown.txt"):
+            self.assertEqual(self.request(f"/api/jobs/{ended['id']}/artifacts/{suffix}")[0], 404)
+        self.assertEqual(before, {j["id"]: j for j in self.app.state["jobs"] if j["id"] in before})
+
+    def test_notebook_context_is_explicit_validated_and_immutable(self):
+        self.app.command_builder = lambda folder, images: [sys.executable, "-c", "import sys; sys.stdin.read(); sys.exit(2)"]
+        _, selected = self.request("/api/reflections", {"session_id": "test-session", "world": "forest",
+                                                       "text": "Exact selected note\nwith a second line."})
+        _, excluded = self.request("/api/reflections", {"session_id": "test-session", "world": "forest",
+                                                       "text": "Unselected private notebook note"})
+        body = {"session_id": "test-session", "question": "What could we try?", "premise": "An imagined school", "world": "forest"}
+        count = len(self.app.state["jobs"])
+        for ids in (["unknown-note"], [selected["id"]] * 21, "not-a-list", [1], None):
+            self.assertEqual(self.request("/api/project", dict(body, reflection_ids=ids))[0], 400)
+        self.assertEqual(len(self.app.state["jobs"]), count)
+        # Client-supplied note text must never bypass the saved-record lookup.
+        _, queued = self.request("/api/project", dict(body, notebook_context=[excluded]))
+        default = self.wait_job(queued["id"])
+        self.assertNotIn("notebook_context", default["input"])
+        self.assertNotIn(selected["text"], default["invocation"]["stdin"])
+        self.assertNotIn(excluded["text"], default["invocation"]["stdin"])
+        _, queued = self.request("/api/project", dict(body, reflection_ids=[selected["id"]]))
+        ended = self.wait_job(queued["id"])
+        self.assertEqual(ended["input"]["notebook_context"], [selected])
+        prompt_data = json.loads(ended["invocation"]["stdin"].split("\n", 1)[1])
+        self.assertEqual(prompt_data["notebook_context"], [selected])
+        self.assertNotIn(excluded["text"], ended["invocation"]["stdin"])
+        trace = self.app.tracing.client.get_trace(ended["trace_id"])
+        self.assertEqual(trace.data.spans[0].inputs["notebook_context"], [selected])
+        self.assertIn("not verified facts", ended["invocation"]["stdin"])
+        with self.app.lock:
+            note = next(r for r in self.app.state["reflections"] if r["id"] == selected["id"])
+            note["text"] = "Changed later in test"
+            self.app.save()
+        self.assertEqual(self.app.job(ended["id"])["input"]["notebook_context"], [selected])
+        reopened = App(self.temp.name)
+        self.assertEqual(reopened.job(ended["id"])["input"]["notebook_context"], [selected])
+        saved = json.loads((self.app.data / "jobs" / ended["id"] / "input.json").read_text())
+        self.assertEqual(saved["notebook_context"], [selected])
 
 
 if __name__ == "__main__":
