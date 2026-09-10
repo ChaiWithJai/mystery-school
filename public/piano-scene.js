@@ -32,9 +32,8 @@ export function mountPianoScene(container,adapter,track,onContinue){
   const targetKey=piano.querySelector('[aria-label="E6, hold to play"]');targetKey?.classList.add('is-lesson-target');
   const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Into the ring →';next.hidden=true;piano.append(next);
   next.onclick=async()=>{piano.querySelector('[data-stop]').click();next.disabled=true;try{await onContinue?.();}catch(error){const message=piano.querySelector('[data-error]');message.hidden=false;message.textContent='Could not keep this take: '+error.message;}finally{next.disabled=false;}};
-  const reference=scene.querySelector('.piano-scene__reference');
-  referenceButton.onclick=()=>{reference.hidden=false;scene.querySelector('[data-player]').innerHTML='<iframe title="Runaway — official video reference" src="https://www.youtube-nocookie.com/embed/Bm5iA4Zupek?autoplay=0" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe>';track('reference.open',{url:'https://www.youtube.com/watch?v=Bm5iA4Zupek',source_kind:'artist_video',automatic_transcription:false});};
-  scene.querySelector('[data-close-reference]').onclick=()=>{reference.hidden=true;scene.querySelector('[data-player]').replaceChildren();referenceButton.focus();};
+  referenceButton.remove();
+  scene.querySelector('.piano-scene__reference').remove();
   const ns='http://www.w3.org/2000/svg',held=new Set();let disposed=false;
   const el=(tag,attrs)=>{const n=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);return n;};
   function render(){if(disposed)return;const full=adapter.getState();const label=openingTempoLabel(full.practice_target);if(tempo.textContent!==label){tempo.textContent=label;feedback.textContent='Try the glowing key.';}const state=full.practice;if(!state)return;next.hidden=!state.events.some(event=>event.type==='off');const notes=performanceNotes(state),lines=scene.querySelector('[data-take-lines]');lines.replaceChildren();const duration=Math.max(4,state.duration);
