@@ -78,6 +78,6 @@ export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
     q('[role=status]').hidden=false;q('[role=status]').textContent='Choose your local Runaway recording in audio options.';
   });
   q('[data-play]').textContent='Play opening';
-  active = {play(restart=true){return local?.play(restart);},pause(){local?.pause();},leavePiano() {if (!continuous) stop();else document.body.append(root);}, stop};
+  active = {get continuous(){return continuous;},play(restart=true){return local?.play(restart);},pause(){local?.pause();},leavePiano() {if (!continuous) stop();else document.body.append(root);}, stop};
   return active;
 }

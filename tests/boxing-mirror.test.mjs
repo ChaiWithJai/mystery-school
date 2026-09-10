@@ -147,4 +147,6 @@ const kept=keepMirrorObservation(state,lesson);assert.equal(kept.observations.le
 assert.equal(keepMirrorObservation(state,{...lesson,evidenceType:undefined}).observations.length,0);
 assert.equal(keepMirrorObservation(state,{...lesson,source:undefined}).observations.length,0);
 assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reportedTried:false}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],mirrorStartedAt:''}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reflection:'   '}}},lesson).observations.length,0);
 });
