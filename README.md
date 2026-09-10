@@ -66,15 +66,19 @@ scenes, generated possibilities, and user observations remain distinct.
 
 ## Run
 
-Use Python 3.11 or newer, Node.js, and a Codex CLI compatible with GPT-6 Astra.
-Authentication uses your existing Codex sign-in. Model requests leave the device;
-the scene, notebook, references, and trace database are stored locally.
+Start from a clone with Python 3.11 and Node.js installed. Python 3.11 is the
+verified setup below; newer Python versions have not been checked. Local play
+does not require a Codex sign-in. Live Astra requests additionally require a
+compatible Codex CLI and model access. Model requests leave the device; the
+scene, notebook, references, and trace database are stored locally.
 
 ```sh
-python3 -m venv .venv
+git clone https://github.com/ChaiWithJai/mystery-school.git
+cd mystery-school
+python3.11 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 npm ci
-ASTRAL_CODEX_BIN=/path/to/current/codex .venv/bin/python server.py --port 5188
+.venv/bin/python server.py --port 5188
 ```
 
 Open `http://127.0.0.1:5188/` for the school and `/review.html` for trajectories.
@@ -86,10 +90,25 @@ The API records MLflow traces in `data/mlflow.db`. In a second terminal:
   --default-artifact-root "file://$PWD/data/mlartifacts"
 ```
 
-The current Mac also has a compatible candidate CLI at
-`/Applications/ChatGPT.app/Contents/Resources/codex`. Inspect `/api/diagnostics`
-for the selected executable and build identity. Executable availability does
-not prove authentication or model access.
+To select a different installed CLI, set `ASTRAL_CODEX_BIN` to its executable
+when starting the server. Inspect `/api/diagnostics` for the selected executable
+and build identity. Executable availability does not prove authentication or
+model access. The app records failed requests visibly.
+
+For a check that starts its own server with empty temporary data and disables
+model executable discovery:
+
+```sh
+npm run check
+npm test
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python scripts/check-clean-setup.py --port 5196 --require-clean
+```
+
+This verifies installation, startup and served files. It does not establish a
+fluid experience or replay a live model result. See
+[reproducible delivery](docs/reproducible-delivery.md) for the measured checkpoint
+and remaining public replay gate.
 
 ## Checkpoint: September 10, 2026
 
