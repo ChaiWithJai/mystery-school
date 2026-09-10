@@ -10,7 +10,8 @@ Python 3.11.14, Node.js 26.5.0, new virtual environment, successful dependency
 installation and `npm ci`. Syntax checks, 112 JavaScript tests and 24 backend
 tests passed. The empty-data HTTP check passed on port 5196 with no model call.
 Port 5194 was occupied and was left untouched. These results apply to that
-source checkpoint; the setup script and this guide were the only added tooling.
+source checkpoint. Later feature and tooling changes are not covered by that
+fresh-clone result. No new clean installation or browser result is claimed here.
 
 ## Fresh setup
 
@@ -32,11 +33,20 @@ npm test
 
 The setup check refuses an occupied port, creates temporary empty data, selects
 a nonexistent model executable and local temporary MLflow database, starts its
-own server, and checks empty API collections. It compares served tracked HTML,
-JavaScript, CSS, PNG and GLB bytes with the checkout, opens all three pathway
-documents, and verifies Three.js is served. It prints the Git commit and file
+own server, and checks empty API collections, including saved artifacts and
+imported sidecar records. It compares served tracked HTML, JavaScript, CSS,
+JSON, PNG and GLB bytes with the checkout. JSON includes the bundled music
+replay fixture. It requests all three pathway documents and verifies Three.js
+is served. It prints the Git commit and file
 hashes and Git worktree status, shuts down only its own server, and removes its temporary data. It makes
 GET requests only. This is an HTTP startup check, not a browser interaction test.
+
+`npm run check` checks the syntax of every tracked JavaScript file under
+`public/`, including the opening route and piano practice helpers. It does not
+execute those modules. New untracked files must be added to Git before they are
+included. The HTTP check also covers the tracked `play-first.css` stylesheet.
+Returning the same HTML for each pathway does not verify that its controls mount
+or respond in a browser.
 
 Use another free `--port` when needed. The normal README server retains local
 data; this check intentionally does not. The historical `verify_demo.mjs`,
@@ -48,18 +58,19 @@ Without it, the report lists those changes explicitly; its commit identifies the
 base revision, not the complete served worktree. Startup failures include a
 bounded server-log tail before temporary files are removed.
 
-## Public replay is a separate delivery gate
+## Recorded music replay
 
-**Blocked pending a published fixture and its verifier.** A missing replay is
-not a pass. Maincar owns the public replay fixture. It must carry provenance,
-an exact source revision, inspectable input/output and the distinction between
-recorded output and a new model call. It must contain no private learner data or
-credentials. This setup check neither fabricates nor substitutes that fixture.
+The repository includes `public/replay.html` and
+`public/fixtures/recorded-music-proposal.json`. After starting the server, open
+`http://127.0.0.1:5188/replay.html`. Play the phrase, inspect the recorded
+proposal, apply it, play again, and undo. The source panel shows the fixture's
+provenance and local page events. No model call or new backend record is made.
 
-When published, a new contributor must reproduce the intended saved scenario
-from the fixture alone. Record the fixture revision, verifier command and actual
-result separately from these startup checks. Until that happens, clean delivery
-is partial even if installation and tests pass.
+The fixture covers a recorded music phrase variation, not the piano practice
+target. Movement and ideas have no equivalent bundled replay. The startup check
+verifies fixture bytes, not the replay's behavior. Record browser results and
+the exact fixture revision separately before claiming reproducible interaction.
+All three pathways remain required for experience acceptance.
 
 ## Experience acceptance remains open
 

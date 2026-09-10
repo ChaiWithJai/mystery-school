@@ -385,6 +385,10 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   story.append(rain, street, storyCaption, umbrella, bookDoor, enterMap);
   const decisionPanel = node('div', 'ideas-lab__decision');
   const decisionQuestion = node('p', 'ideas-lab__probe');
+  const decisionContext = node('details', 'ideas-lab__decision-context');
+  const decisionScenario = node('p', 'ideas-lab__probe');
+  decisionContext.append(node('summary', '', 'The situation'), decisionScenario, decisionQuestion,
+    node('small', 'ideas-lab__note', 'Model-imagined choices and consequences, not predictions of people or facts from the source. Your interpretation remains yours to write.'));
   const decisionChoices = node('div', 'ideas-lab__decision-choices');
   const decisionConsequence = node('p', 'ideas-lab__decision-consequence');
   decisionConsequence.setAttribute('role', 'status');
@@ -402,14 +406,13 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   });
   const neither = node('button', 'ideas-lab__button', 'Neither fits'); neither.type = 'button';
   listen(neither, 'click', () => chooseDecision('neither'));
-  decisionPanel.append(decisionQuestion, decisionChoices, neither, decisionConsequence,
-    node('small', 'ideas-lab__note', 'Model-imagined choices and consequences, not predictions of people or facts from the source. Your interpretation remains yours to write.'));
+  decisionPanel.append(decisionChoices, neither, decisionConsequence, decisionContext);
   story.append(decisionPanel);
   let storyVoice;
   if (speech && Utterance) {
     storyVoice = node('button', 'ideas-lab__voice', '◖))'); storyVoice.type = 'button';
     storyVoice.setAttribute('aria-label', 'Hear this authored story');
-    listen(storyVoice, 'click', () => speak(`${state.modelComparison?.decision_scene ? 'Model-imagined situation.' : 'An imagined moment.'} ${storyCaption.textContent}`));
+    listen(storyVoice, 'click', () => speak(state.modelComparison?.decision_scene ? `Model-imagined situation. ${state.modelComparison.scenario} ${state.modelComparison.question}` : `An imagined moment. ${storyCaption.textContent}`));
     story.append(storyVoice);
   }
   if (!state.interpretation && !state.revisedInterpretation) chain.hidden = true;
@@ -495,17 +498,18 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     story.setAttribute('data-shared', String(shared));
     umbrella.disabled = Boolean(scene);
     umbrella.setAttribute('aria-label', scene ? (shared ? 'Imagined umbrella shared' : 'Imagined umbrella held by one person') : shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
-    storyCaption.textContent = scene ? state.modelComparison.scenario : shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
+    storyCaption.textContent = scene ? 'Where will you put the shelter?' : shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
     bookDoor.hidden = enterMap.hidden = scene ? !response : !shared;
     decisionPanel.hidden = !scene;
     decisionQuestion.textContent = scene ? state.modelComparison.question : '';
+    decisionScenario.textContent = scene ? state.modelComparison.scenario : '';
     decisionButtons.forEach((button, index) => {
       button.textContent = scene?.choices[index].label || '';
       button.setAttribute('aria-pressed', String(Boolean(scene) && response === scene.choices[index].id));
     });
     neither.setAttribute('aria-pressed', String(response === 'neither'));
     decisionConsequence.textContent = selected ? `Imagined consequence: ${selected.consequence}` : response === 'neither'
-      ? 'Neither choice selected. Your words and authored story choice are unchanged.' : 'Choose a possibility, or leave both aside.';
+      ? 'Neither selected.' : '';
     comparisonPlay.hidden = !scene;
     comparisonOrigin.textContent = scene ? 'Model-imagined situation. The source quotation is separate.' : 'Historical text-only comparison. No playable model scene is attached; the rain story is authored separately.';
     comparison.hidden = !state.modelComparison;

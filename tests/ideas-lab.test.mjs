@@ -289,7 +289,11 @@ test('apply foregrounds actual model choices; choices and neither never write le
   assert.equal(story.hidden, false);
   assert.equal(elements.find(e => e.className === 'ideas-lab__chain').hidden, true);
   assert.equal(elements.find(e => e.className === 'ideas-lab__editor').hidden, true);
-  assert.equal(elements.find(e => e.className === 'ideas-lab__story-caption').textContent, modelComparison.scenario);
+  assert.equal(elements.find(e => e.className === 'ideas-lab__story-caption').textContent, 'Where will you put the shelter?');
+  const context=elements.find(e=>e.className==='ideas-lab__decision-context');
+  assert.notEqual(context.open,true);
+  assert.ok(context.children.some(e=>e.textContent===modelComparison.scenario));
+  assert.ok(context.children.some(e=>e.textContent===modelComparison.question));
   const buttons = elements.find(e => e.className === 'ideas-lab__decision-choices').children;
   assert.deepEqual(buttons.map(b => b.textContent), modelComparison.decision_scene.choices.map(c => c.label));
   buttons[0].fire('click');

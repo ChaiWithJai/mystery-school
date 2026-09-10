@@ -85,6 +85,7 @@ test('play-first capture starts on a key and preserves the previous take when re
   assert.deepEqual(api.getState().events.slice(0,4),take.events);
   assert.equal(api.getState().events.length,6);
   assert.ok(api.getState().events[4].time>=take.duration);
+  assert.equal(api.getState().duration,api.getState().events.at(-1).time);
   assert.deepEqual(events.find(([type])=>type==='record_start')[1],{source:'key_press',resumed:true});
   api();
 });

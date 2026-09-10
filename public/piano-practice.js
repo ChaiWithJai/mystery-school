@@ -208,7 +208,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   function stop() {
     generation++;
     for (const source of [...held.keys()]) up(source);
-    if (recording) { state.duration = elapsed(); recording = false; publish(); }
+    if (recording) { state.duration = autoCapture ? (state.events.at(-1)?.time || 0) : elapsed(); recording = false; publish(); }
     for (const v of scheduled.splice(0)) { try { v.oscillator.stop(); } catch {} }
     clearTimeout(replayTimer); clearTimeout(limitTimer); clearInterval(replayVisual);
     replaying = false;
