@@ -10,7 +10,7 @@ September 10, 2026. Tests ran on Apple M5 Pro. M4 remains untested.
 | Explicit selection | Neo: projection disabled before confirmation and enabled after it | Selection is not evidence of understanding. |
 | Learner request | Neo: the opening request appears unchanged in Imagine | Speech and sketch interpretation require a facilitator. |
 | Backend | Latest checkpoint: 17 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
-| JavaScript | Latest checkpoint: 58 tests pass | Deterministic tests are not participant learning evidence. |
+| JavaScript | Latest checkpoint: 63 tests pass | Deterministic tests are not participant learning evidence. |
 | Actual model correction | `verify_demo.mjs` passes for the saved parent and child | QA annotation, not participant feedback. |
 | Exact request capture | `verify_capture.mjs` passes for the bike walkthrough | Capture begins with new jobs; older prompts cannot be reconstructed as fact. |
 | Saved music to Astra | `verify_learning_projection.mjs 14e0de07-b8ea-4083-a395-e89dd2741841` independently passed using GET requests | Checks record integrity, not model understanding or learner outcomes. |
@@ -123,6 +123,13 @@ OK and the same parent ID. The accepted suggestion
 alongside a separate agent decision. Browser reload and API readback were checked.
 Human acceptance is covered by isolated synthetic tests only, not a live human
 action. Missing historical decision attribution remains unknown.
+
+Imported reviews now have a collapsed Related reviews section. Known original
+findings and follow-up reviews open through the review interface; missing records
+are labeled unavailable. Agent browser QA followed verification to finding and
+back, checked keyboard focus, and confirmed the source text stayed unchanged.
+Five regression tests cover known, missing, duplicate, and malformed references.
+Links are resolved from loaded records, not URLs embedded in source text.
 
 ## Remaining evidence
 

@@ -110,7 +110,7 @@ not prove authentication or model access.
   each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
-- The latest verified suite checkpoint is 58 JavaScript tests and 17 backend
+- The latest verified suite checkpoint is 63 JavaScript tests and 17 backend
   tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
   Their jobs, traces, sources, and reported usage are listed in the verification doc.
 - The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.

@@ -9,6 +9,28 @@ function suggestionDecision(suggestion, status, declaration, decidedAt) {
   return {...suggestion, status, decision: {actor_kind: declaration.actor_kind, producer, decided_at: decidedAt}};
 }
 
+function relatedReviews(sample, samples) {
+  const imported = item => item?.metadata?.capture_method === 'imported';
+  if (!imported(sample)) return [];
+  const parents = item => Array.isArray(item?.metadata?.parent_finding_ids) ? item.metadata.parent_finding_ids : [];
+  const known = new Map();
+  for (const item of samples) if (imported(item) && typeof item.id === 'string' && item.id && !known.has(item.id)) known.set(item.id, item);
+  const seen = new Set([sample.id]);
+  const result = [];
+  for (const id of parents(sample)) {
+    if (typeof id !== 'string' || !id.trim() || seen.has(id)) continue;
+    seen.add(id);
+    result.push({id, relation: 'Original finding', sample: known.get(id) || null});
+  }
+  for (const [id, item] of known) {
+    if (!seen.has(id) && parents(item).includes(sample.id)) {
+      seen.add(id);
+      result.push({id, relation: 'Follow-up review', sample: item});
+    }
+  }
+  return result;
+}
+
 (() => {
   'use strict';
 
@@ -328,6 +350,24 @@ function suggestionDecision(suggestion, status, declaration, decidedAt) {
     header.append(actions, el('p', 'read-hint', 'Select a passage to leave a free-text note. Saved notes appear in the margin. Corrections create a new version.'));
     const job = Array.isArray(state.app.jobs) ? state.app.jobs.find(item => item.id === sample.id) : null;
     if (job) header.append(renderExecutionFiles(job));
+    const related = relatedReviews(sample, state.samples);
+    if (related.length) {
+      const details = el('details', 'related-reviews');
+      details.append(el('summary', '', `Related reviews (${related.length})`));
+      const list = el('ul');
+      for (const item of related) {
+        const row = el('li');
+        if (item.sample) row.append(button(`${item.relation}: ${sampleTitle(item.sample)} (${item.id})`, () => {
+          openSample(item.id);
+          const heading = $('#trajectory-header h1');
+          if (heading) { heading.tabIndex = -1; heading.focus({preventScroll: true}); }
+        }, 'related-review-link'));
+        else row.append(el('span', 'related-review-unavailable', `${item.relation}: ${item.id} / unavailable in loaded reviews`));
+        list.append(row);
+      }
+      details.append(list);
+      header.append(details);
+    }
     $('#trajectory-header').append(header);
     const items = [...state.annotations.filter(note => note.sample_id === sample.id).map(note => ({ ...note, kind: 'annotation' })), ...pending().filter(note => note.sample_id === sample.id).map(note => ({ ...note, kind: 'suggestion' }))];
     const anchors = new Map(items.map(item => [item.id, resolveAnchor(sample, item)]));
