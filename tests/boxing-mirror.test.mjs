@@ -37,7 +37,7 @@ test('invalid reflection values never become invented observation text',()=>{
 const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 function harness({bitmapFailure=false,transferFailure=false}={}) {
   class Element {
-    constructor(){this.queries=new Map();this.children=[];this.classList={add(){},remove(){},contains(){return true}};this.readyState=2;this.paused=true;this.currentTime=12;this.videoWidth=640;this.videoHeight=480;}
+    constructor(){this.queries=new Map();this.children=[];this.classList={add(){},remove(){},toggle(){},contains(){return true}};this.readyState=2;this.paused=true;this.currentTime=12;this.videoWidth=640;this.videoHeight=480;}
     querySelector(key){if(!this.queries.has(key))this.queries.set(key,new Element());return this.queries.get(key);}
     append(...nodes){this.children.push(...nodes);} replaceChildren(...nodes){this.children=nodes;}
     setAttribute(){} pause(){this.paused=true;} async play(){this.paused=false;} removeAttribute(){} remove(){}

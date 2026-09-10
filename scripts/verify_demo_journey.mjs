@@ -41,7 +41,7 @@ try{
   await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});
  }else record('manual advance piano to boxing',false,'No visible explicit transition.');
  if(await visible('.boxing-journey-intro')){
-  await page.locator('.boxing-journey-intro [data-try]').click();await page.locator('.boxing-mirror').waitFor({state:'visible'});record('body map opens mirror',true);
+  await page.locator('.boxing-journey-intro [data-try]:visible').click();await page.locator('.boxing-mirror').waitFor({state:'visible'});record('body map opens mirror',true);
  }
  if(await visible('.boxing-mirror')){
   if(fixture){await page.locator('.boxing-mirror input[type=file]').setInputFiles(resolve(fixture));await page.locator('.boxing-mirror.is-live').waitFor();const start=page.locator('.boxing-mirror [data-round]');if(await start.isEnabled()){const mediaDuration=await page.locator('.boxing-mirror-self').evaluate(v=>v.duration);if(!Number.isFinite(mediaDuration)||mediaDuration<41)throw Error('QA video must exceed 41 seconds; short clips are not looped or counted as a full practice.');report.fixture={path:resolve(fixture),duration:mediaDuration,kind:'source-video QA, not learner performance or evidence of selected technique'};await start.click();await page.waitForTimeout(41000);const rounds=await page.evaluate(()=>JSON.parse(localStorage.getItem('astral.learning-path-drafts.v1')||'{}').movement?.lab?.boxing_mirror?.practiceRounds||[]);record('40-second local video practice retained',rounds.some(r=>r.status==='elapsed'&&r.durationMs>=40000),rounds.map(({points,...r})=>({...r,positionSamples:points?.length})));}else record('40-second local video practice retained',false,'Practice control not enabled.');}

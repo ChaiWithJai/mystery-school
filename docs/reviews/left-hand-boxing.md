@@ -1,0 +1,9 @@
+# Left uppercut and left hook
+
+Jai redirected the movement screen to two left-hand punches and positive completion feedback. The primary entrance now shows two animated paths, a short cue, and “Try both in my mirror.” The five foundational lessons remain under “More from the school.” The illustration is an authored explanation, not captured motion.
+
+The drill uses anatomical left-hand metadata from the existing detector; CSS camera mirroring does not swap that metadata. Only matching lesson/session/hand/type estimates advance the two targets. Missing hand identity is no longer assumed to mean left. The cue moves from uppercut to hook as estimates arrive, and both estimates trigger a positive visual response. An explicit completion report also receives congratulations, independently of detector output. Neither proves technique or mastery. Reports persist in `drillReports` and emit observable events.
+
+Source: Andrii Khotin's tutorial linked by the existing curriculum. Captions and actual video frames were inspected for lead hook at 30:24–31:04 and lead uppercut at 40:19–40:43. The latter is a long-range variant. Left means lead here only under the stated orthodox stance. The right-hand guard cue is anchored at 09:08–09:16; the exhale cue at 14:21–14:28. Slow solo practice and the simplified arrows are our adaptation. No attribution to Derek James is claimed.
+
+Actual Chromium at 1080×592 verified primary entry, both explanation tabs, mirror entry, target visibility and explicit completion feedback. A separate synthetic adapter check verified matching left estimates versus pending movements and preserved completion reports; it is not a test of a human throwing these punches. All 298 JavaScript tests pass. Existing camera/worker cleanup and forty-second practice remain unchanged.
