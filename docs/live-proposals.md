@@ -75,7 +75,13 @@ log stays on the page and is explicitly separate from MLflow model traces.
 Main Neo page 103 applied the bundled proposal, invoked playback, and undid it.
 The page event log recorded the five-note candidate and four-note restoration
 without a model call or displayed error. Speaker output was not captured.
-Browser replay on a fresh checkout remains a separate delivery requirement.
+Fresh-checkout replay passed on detached commit `a58485e`, served with
+`python3 -m http.server 5194 --bind 127.0.0.1 --directory public`.
+Neo page 104 loaded `/replay.html`, applied the proposal, invoked playback and
+undid it. The local event log recorded preview, resume, apply, play, stop and
+undo, each with `model_called: false`. Four keys were restored and no error
+was displayed. The isolated checkout remained clean. No app backend, saved
+database, credentials or model process was used by the replay page.
 
 ## Ideas, September 10, 2026
 
