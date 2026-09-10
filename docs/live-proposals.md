@@ -106,3 +106,21 @@ the model comparison. No additional model call was made for replay.
 The current comparison is still text. It does not establish the requested
 playable story, a completed classics curriculum, or a learning result. The visual
 renderer must make the choice actionable rather than merely restyle the prose.
+
+### Applied version and MLflow readback
+
+Main reapplied the recorded ideas proposal, saved it through the Keep panel,
+then reloaded its exact URL in Neo page 102. Artifact
+`d4c7d7c5-6e51-4308-b97e-3cf8e1f95c5f` restored the proposed comparison.
+API assertions confirmed the comparison exactly matches the model result,
+both earlier learner interpretations remain unchanged, source links survive,
+and the original artifact is the parent. Eleven event links were retained;
+the record reports no failed, omitted or unrecoverable event links for this save.
+
+Apply event `77451ab3-a4a1-4888-8a49-605edb74bb2a` identifies the original
+model job. Direct MLflow client reads confirmed the saved-artifact trace
+`tr-73e1e4a691fee6f245642871328cc04a`, apply trace
+`tr-cd652f2e725c97770f87359cd215cbd3`, and model trace
+`tr-f3c49523ae4c69c5d2be23d7327a4053` exist with one, one and five spans
+respectively. The check establishes retrievable trace records, not continuous
+screen recording or hidden model reasoning.
