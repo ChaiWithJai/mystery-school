@@ -7,11 +7,39 @@
   "evidence_kind": "synthetic_test_specification",
   "scope": "Three required pathways; M5 owns product integration. These probes do not establish learner efficacy.",
   "common_protocol": {
-    "sequence": ["care", "try", "needed_concept", "own_artifact", "share", "new_question"],
+    "sequence": [
+      "care",
+      "try",
+      "needed_concept",
+      "own_artifact",
+      "share",
+      "new_question"
+    ],
     "delivery": "Offer a changed case before revealing its answer. Accept speech, pointing, drawing, sound, movement or text. Do not require polished English or a written rationale to begin.",
     "imprints": "Situational needs may change within a person; do not assign fixed learner types or score compliance, fluency or activity volume.",
-    "record_fields": ["commit_sha", "route", "source_event_id", "actor_role", "evidence_kind", "artifact_before_id", "artifact_after_id", "trace_id", "sample_id", "prompt", "first_attempt", "assistance", "revised_attempt", "observed_result", "verification_status"],
-    "verification_statuses": ["observed_pass", "observed_fail", "not_observed", "not_supported"],
+    "record_fields": [
+      "commit_sha",
+      "route",
+      "source_event_id",
+      "actor_role",
+      "evidence_kind",
+      "artifact_before_id",
+      "artifact_after_id",
+      "trace_id",
+      "sample_id",
+      "prompt",
+      "first_attempt",
+      "assistance",
+      "revised_attempt",
+      "observed_result",
+      "verification_status"
+    ],
+    "verification_statuses": [
+      "observed_pass",
+      "observed_fail",
+      "not_observed",
+      "not_supported"
+    ],
     "assistance": "Record hints, supplied answers and facilitator actions separately. Preserve the first attempt; assisted success does not overwrite it.",
     "provenance": "Distinguish scripted character activity, agent review, real learner observation and human judgment. Label staged sharing. Keep unknown telemetry unknown. Preserve original event and artifact lineage.",
     "scope_check": "A functioning central interaction and the complete circle are required in each pathway; these probes inspect one relationship per pathway and do not replace whole-path acceptance."
@@ -24,19 +52,76 @@
       "capability": "Relate a change in attack duration to the rate of change of a defined amplitude envelope while keeping pitch fixed.",
       "assumptions": [
         "This fixture uses a linear normalized amplitude attack envelope, not a complete physical piano model.",
-        "Carrier frequency remains 440 Hz, target envelope amplitude remains 1, and only attack duration changes.",
+        "The same C4/E4/G4/C5 sine-tone phrase is retained in both versions; target normalized envelope amplitude remains 1 and only attack duration changes.",
         "Baseline envelope a(t)=t/T for 0<t<T, starting at 0 and reaching 1 at T; later envelope stages are outside this probe.",
         "For a different implemented envelope, preserve its actual formula and derive its rate relationship before using this fixture as an exact oracle."
       ],
-      "baseline": {"carrier_frequency_hz": 440, "target_normalized_amplitude": 1, "attack_duration_seconds": 0.2},
-      "changed_case": {"carrier_frequency_hz": 440, "target_normalized_amplitude": 1, "attack_duration_seconds": 0.4},
+      "baseline": {
+        "target_normalized_amplitude": 1,
+        "attack_duration_seconds": 0.2,
+        "phrase_notes": [
+          {
+            "name": "C4",
+            "frequency_hz": 261.625565
+          },
+          {
+            "name": "E4",
+            "frequency_hz": 329.627557
+          },
+          {
+            "name": "G4",
+            "frequency_hz": 391.995436
+          },
+          {
+            "name": "C5",
+            "frequency_hz": 523.251131
+          }
+        ]
+      },
+      "changed_case": {
+        "target_normalized_amplitude": 1,
+        "attack_duration_seconds": 0.4,
+        "phrase_notes": [
+          {
+            "name": "C4",
+            "frequency_hz": 261.625565
+          },
+          {
+            "name": "E4",
+            "frequency_hz": 329.627557
+          },
+          {
+            "name": "G4",
+            "frequency_hz": 391.995436
+          },
+          {
+            "name": "C5",
+            "frequency_hz": 523.251131
+          }
+        ]
+      },
       "prompt": "Keep the note and its target level the same. Make its rise take twice as long. Before trying it, show what you expect the envelope graph and its steepness to do. Then listen, compare and choose what serves your song.",
       "expected_checks": [
-        {"check": "attack_duration", "expected": "Attack duration doubles from 0.2 s to 0.4 s."},
-        {"check": "envelope_rate", "expected": "On the interior of each linear attack, da/dt changes from 5 normalized-amplitude units/s to 2.5 units/s; the rate halves."},
-        {"check": "fixed_pitch", "expected": "Carrier remains 440 Hz in both cases. Changing attack duration does not change carrier frequency or note pitch in this model."},
-        {"check": "fixed_endpoint", "expected": "Both attacks reach the same target normalized amplitude 1; the changed case reaches it later."},
-        {"check": "derivative_boundary", "expected": "Do not assert the piecewise envelope derivative exists at corners, or confuse envelope derivative with the derivative of the oscillating audio waveform."}
+        {
+          "check": "attack_duration",
+          "expected": "Attack duration doubles from 0.2 s to 0.4 s."
+        },
+        {
+          "check": "envelope_rate",
+          "expected": "On the interior of each linear attack, da/dt changes from 5 normalized-amplitude units/s to 2.5 units/s; the rate halves."
+        },
+        {
+          "check": "fixed_pitch",
+          "expected": "C4/E4/G4/C5 retain their respective frequencies 261.625565, 329.627557, 391.995436 and 523.251131 Hz. Attack duration changes no note frequency; this is a fixed phrase, not a single 440 Hz carrier."
+        },
+        {
+          "check": "fixed_endpoint",
+          "expected": "Both attacks reach the same target normalized amplitude 1; the changed case reaches it later."
+        },
+        {
+          "check": "derivative_boundary",
+          "expected": "Do not assert the piecewise envelope derivative exists at corners, or confuse envelope derivative with the derivative of the oscillating audio waveform."
+        }
       ],
       "artifact": "Saved before/after attack settings, audible output, envelope graph and learner annotation or facilitated description tied to the musical choice.",
       "share_and_new_question": "A labeled sharing response asks whether another attack duration would suit a different phrase; retain the learner's chosen next experiment or disagreement.",
@@ -54,14 +139,34 @@
         "This is a labeled simulation or comparison; numbers are not represented as measured athlete data.",
         "No impact-force claim is derived from motion endpoints or video."
       ],
-      "baseline": {"start_position_m": 0, "end_position_m": 0.4, "duration_seconds": 0.5},
-      "changed_case": {"start_position_m": 0, "end_position_m": 0.4, "duration_seconds": 1.0},
+      "baseline": {
+        "start_position_m": 0,
+        "end_position_m": 0.4,
+        "duration_seconds": 2
+      },
+      "changed_case": {
+        "start_position_m": 0,
+        "end_position_m": 0.4,
+        "duration_seconds": 4
+      },
       "prompt": "Move through the same distance but take twice as long. Before running the comparison, show what you expect the average velocity to do. Can two different movement shapes have that same average?",
       "expected_checks": [
-        {"check": "fixed_distance", "expected": "Both cases cover 0.4 m; changed duration is 1.0 s, twice the original 0.5 s."},
-        {"check": "average_velocity", "expected": "Average velocity is displacement/duration: +0.8 m/s initially and +0.4 m/s after the change, so it halves."},
-        {"check": "average_speed", "expected": "Under the monotonic-path assumption, average speeds are 0.8 and 0.4 m/s. Reversals would require a separate total-distance calculation."},
-        {"check": "inference_limit", "expected": "Endpoints and duration do not determine instantaneous velocity or acceleration. A constant-velocity interpolation is a stated model assumption, not measured fact."}
+        {
+          "check": "fixed_distance",
+          "expected": "Both cases cover 0.4 m; changed duration is 4 s, twice the original 2 s. Both values are reachable in the implemented 1\u20134 s control."
+        },
+        {
+          "check": "average_velocity",
+          "expected": "Average velocity is displacement/duration: +0.2 m/s initially and +0.1 m/s after the change, so it halves."
+        },
+        {
+          "check": "average_speed",
+          "expected": "Under the monotonic-path assumption, average speeds are 0.2 and 0.1 m/s. Reversals would require a separate total-distance calculation."
+        },
+        {
+          "check": "inference_limit",
+          "expected": "Endpoints and duration do not determine instantaneous velocity or acceleration. A constant-velocity interpolation is a stated model assumption, not measured fact."
+        }
       ],
       "artifact": "Inspectable before/after movement comparison with positions, units, duration, model labels and the learner's prediction or annotation.",
       "share_and_new_question": "A labeled teammate response asks whether pausing midway could retain the same average velocity. The learner sketches or describes a revised trajectory.",
@@ -88,16 +193,32 @@
       "changed_case": "Preserve the first interpretation. Offer this explicitly authored alternative: 'You can choose whether and how to challenge an unfair rule even when you cannot guarantee that others will change it.' This is a discussion proposal, not an Epictetus quotation or uniquely correct reading. Apply an unfair-rule counterexample: a club rule excludes a teammate; the learner may ask for a change but cannot control the committee's decision. Retain the learner's revision or reasoned disagreement.",
       "prompt": "Compare your first reading with this authored alternative. What does section 1 support or leave unsettled? In the unfair-rule case, what would your account suggest doing, and why? Show what you would revise or keep; you can disagree with either reading.",
       "expected_checks": [
-        {"check": "source_identity", "expected": "The book anchor identifies Epictetus, Enchiridion section 1, Elizabeth Carter translation at the MIT Internet Classics Archive URL. A video contribution remains unverified until its URL, time range and actual content are supplied and inspected."},
-        {"check": "attribution", "expected": "Source claim, commentator interpretation, personal inference and generated suggestion remain distinct."},
-        {"check": "reasoned_revision", "expected": "The learner revises or retains an account with a reason tied to source evidence or an explicitly labeled inference; agreement with the model is not required."},
-        {"check": "fresh_case", "expected": "The learner applies or limits their account in the unfair-rule case, distinguishes their proposed action from control over others' decision, and retains a revision or reasoned disagreement."},
-        {"check": "uncertainty", "expected": "Section 1 is not presented as uniquely settling activism versus passivity. Rival interpretations and the unfair-rule application are authored discussion material. No missing video, quotation or definitive philosophical answer is invented."}
+        {
+          "check": "source_identity",
+          "expected": "The book anchor identifies Epictetus, Enchiridion section 1, Elizabeth Carter translation at the MIT Internet Classics Archive URL. A video contribution remains unverified until its URL, time range and actual content are supplied and inspected."
+        },
+        {
+          "check": "attribution",
+          "expected": "Source claim, commentator interpretation, personal inference and generated suggestion remain distinct."
+        },
+        {
+          "check": "reasoned_revision",
+          "expected": "The learner revises or retains an account with a reason tied to source evidence or an explicitly labeled inference; agreement with the model is not required."
+        },
+        {
+          "check": "fresh_case",
+          "expected": "The learner applies or limits their account in the unfair-rule case, distinguishes their proposed action from control over others' decision, and retains a revision or reasoned disagreement."
+        },
+        {
+          "check": "uncertainty",
+          "expected": "Section 1 is not presented as uniquely settling activism versus passivity. Rival interpretations and the unfair-rule application are authored discussion material. No missing video, quotation or definitive philosophical answer is invented."
+        }
       ],
       "artifact": "Versioned sourced map, short argument or narrated account retaining the original, rival interpretation and learner response.",
       "share_and_new_question": "A labeled discussion response asks about an assumption in the account; the learner revises, disagrees with a reason or carries a new question forward.",
       "insufficient_evidence": "Citation decoration, a fluent summary or repeating an AI answer does not establish interpretation or transfer. Personal model means an evolving account, not trained model weights.",
       "verification_status": "not_observed"
     }
-  ]
+  ],
+  "implementation_binding_commit": "7ec7324"
 }
