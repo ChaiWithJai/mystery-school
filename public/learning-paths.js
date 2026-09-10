@@ -108,7 +108,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       copy.onclick=async()=>{copy.disabled=true;status.textContent='Copying link...';status.textContent=await copySavedVersion(url,navigator.clipboard);copy.disabled=false;};
       box.append(link,copy,address,status,scope);return box;
     }
-    const savedLinks=document.createElement('div');q('[data-status]').after(savedLinks);
+    const savedLinks=document.createElement('div');q('.learning-versions').append(savedLinks);
     if(artifactId)savedLinks.replaceChildren(versionLinks({id:artifactId}));
     q('[data-other]').onclick=chooser;
     root.querySelectorAll('[data-panel]').forEach(button=>button.onclick=()=>{
@@ -164,6 +164,19 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       const host=document.createElement('div'),physics=document.createElement('details'),summary=document.createElement('summary');physics.className='universe-physics';summary.textContent='∿ Look closer at the motion';physics.append(summary,q('.movement-lab'));q('[data-lab]').append(host,physics);
       const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Enter a story →';next.hidden=!(draft.lab.boxing_round?.attempts?.length);host.after(next);next.onclick=async()=>{next.disabled=true;try{await save(draft.parentId?'revision':'attempt');await open('ideas');}catch(error){next.disabled=false;toast(error.message);}};
       boxingGame=mountBoxingGame(host,{getSettings:()=>structuredClone(draft.lab),initialState:draft.lab.boxing_round||{},onChange:state=>{draft.lab.boxing_round=structuredClone(state);next.hidden=!state.attempts.length;keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
+    }
+    // Preserve adapter query roots while exposing their panels through one menu.
+    const transport=q('.piano-practice__transport');
+    if(transport)q('.piano-practice__options').append(transport);
+    const tuning=q('.bg-tuning');
+    if(tuning){const panel=document.createElement('details');panel.className='play-opponent';const label=document.createElement('summary');label.textContent='Adjust opponent';tuning.before(panel);panel.append(label,tuning);}
+    for(const selector of ['.piano-practice__options','.song-lab__variations','.universe-physics','.bg-notebook','.play-opponent','.ideas-lab__video']){
+      const panel=q(selector);if(!panel)continue;
+      const button=document.createElement('button');button.className='text-button';button.textContent=panel.querySelector('summary').textContent;
+      panel.hidden=true;panel.classList.add('play-support-panel');
+      button.onclick=()=>{panel.hidden=false;panel.open=true;tools.open=false;panel.querySelector('summary').focus();};
+      panel.addEventListener('toggle',()=>{if(!panel.open){panel.hidden=true;tools.open=true;button.focus();}});
+      tools.append(button);
     }
     const recordedJob=new URLSearchParams(location.search).get('experiment');
     if(ready&&artifactId&&recordedJob){

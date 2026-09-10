@@ -21,6 +21,7 @@ export function mountSongLab(container, { initialState = {}, onChange = () => {}
   advanced.append(summary, variationHost); root.append(pianoHost, advanced); container.append(root);
   const publish = () => { if (!disposed && !applying) onChange(structuredClone(state)); };
   const piano = mountPianoPractice(pianoHost, {
+    autoCapture: true,
     initialState: state.practice,
     onChange: practice => { state.practice = structuredClone(practice); publish(); },
     onEvent: (type, payload) => onEvent('performance.' + type, payload)

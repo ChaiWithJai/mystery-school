@@ -58,7 +58,7 @@ export function performanceNotes(value) {
   return notes;
 }
 
-export function mountPianoPractice(container, { initialState = {}, onChange = () => {}, onEvent = () => {} } = {}) {
+export function mountPianoPractice(container, { initialState = {}, onChange = () => {}, onEvent = () => {}, autoCapture = false } = {}) {
   let state = normalizePianoState(initialState);
   let disposed = false;
   let context;
@@ -169,6 +169,18 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   async function down(midi, source) {
     if (disposed || held.has(source)) return;
     if (replaying) stop();
+    if (autoCapture && !recording) {
+      if (state.duration >= 600 || state.events.length >= 4000) {
+        fail(new Error('This take is full. Keep it before starting a new take.'));
+        return;
+      }
+      // Resume the existing take instead of silently replacing a learner's work.
+      started = performance.now() - state.duration * 1000;
+      recording = true;
+      limitTimer = setTimeout(stop, (600 - state.duration) * 1000);
+      render();
+      emit('record_start', { source: 'key_press', resumed: state.events.length > 0 });
+    }
     const already = [...held.values()].includes(midi);
     held.set(source, midi);
     if (already) return;

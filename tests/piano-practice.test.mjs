@@ -74,6 +74,21 @@ test('mount never starts audio, full-state callback and atomic setter/cleanup', 
   api();api();assert.throws(()=>api.setState(take));
 });
 
+test('play-first capture starts on a key and preserves the previous take when resumed', async t => {
+  const h=harness(t);const events=[];
+  const api=mountPianoPractice(h.host,{autoCapture:true,initialState:take,onEvent:(...args)=>events.push(args)});
+  assert.equal(h.audio.contexts.length,0);
+  const key=h.find('.piano-practice__keyboard').children[12];
+  await key.fire('pointerdown',{button:0,pointerId:1});
+  await key.fire('pointerup',{pointerId:1});
+  await h.find('[data-stop]').fire('click');
+  assert.deepEqual(api.getState().events.slice(0,4),take.events);
+  assert.equal(api.getState().events.length,6);
+  assert.ok(api.getState().events[4].time>=take.duration);
+  assert.deepEqual(events.find(([type])=>type==='record_start')[1],{source:'key_press',resumed:true});
+  api();
+});
+
 test('initial markup is instrument-first with only three primary controls and collapsed options', t => {
   const h=harness(t);const api=mountPianoPractice(h.host);
   const markup=h.host.children[0].html;

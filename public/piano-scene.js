@@ -9,7 +9,7 @@ export function mountPianoScene(container,adapter,track,onContinue){
   const invitation=scene.querySelector('.piano-scene__invitation');
   const referenceButton=scene.querySelector('.piano-scene__listen');
   const feedback=invitation.querySelector('p');
-  feedback.textContent='Hear it. Then try E6 twice.';
+  feedback.textContent='Try the glowing key.';
   const demonstration=document.createElement('button');demonstration.className='piano-scene__listen';demonstration.textContent='Hear the opening';
   demonstration.onclick=()=>{void adapter.demonstrate(createOpeningDemoTake());track('lesson.demonstrate',{source:RUNAWAY_OPENING_SOURCE,kind:'notation_exercise',learner_attempt:false});};
   invitation.append(demonstration);
@@ -29,10 +29,10 @@ export function mountPianoScene(container,adapter,track,onContinue){
   function render(){if(disposed)return;const state=adapter.getState().practice;if(!state)return;next.hidden=!state.events.some(event=>event.type==='off');const notes=performanceNotes(state),lines=scene.querySelector('[data-take-lines]');lines.replaceChildren();const duration=Math.max(4,state.duration);
     for(const note of notes){const x=45+note.start/duration*1010,y=pianoScenePoint(note.midi).y;lines.append(el('rect',{x,y,width:Math.max(5,(note.end-note.start)/duration*1010),height:9,rx:4,fill:'#d8c4a5',opacity:.7}));}
     const lights=scene.querySelector('[data-held-lights]');lights.replaceChildren();for(const midi of held){const {x}=pianoScenePoint(midi);lights.append(el('path',{d:`M${x} 320Q${x-35} 180 ${x} 80`,stroke:'#f1d3a0','stroke-width':3,fill:'none',class:'piano-scene__beam'}));lights.append(el('circle',{cx:x,cy:80,r:14,fill:'#ffedc3'}));const text=el('text',{x,y:45,'text-anchor':'middle',fill:'#fff0d1'});text.textContent=noteName(midi);lights.append(text);}}
-  function event(type,payload){if(type==='performance.note_on')held.add(payload.midi);if(type==='performance.note_off')held.delete(payload.midi);if(type==='performance.stop'){
-    held.clear();const comparison=analyzeOpening(adapter.getState().practice);
+  function event(type,payload){if(type==='performance.note_on')held.add(payload.midi);if(type==='performance.note_off')held.delete(payload.midi);if(type==='performance.stop'||type==='performance.note_off'){
+    if(type==='performance.stop')held.clear();const comparison=analyzeOpening(adapter.getState().practice);
     if(comparison.status==='compared'){
-      feedback.textContent=`First two strikes: ${comparison.pitches.map(p=>noteName(p.actual_midi)).join(', ')}. ${comparison.interval_seconds.toFixed(2)}s apart; try E6 twice, 1.50s apart.`;
+      feedback.textContent=comparison.pitches.some(p=>!p.matches_target)?'Try the glowing key.':Math.abs(comparison.interval_difference_seconds)<.2?'Keep that rhythm.':comparison.interval_difference_seconds>0?'A little closer together.':'Leave a little more space.';
       track('lesson.compare',{...comparison,learner_outcome_claimed:false});
     }
   }render();}

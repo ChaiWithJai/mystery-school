@@ -1,0 +1,18 @@
+/* The scene owns the viewport. Tools are requested, never prerequisites. */
+.learning-drawer .play-support-panel[hidden]{display:none!important}
+.learning-drawer .play-support-panel[open]{position:fixed!important;inset:80px 28px auto auto!important;width:min(440px,80vw);max-height:70vh;box-sizing:border-box;overflow:auto;z-index:40;padding:24px!important;background:#142b24!important;border:1px solid #b4c09b55!important;border-radius:18px;color:#e9dfc5}
+.play-support-panel>summary{cursor:pointer;min-height:32px}
+.universe-tools>button{display:block;width:100%;text-align:left;margin:8px 0}
+.learning-drawer .piano-practice__key{font-size:0!important}
+.learning-drawer .piano-practice__key:is(:hover,:focus-visible,.is-lesson-target){font-size:11px!important}
+.learning-drawer .piano-practice>[data-take],.learning-drawer .piano-practice__hint{display:none}
+.learning-drawer .boxing-game{height:calc(100dvh - 110px);min-height:540px}
+.learning-drawer .bg-ring{height:75%;max-height:none}
+.learning-drawer .bg-film-title span{display:none}
+.learning-drawer .bg-instruction{margin:12px 0;font-size:12px}
+.learning-drawer .bg-coach{font-size:16px}
+.learning-drawer .bg-replay{position:absolute;bottom:12px;left:25%;right:25%;padding:0}
+.learning-drawer .bg-controls .bg-start{min-width:150px}
+.learning-drawer .bg-prediction text{opacity:0}
+.learning-drawer .bg-prediction:is(:hover,:focus) text{opacity:1}
+.learning-drawer .universe-next{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);z-index:22}
