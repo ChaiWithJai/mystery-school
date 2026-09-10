@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {validateExperimentProposal, proposedLabState} from '../public/experiment-proposal.js';
 import {normalizeSongState} from '../public/song-lab.js';
 
-const fixture = JSON.parse(readFileSync(new URL('./fixtures/recorded-music-proposal.json', import.meta.url), 'utf8'));
+const fixture = JSON.parse(readFileSync(new URL('../public/fixtures/recorded-music-proposal.json', import.meta.url), 'utf8'));
 
 test('recorded Astra music proposal preserves the opening and changes the ending', () => {
   const before = structuredClone(fixture.initial_state);

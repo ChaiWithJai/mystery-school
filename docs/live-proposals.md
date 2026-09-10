@@ -64,12 +64,18 @@ capture, song comparison, timing accuracy or learner result is claimed.
 
 ## Public replay check
 
-`tests/fixtures/recorded-music-proposal.json` contains the exact experiment field
+`public/fixtures/recorded-music-proposal.json` contains the exact experiment field
 from the completed music job, its starting phrase and provenance. It omits the
 rest of the job and private runtime paths. `npm test` validates the recorded
 proposal and retained performance state without network access or inference.
-The preservation test uses a labeled synthetic take. Browser replay on a fresh
-checkout remains a separate delivery requirement.
+The preservation test uses a labeled synthetic take. `/replay.html` loads the
+bundled output through the real lab and proposal controller with a read-only
+local adapter. It cannot submit inference or save a backend artifact. Its event
+log stays on the page and is explicitly separate from MLflow model traces.
+Main Neo page 103 applied the bundled proposal, invoked playback, and undid it.
+The page event log recorded the five-note candidate and four-note restoration
+without a model call or displayed error. Speaker output was not captured.
+Browser replay on a fresh checkout remains a separate delivery requirement.
 
 ## Ideas, September 10, 2026
 
