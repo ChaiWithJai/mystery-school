@@ -21,6 +21,7 @@ try {
   instrument = mountMusicLab(document.querySelector('#instrument'), {
     initialState:state, onChange:value => {state = structuredClone(value);}, onEvent:track
   });
+  document.querySelectorAll('#instrument details').forEach(details => {details.open = false;});
   controller = mountLearningExperiment(document.querySelector('#proposal'), {
     api:async (route, payload) => {
       if (payload !== undefined) throw Error('Recorded replay cannot send model requests.');
