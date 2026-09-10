@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5ee">
+  <title>Trajectory review | Astral School</title>
+  <link rel="stylesheet" href="/review.css">
+  <script src="/review.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="Back to Astral School"><span class="brand-symbol" aria-hidden="true">a<span>*</span></span><span>Astral School<small>A sandbox for intuition</small></span></a>
+    <nav class="view-tabs" aria-label="Review views">
+      <button type="button" data-view="content" aria-current="page">Content</button>
+      <button type="button" data-view="map">Map</button>
+      <button type="button" data-view="progress">Progress <span id="pending-count"></span></button>
+    </nav>
+    <div class="header-actions"><span id="save-status" role="status">Connecting...</span><button id="backup" class="quiet" type="button">Export backup</button></div>
+  </header>
+  <div id="notices" aria-live="polite"></div>
+  <div id="recovery" class="recovery" hidden><span>A note draft is saved on this device.</span><button id="restore-draft" type="button">Resume note</button><button id="discard-draft" class="quiet" type="button">Discard draft</button></div>
+  <main>
+    <section id="content-view" class="view" aria-label="Trajectory content">
+      <aside class="record-sidebar">
+        <div class="sidebar-heading"><p class="eyebrow">Field notes / review</p><h1>Follow the<br>thought forward.</h1><p class="intro">Read what happened. Notice what could be better.</p></div>
+        <label class="search-label" for="record-search">Find a trajectory</label><input id="record-search" type="search" placeholder="Search title, model, world..." autocomplete="off">
+        <div class="list-meta"><span id="record-count">Loading records</span><button type="button" id="refresh" class="text-button">Refresh</button></div>
+        <div id="record-list" class="record-list" aria-label="Trajectories"></div>
+        <p class="sidebar-footnote">App events and model runs are distinct records. A run's status is not a human quality judgment.</p>
+      </aside>
+      <div class="reader-shell">
+        <div id="trajectory-header"></div>
+        <div id="reader-empty" class="empty-state"><span class="empty-glyph" aria-hidden="true">*</span><h2>Opening the field book.</h2><p>Loading saved trajectories from this school.</p></div>
+        <div id="reading-layout" class="reading-layout" hidden><article id="messages" aria-label="Observable trajectory messages"></article><aside id="margin-notes" class="margin-notes" aria-label="Notes and suggestions"></aside></div>
+        <footer id="reader-footer" class="reader-footer" hidden><button id="previous-record" type="button" class="quiet">Previous trajectory</button><span id="record-position"></span><button id="next-record" type="button" class="quiet">Next trajectory</button></footer>
+      </div>
+    </section>
+    <section id="map-view" class="view wide-view" aria-label="Trajectory map" hidden>
+      <div class="section-heading"><div><p class="eyebrow">The shape of the collection</p><h1>A wider view.</h1><p>Explore nearby trajectories, then return to the details.</p></div><span id="map-count" class="count-label"></span></div>
+      <div id="map-container" class="map-container"></div><div id="map-legend" class="map-legend"></div>
+      <p class="fine-print">Positions come from the server's structural features: trajectory length, tools, time, tokens, and outcome. Small collections use deterministic positions. Distance and clusters are not quality judgments. Bordered nodes belong to the review set; a brass ring means a saved human note.</p>
+    </section>
+    <section id="progress-view" class="view wide-view" aria-label="Review progress" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Notice. Name. Revisit.</p><h1>What we're learning.</h1><p>Human observations first. Patterns emerge from the notes.</p></div><div id="progress-counts" class="progress-counts"></div></div>
+      <div class="section-subheading"><h2>Failure modes</h2><span>Block area reflects saved note count</span></div><div id="failure-modes" class="failure-modes"></div>
+      <div class="section-subheading suggestions-heading"><div><h2>Suggestions to review</h2><p>Proposals from the agent. Only accepted notes count as human annotations.</p></div></div>
+      <div id="suggestion-controls" class="suggestion-controls"><label><input id="select-all-suggestions" type="checkbox"> Select all</label><button id="accept-selected" type="button">Accept selected</button><button id="dismiss-selected" type="button" class="quiet">Dismiss selected</button></div><div id="suggestion-list"></div>
+    </section>
+  </main>
+  <dialog id="note-editor" class="note-editor" aria-labelledby="note-editor-title">
+    <form id="note-form"><div class="editor-heading"><h2 id="note-editor-title">Leave a field note</h2><button id="close-editor" type="button" class="icon-button" aria-label="Close note editor">&times;</button></div><blockquote id="selected-quote"></blockquote><label for="note-text">What did you notice?</label><textarea id="note-text" rows="4" placeholder="Describe the issue or a better direction..." required></textarea><div class="editor-footer"><span>Enter to save. Shift + Enter for a new line.<br>Draft backed up on this device.</span><button id="save-note" type="submit">Save note</button></div></form>
+  </dialog>
+  <noscript><p class="noscript">Trajectory review needs JavaScript to load records and save your notes.</p></noscript>
+</body>
+</html>

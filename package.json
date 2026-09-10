@@ -1,0 +1,8 @@
+{
+  "name": "astral-school",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"check": "node --check public/app.js && node --check public/world.js && node --check public/review.js"},
+  "dependencies": {"three": "0.180.0"}
+}

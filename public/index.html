@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edece2"><title>Astral School · Imagine with Bonsai</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/refinements.css">
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/webgpu":"/vendor/three/three.webgpu.js"}}</script>
+</head>
+<body>
+  <header class="masthead">
+    <a href="/" class="brand" aria-label="Astral School home"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 34V15M20 23C5 23 6 9 8 7c11 0 12 10 12 16ZM20 19C20 8 28 4 32 5c2 11-4 14-12 14ZM10 35h20"/></svg><span>IMAGINE WITH BONSAI<span class="brand-sub">A school on your computer.</span></span></a>
+    <nav aria-label="Utilities"><button id="reference-open" class="nav-button">Bring a reference <span>↗</span></button><a href="/review.html" target="_blank" rel="noopener">Trajectory studio <span>↗</span></a><button id="journal-open" class="profile"><span class="avatar">J</span><span>Jai's notebook</span></button></nav>
+  </header>
+  <main id="school">
+    <div id="world" role="img" aria-label="An interactive grove of six floating forest islands, each representing part of Jai's school"></div>
+    <div class="world-vignette" aria-hidden="true"></div>
+    <div class="coordinates" aria-hidden="true">A PLACE BETWEEN<br>WHAT IS & WHAT COULD BE</div>
+    <section id="welcome" class="welcome">
+      <div class="eyebrow"><span class="small-star">✳</span> THE FIRST DAY OF A DIFFERENT SCHOOL</div>
+      <h1>What comes<br><em>next for us?</em></h1>
+      <p class="intro">My name is Jai. I want to run a whole school on my computer.</p>
+      <p class="invitation">A place to follow a question. Step inside a possibility. Discover something about the world, and yourself.</p>
+      <button id="enter" class="primary">Enter the school <span>↗</span></button>
+      <div class="welcome-foot"><span class="dot"></span> An explorable sketch of a possible future.</div>
+    </section>
+    <div id="world-labels" class="world-labels" aria-label="Explore the school"></div>
+    <aside id="lesson" class="lesson hidden" aria-live="polite">
+      <div class="lesson-top"><span id="lesson-number" class="eyebrow"></span><button id="overview" class="icon-button" aria-label="Return to school overview">↙</button></div>
+      <h2 id="lesson-title"></h2><p id="lesson-story" class="lesson-story"></p>
+      <div class="question-card"><span class="eyebrow">A QUESTION TO CARRY</span><p id="lesson-question"></p></div>
+      <div id="choices" class="choices"></div><p id="consequence" class="consequence hidden"></p>
+      <div class="lesson-actions"><button id="imagine-open" class="primary">Imagine another way <span>✳</span></button><button id="reflect-open" class="text-button">Keep a thought <span>+</span></button></div>
+      <button id="evidence-open" class="source-link">What is this based on? <span>↗</span></button>
+    </aside>
+    <div id="scene-caption" class="scene-caption"><span class="caption-rule"></span><span>Six small worlds. One growing school.</span></div>
+    <footer class="world-footer">
+      <button id="home-view" class="text-button light"><span>⌘</span> The whole school</button>
+      <div class="lens-control" aria-label="View a different possibility"><span class="lens-label">WHAT IF...</span><button data-lens="alone" aria-pressed="false">I explore alone</button><button data-lens="together" class="active" aria-pressed="true">We learn together</button><button data-lens="open" aria-pressed="false">Anyone can build</button></div>
+      <div class="view-controls"><button id="zoom-out" class="icon-button" aria-label="Zoom out">−</button><button id="zoom-in" class="icon-button" aria-label="Zoom in">+</button><button id="motion" class="icon-button" aria-label="Pause motion" aria-pressed="false">Ⅱ</button></div>
+    </footer>
+    <span id="render-status" class="render-status">Preparing your school…</span>
+  </main>
+  <div id="shade" class="shade hidden"></div>
+  <section id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <header><span id="drawer-kicker" class="eyebrow">YOUR SCHOOL</span><button id="drawer-close" class="icon-button" aria-label="Close panel">×</button></header><h2 id="drawer-title"></h2><div id="drawer-body"></div>
+  </section>
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

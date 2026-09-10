@@ -1,0 +1,10 @@
+.lesson{background:#f3f1e9}
+.scene-caption{max-width:52%;white-space:normal;text-align:center;font-size:17px}
+.error-detail{white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;font-size:10px}
+.drawer label small{font-weight:400;color:#727b68}
+.projection-entry{padding:16px 0;border-bottom:1px solid var(--line)}
+.projection-entry h3{font-family:var(--serif);font-size:24px;font-weight:500;margin:8px 0}
+.projection-entry .meta{font-size:9px;color:var(--muted)}
+.projection-entry p{margin:8px 0}
+.projection-entry .text-button{display:inline-flex;margin-right:18px;text-decoration:underline;text-underline-offset:4px}
+@media (min-width:1200px) and (max-height:850px){.welcome{top:7%}.welcome h1{font-size:76px;margin:22px 0}.intro{font-size:24px}.invitation{margin-bottom:20px}.welcome-foot{margin-top:16px}.lesson{top:26px}}

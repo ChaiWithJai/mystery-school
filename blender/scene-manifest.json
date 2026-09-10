@@ -1,0 +1,180 @@
+{
+  "units": "meters",
+  "up": "Y",
+  "central": {
+    "node": "island_library",
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "radius": 3.3
+  },
+  "satellites": [
+    {
+      "id": "memory",
+      "position": [
+        9.2,
+        0,
+        0.0
+      ],
+      "radius": 2.0,
+      "node": "island_memory"
+    },
+    {
+      "id": "questions",
+      "position": [
+        4.6,
+        0,
+        7.967434
+      ],
+      "radius": 2.0,
+      "node": "island_questions"
+    },
+    {
+      "id": "experiments",
+      "position": [
+        -4.6,
+        0,
+        7.967434
+      ],
+      "radius": 2.0,
+      "node": "island_experiments"
+    },
+    {
+      "id": "futures",
+      "position": [
+        -9.2,
+        0,
+        0.0
+      ],
+      "radius": 2.0,
+      "node": "island_futures"
+    },
+    {
+      "id": "people",
+      "position": [
+        -4.6,
+        0,
+        -7.967434
+      ],
+      "radius": 2.0,
+      "node": "island_people"
+    },
+    {
+      "id": "reflection",
+      "position": [
+        4.6,
+        0,
+        -7.967434
+      ],
+      "radius": 2.0,
+      "node": "island_reflection"
+    }
+  ],
+  "bounds": {
+    "min": [
+      -11.346264839172363,
+      -3.3701012134552,
+      -10.169098854064941
+    ],
+    "max": [
+      11.397592544555664,
+      5.980477333068848,
+      10.078470230102539
+    ]
+  },
+  "blender_version": "5.2.1 LTS",
+  "seed": 41,
+  "lights_exported": false,
+  "density_control": {
+    "connection_node": "connections",
+    "preserved_landmark": "central oak and library",
+    "islands": [
+      {
+        "anchor": "island_library",
+        "nodes": [
+          "foliage_library_0",
+          "foliage_library_1",
+          "foliage_library_2",
+          "foliage_library_3",
+          "foliage_library_4"
+        ],
+        "batch_count": 5
+      },
+      {
+        "anchor": "island_memory",
+        "nodes": [
+          "foliage_memory_0",
+          "foliage_memory_1",
+          "foliage_memory_2",
+          "foliage_memory_3",
+          "foliage_memory_4",
+          "foliage_memory_5"
+        ],
+        "batch_count": 6
+      },
+      {
+        "anchor": "island_questions",
+        "nodes": [
+          "foliage_questions_0",
+          "foliage_questions_1",
+          "foliage_questions_2",
+          "foliage_questions_3",
+          "foliage_questions_4",
+          "foliage_questions_5"
+        ],
+        "batch_count": 6
+      },
+      {
+        "anchor": "island_experiments",
+        "nodes": [
+          "foliage_experiments_0",
+          "foliage_experiments_1",
+          "foliage_experiments_2",
+          "foliage_experiments_3",
+          "foliage_experiments_4",
+          "foliage_experiments_5"
+        ],
+        "batch_count": 6
+      },
+      {
+        "anchor": "island_futures",
+        "nodes": [
+          "foliage_futures_0",
+          "foliage_futures_1",
+          "foliage_futures_2",
+          "foliage_futures_3",
+          "foliage_futures_4",
+          "foliage_futures_5"
+        ],
+        "batch_count": 6
+      },
+      {
+        "anchor": "island_people",
+        "nodes": [
+          "foliage_people_0",
+          "foliage_people_1",
+          "foliage_people_2",
+          "foliage_people_3",
+          "foliage_people_4",
+          "foliage_people_5"
+        ],
+        "batch_count": 6
+      },
+      {
+        "anchor": "island_reflection",
+        "nodes": [
+          "foliage_reflection_0",
+          "foliage_reflection_1",
+          "foliage_reflection_2",
+          "foliage_reflection_3",
+          "foliage_reflection_4",
+          "foliage_reflection_5"
+        ],
+        "batch_count": 6
+      }
+    ],
+    "visibility_rule": "batch_index < ceil(clamp(tree_density, 0, 1) * batch_count)"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "verified": true,
+  "blender_version": "5.2.1 LTS",
+  "authored_mesh_objects": 1079,
+  "glb_mesh_objects": 49,
+  "glb_materials": 13,
+  "glb_primitives": 265,
+  "glb_triangles": 37678,
+  "imported_bounds_y_up": {
+    "min": [
+      -11.261719703674316,
+      -3.3701012134552,
+      -10.089102745056152
+    ],
+    "max": [
+      11.286115646362305,
+      5.723086833953857,
+      9.973097801208496
+    ]
+  },
+  "preview_dimensions": [
+    1600,
+    1300
+  ],
+  "files": {
+    "school.blend": 624929,
+    "school.glb": 2730116,
+    "school-preview.png": 2296002
+  },
+  "foliage_nodes": [
+    "foliage_library_0",
+    "foliage_library_1",
+    "foliage_library_2",
+    "foliage_library_3",
+    "foliage_library_4",
+    "foliage_memory_0",
+    "foliage_memory_1",
+    "foliage_memory_2",
+    "foliage_memory_3",
+    "foliage_memory_4",
+    "foliage_memory_5",
+    "foliage_questions_0",
+    "foliage_questions_1",
+    "foliage_questions_2",
+    "foliage_questions_3",
+    "foliage_questions_4",
+    "foliage_questions_5",
+    "foliage_experiments_0",
+    "foliage_experiments_1",
+    "foliage_experiments_2",
+    "foliage_experiments_3",
+    "foliage_experiments_4",
+    "foliage_experiments_5",
+    "foliage_futures_0",
+    "foliage_futures_1",
+    "foliage_futures_2",
+    "foliage_futures_3",
+    "foliage_futures_4",
+    "foliage_futures_5",
+    "foliage_people_0",
+    "foliage_people_1",
+    "foliage_people_2",
+    "foliage_people_3",
+    "foliage_people_4",
+    "foliage_people_5",
+    "foliage_reflection_0",
+    "foliage_reflection_1",
+    "foliage_reflection_2",
+    "foliage_reflection_3",
+    "foliage_reflection_4",
+    "foliage_reflection_5"
+  ],
+  "connection_node": "connections",
+  "density_control_verified": true
+}

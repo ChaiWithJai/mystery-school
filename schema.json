@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "premise", "story", "surprise", "question", "choices", "assumptions", "visual", "evidence"],
+  "properties": {
+    "title": {"type": "string"},
+    "premise": {"type": "string"},
+    "story": {"type": "string"},
+    "surprise": {"type": "string"},
+    "question": {"type": "string"},
+    "choices": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["label", "consequence"], "properties": {"label": {"type": "string"}, "consequence": {"type": "string"}}}},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "visual": {"type": "object", "additionalProperties": false, "required": ["tree_density", "connection_strength", "light", "openness"], "properties": {"tree_density": {"type": "number", "minimum": 0, "maximum": 1}, "connection_strength": {"type": "number", "minimum": 0, "maximum": 1}, "light": {"type": "number", "minimum": 0, "maximum": 1}, "openness": {"type": "number", "minimum": 0, "maximum": 1}}},
+    "evidence": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["label", "basis", "detail"], "properties": {"label": {"type": "string"}, "basis": {"type": "string", "enum": ["user_statement", "reference_observation", "imagined"]}, "detail": {"type": "string"}}}}
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+data/
+error_discovery_data/
+__pycache__/
+*.pyc
+mlartifacts/
+mlruns/
+.env*
+.venv/
