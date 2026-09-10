@@ -1,0 +1,25 @@
+{
+  "base_main": "a5632f2793ad3b49b755ca14fdf14ae750e83174",
+  "integration_parent": "9300b18e39dceefbad0366f7c877c289ee0bb6f7",
+  "actor": "agent_review",
+  "browser_result": {
+    "mirror": {
+      "status": "Step back until your upper body is visible.",
+      "estimates": "Local mirror \u00b7 frames stay on this device",
+      "videoWidth": 360
+    },
+    "reflection": {
+      "step": "observation",
+      "action": "Agent QA planned action: ask a friend what they noticed.",
+      "status": "Planned \u00b7 the real-world action is still ahead"
+    },
+    "url": "http://127.0.0.1:5210/?path=ideas&actor=agent_review&artifact=2112ca52-1ded-4b92-8c8a-77db2f165f7d",
+    "errors": []
+  },
+  "limits": [
+    "Local source clip used as explicit QA playback, not a learner camera recording.",
+    "Physical webcam practice and live instructional voice not verified.",
+    "Source videos visually reviewed; embedded playback remains unverified.",
+    "Real-world action remains planned; no lived experience fabricated."
+  ]
+}

@@ -26,7 +26,7 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
   }
   async function begin(localFile){release();const token=epoch;status.textContent='Opening your mirror…';start.hidden=true;
     try {
-      if(localFile){url=URL.createObjectURL(localFile);video.src=url;video.loop=false;state.sourceMode='local-video';}else{const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720},audio:false});if(!alive||token!==epoch){acquired.getTracks().forEach(t=>t.stop());return;}stream=acquired;video.srcObject=stream;state.sourceMode='camera';}
+      if(localFile){url=URL.createObjectURL(localFile);video.src=url;video.loop=false;video.controls=true;root.classList.add('is-local-video');state.sourceMode='local-video';}else{const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720},audio:false});if(!alive||token!==epoch){acquired.getTracks().forEach(t=>t.stop());return;}stream=acquired;video.controls=false;root.classList.remove('is-local-video');video.srcObject=stream;state.sourceMode='camera';}
       await video.play();if(!alive||token!==epoch)return;root.classList.add('is-live');stop.hidden=false;status.textContent='Loading local movement tracking…';smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};started=performance.now();changed();emit('boxing.mirror.start',{mode:state.sourceMode,lessonId:state.lessonId});
       worker=new Worker(new URL('./boxing-mirror-worker.js',import.meta.url));
       const loop=async()=>{if(!alive||token!==epoch)return;if(!busy&&video.readyState>=2&&!video.paused){busy=true;try{const bitmap=await createImageBitmap(video);if(!alive||token!==epoch){bitmap.close();return;}worker.postMessage({type:'frame',bitmap,t:performance.now()},[bitmap]);}catch{busy=false;}}frame=requestAnimationFrame(loop);};
@@ -34,6 +34,7 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
       worker.onerror=()=>{status.textContent='Your mirror is live. Movement tracking is unavailable.';worker?.terminate();worker=null;cancelAnimationFrame(frame);};worker.postMessage({type:'init'});
     }catch(e){if(token!==epoch)return;release();status.textContent=e.name==='NotAllowedError'?'Camera permission was not granted. You can use your own video.':'Could not open this camera or video. Try another local video.';emit('boxing.mirror.start_error',{reason:e.name});}
   }
+  video.onseeking=()=>{smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};};
   start.onclick=()=>begin();file.onchange=()=>{if(file.files[0])begin(file.files[0]);};stop.onclick=()=>{release();status.textContent='What changed when you watched yourself?';emit('boxing.mirror.stop',{estimates:state.attempts.length});};video.onended=()=>{status.textContent='What did you notice? Keep one observation.';emit('boxing.mirror.video_complete');};
   return {getState:()=>cleanMirrorState(state),setState(v){state=cleanMirrorState(v);reflection.value=state.reflection;lesson();},dispose(){alive=false;release();lessonVideo.pause();lessonVideo.removeAttribute('src');root.remove();}};
 }
