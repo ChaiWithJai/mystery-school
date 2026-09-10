@@ -7,3 +7,6 @@ mlartifacts/
 mlruns/
 .env*
 .venv/
+
+dist/
+.netlify/

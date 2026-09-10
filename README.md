@@ -204,3 +204,7 @@ deployment.
 See [Blender instructions](blender/README.md) for editable assets and rebuilds.
 Coordinate this milestone in Buzz's `mystery-school` channel, not Slack or
 Google Workspace.
+
+## Netlify and local inference
+
+The [private demo deployment guide](docs/netlify-local-inference.md) packages the website for Netlify, keeps the existing Codex/Astra backend on the presenter machine, and adds an authenticated Bonsai 4B cue adapter. M5 owns live scene integration and activation. The guide distinguishes tested infrastructure from pending live inference and webcam verification.
