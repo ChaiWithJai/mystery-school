@@ -1,0 +1,36 @@
+{
+  "provenance": {
+    "kind": "recorded_model_output",
+    "actor_kind": "agent_review",
+    "model": "gpt-6-astra",
+    "job_id": "06864f01-6af0-4db6-bda2-242f3a305d44",
+    "trace_id": "tr-2755a5ea4a711c1b2a0cbbdb7e0beaa8",
+    "input_tokens": 16205,
+    "output_tokens": 814,
+    "cost_usd": null,
+    "scope": "Exact experiment proposal extracted from a completed model job. Replaying this fixture makes no model call. It does not demonstrate Runaway instruction or human learning."
+  },
+  "artifact": {
+    "id": "cbf24a46-393f-4d36-b55f-41e48c855a7e",
+    "pathway": "music"
+  },
+  "initial_state": {
+    "attack": 0.4,
+    "tempo": 100,
+    "notes": [{"midi":60,"beats":2},{"midi":64,"beats":2},{"midi":67,"beats":2},{"midi":72,"beats":2}]
+  },
+  "proposal": {
+    "version": 1,
+    "pathway": "music",
+    "base_artifact_id": "cbf24a46-393f-4d36-b55f-41e48c855a7e",
+    "status": "supported",
+    "reason": "Preserve the first three notes exactly and replace the final high C with E4 for 2 beats followed by C4 for 4 beats. This descending ending lengthens the last note while keeping tempo at 100 and attack at 0.4. The proposed variation lets you listen for whether it feels more settled.",
+    "music": {
+      "attack": 0.4,
+      "tempo": 100,
+      "notes": [{"midi":60,"beats":2},{"midi":64,"beats":2},{"midi":67,"beats":2},{"midi":64,"beats":2},{"midi":60,"beats":4}]
+    },
+    "movement": null,
+    "ideas": null
+  }
+}

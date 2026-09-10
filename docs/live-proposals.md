@@ -48,4 +48,25 @@ Apply and undo identify the original model job. Playback contains the scheduled
 notes and their durations. Browser status and scheduling do not prove speaker
 output quality, perceived latency, or learning. Saving and reopening the applied
 artifact still needs verification. The numeric proposal preview also needs visual
-improvement. None of this establishes the newer goal of teaching Runaway.
+improvement at that checkpoint. Commit `18992c1` replaced the numeric preview
+with note and rhythm wording. None of this establishes the newer goal of teaching Runaway.
+
+## Recorded performance
+
+Commit `05f50bc` integrates a chromatic piano with held keys, recording and replay.
+Main recorded two pointer-played notes in Neo and invoked replay. The saved
+artifact `389cecd4-6648-4653-86a0-daf87a59f6fd` contains four note events and a
+16.633-second take. API readback confirmed pitches 64 and 67 and retained release
+times. Its trace is `tr-2b4e352902d62e589e38ca9132fa27f3`.
+
+The artifact declares agent QA and incomplete earlier draft history. No speaker
+capture, song comparison, timing accuracy or learner result is claimed.
+
+## Public replay check
+
+`tests/fixtures/recorded-music-proposal.json` contains the exact experiment field
+from the completed music job, its starting phrase and provenance. It omits the
+rest of the job and private runtime paths. `npm test` validates the recorded
+proposal and retained performance state without network access or inference.
+The preservation test uses a labeled synthetic take. Browser replay on a fresh
+checkout remains a separate delivery requirement.
