@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "assignment": "MS-TASKS-M4",
+  "base_commit": "c0446cc5019eeff687a0b94d48e808784e0046b3",
+  "author_role": "evaluator_sidecar",
+  "status": "proposed_not_executed",
+  "evidence_kind": "synthetic_test_specification",
+  "scope": "Three required pathways; M5 owns product integration. These probes do not establish learner efficacy.",
+  "common_protocol": {
+    "sequence": ["care", "try", "needed_concept", "own_artifact", "share", "new_question"],
+    "delivery": "Offer a changed case before revealing its answer. Accept speech, pointing, drawing, sound, movement or text. Do not require polished English or a written rationale to begin.",
+    "imprints": "Situational needs may change within a person; do not assign fixed learner types or score compliance, fluency or activity volume.",
+    "record_fields": ["commit_sha", "route", "source_event_id", "actor_role", "evidence_kind", "artifact_before_id", "artifact_after_id", "trace_id", "sample_id", "prompt", "first_attempt", "assistance", "revised_attempt", "observed_result", "verification_status"],
+    "verification_statuses": ["observed_pass", "observed_fail", "not_observed", "not_supported"],
+    "assistance": "Record hints, supplied answers and facilitator actions separately. Preserve the first attempt; assisted success does not overwrite it.",
+    "provenance": "Distinguish scripted character activity, agent review, real learner observation and human judgment. Label staged sharing. Keep unknown telemetry unknown. Preserve original event and artifact lineage.",
+    "scope_check": "A functioning central interaction and the complete circle are required in each pathway; these probes inspect one relationship per pathway and do not replace whole-path acceptance."
+  },
+  "probes": [
+    {
+      "id": "music_attack_duration_01",
+      "pathway": "piano_calculus",
+      "care": "Maya wants a gentler entrance to the song for her grandmother.",
+      "capability": "Relate a change in attack duration to the rate of change of a defined amplitude envelope while keeping pitch fixed.",
+      "assumptions": [
+        "This fixture uses a linear normalized amplitude attack envelope, not a complete physical piano model.",
+        "Carrier frequency remains 440 Hz, target envelope amplitude remains 1, and only attack duration changes.",
+        "Baseline envelope a(t)=t/T for 0<t<T, starting at 0 and reaching 1 at T; later envelope stages are outside this probe.",
+        "For a different implemented envelope, preserve its actual formula and derive its rate relationship before using this fixture as an exact oracle."
+      ],
+      "baseline": {"carrier_frequency_hz": 440, "target_normalized_amplitude": 1, "attack_duration_seconds": 0.2},
+      "changed_case": {"carrier_frequency_hz": 440, "target_normalized_amplitude": 1, "attack_duration_seconds": 0.4},
+      "prompt": "Keep the note and its target level the same. Make its rise take twice as long. Before trying it, show what you expect the envelope graph and its steepness to do. Then listen, compare and choose what serves your song.",
+      "expected_checks": [
+        {"check": "attack_duration", "expected": "Attack duration doubles from 0.2 s to 0.4 s."},
+        {"check": "envelope_rate", "expected": "On the interior of each linear attack, da/dt changes from 5 normalized-amplitude units/s to 2.5 units/s; the rate halves."},
+        {"check": "fixed_pitch", "expected": "Carrier remains 440 Hz in both cases. Changing attack duration does not change carrier frequency or note pitch in this model."},
+        {"check": "fixed_endpoint", "expected": "Both attacks reach the same target normalized amplitude 1; the changed case reaches it later."},
+        {"check": "derivative_boundary", "expected": "Do not assert the piecewise envelope derivative exists at corners, or confuse envelope derivative with the derivative of the oscillating audio waveform."}
+      ],
+      "artifact": "Saved before/after attack settings, audible output, envelope graph and learner annotation or facilitated description tied to the musical choice.",
+      "share_and_new_question": "A labeled sharing response asks whether another attack duration would suit a different phrase; retain the learner's chosen next experiment or disagreement.",
+      "insufficient_evidence": "An atmosphere change, prose claim or correct formula alone does not show a functioning sound/envelope interaction or learner understanding.",
+      "verification_status": "not_observed"
+    },
+    {
+      "id": "movement_double_duration_01",
+      "pathway": "boxing_physics",
+      "care": "Andre wants to understand a controlled non-contact hand movement.",
+      "capability": "Predict how doubling duration at fixed displacement changes average velocity, while distinguishing average from instantaneous motion.",
+      "assumptions": [
+        "One-dimensional monotonic movement is modeled from x=0 m to x=0.4 m along the positive coordinate direction.",
+        "Baseline and changed case cover the same 0.4 m distance and displacement.",
+        "This is a labeled simulation or comparison; numbers are not represented as measured athlete data.",
+        "No impact-force claim is derived from motion endpoints or video."
+      ],
+      "baseline": {"start_position_m": 0, "end_position_m": 0.4, "duration_seconds": 0.5},
+      "changed_case": {"start_position_m": 0, "end_position_m": 0.4, "duration_seconds": 1.0},
+      "prompt": "Move through the same distance but take twice as long. Before running the comparison, show what you expect the average velocity to do. Can two different movement shapes have that same average?",
+      "expected_checks": [
+        {"check": "fixed_distance", "expected": "Both cases cover 0.4 m; changed duration is 1.0 s, twice the original 0.5 s."},
+        {"check": "average_velocity", "expected": "Average velocity is displacement/duration: +0.8 m/s initially and +0.4 m/s after the change, so it halves."},
+        {"check": "average_speed", "expected": "Under the monotonic-path assumption, average speeds are 0.8 and 0.4 m/s. Reversals would require a separate total-distance calculation."},
+        {"check": "inference_limit", "expected": "Endpoints and duration do not determine instantaneous velocity or acceleration. A constant-velocity interpolation is a stated model assumption, not measured fact."}
+      ],
+      "artifact": "Inspectable before/after movement comparison with positions, units, duration, model labels and the learner's prediction or annotation.",
+      "share_and_new_question": "A labeled teammate response asks whether pausing midway could retain the same average velocity. The learner sketches or describes a revised trajectory.",
+      "insufficient_evidence": "Faster-looking animation or an unsupported claim about power or impact force does not satisfy the relationship check.",
+      "verification_status": "not_observed"
+    },
+    {
+      "id": "ideas_source_interpretation_01",
+      "pathway": "great_books_youtube_understanding",
+      "care": "Leena wants to turn saved reading and lectures into an account she can explain and question with another person.",
+      "capability": "Distinguish source content from interpretation, compare a rival reading and revise or defend a personal account with identifiable support.",
+      "source_binding": {
+        "status": "unresolved_requires_actual_selected_sources",
+        "book_title": null,
+        "edition_and_page": null,
+        "video_url": null,
+        "video_time_range": null,
+        "selected_source_content": null,
+        "required_before_source_accuracy_verdict": "Bind and inspect actual selected passage and clip. Do not invent a quotation, author position, citation or transcript. An inaccessible source is a verification gap."
+      },
+      "baseline": "Preserve the learner's account and its actual source anchor before introducing another interpretation.",
+      "changed_case": "Present a plausible competing interpretation labeled as a proposal, tied to the same inspected source. Then offer a different everyday situation to examine the account's limits.",
+      "prompt": "Here is another possible reading. What in the source supports or weakens each reading, and what remains uncertain? Show what you would change or keep in your own account. Would it still help in this different situation?",
+      "expected_checks": [
+        {"check": "source_identity", "expected": "Book edition/page and video URL/time range identify the material used, with source accuracy checked against inspected content."},
+        {"check": "attribution", "expected": "Source claim, commentator interpretation, personal inference and generated suggestion remain distinct."},
+        {"check": "reasoned_revision", "expected": "The learner revises or retains an account with a reason tied to source evidence or an explicitly labeled inference; agreement with the model is not required."},
+        {"check": "fresh_case", "expected": "The learner tries applying or limiting the account in a new situation and identifies a question or possible reason to revise it."},
+        {"check": "uncertainty", "expected": "Missing or ambiguous support is acknowledged rather than replaced with invented certainty. No source-specific correct interpretation is asserted until sources are bound and inspected."}
+      ],
+      "artifact": "Versioned sourced map, short argument or narrated account retaining the original, rival interpretation and learner response.",
+      "share_and_new_question": "A labeled discussion response asks about an assumption in the account; the learner revises, disagrees with a reason or carries a new question forward.",
+      "insufficient_evidence": "Citation decoration, a fluent summary or repeating an AI answer does not establish interpretation or transfer. Personal model means an evolving account, not trained model weights.",
+      "verification_status": "not_observed"
+    }
+  ]
+}
