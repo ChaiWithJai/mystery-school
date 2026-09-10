@@ -1,3 +1,5 @@
+> Historical design contract. For the integrated prototype, use the [README](README.md), [architecture](docs/architecture.md), and [documentation index](docs/README.md). API and ownership details below may describe earlier revisions.
+
 # Astral School demo contract
 
 Desktop first. Jai Bhagat's school on a computer: a sandbox for intuition. Main app is vanilla browser JavaScript with Three.js, served by Python on 127.0.0.1:5188. MLflow UI on 127.0.0.1:5189. Do not touch existing apps/services.

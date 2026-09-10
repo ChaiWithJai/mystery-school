@@ -1,6 +1,6 @@
 # Netlify website + private Bonsai 4B / Codex companion
 
-This PR adds deployment infrastructure and a bounded local coaching adapter. M5 owns connecting the adapter to the current webcam boxing attempt UI. It does not implement pose estimation, complete the boxing PR, or establish learner improvement.
+This guide describes deployment infrastructure and the bounded local cue adapter. The foundation UI now integrates an explicit local-AI action; see [foundation integration](boxing-coach-integration.md). Earlier delivery notes at the end remain historical and do not establish live inference or learner improvement.
 
 ## Runtime
 
@@ -15,9 +15,9 @@ companion.py: 127.0.0.1:5199
                                       └── existing Codex/Astra jobs + MLflow
 ```
 
-The webcam/animation loop must never await coaching. `public/local-coach-client.js` is an explicit, between-attempt helper; it is not automatically attached to any scene. It returns stale when the attempt/version changes. M5 should catch unavailable/busy errors, retain the learner's creation, and offer another attempt.
+The webcam/animation loop must never await coaching. `public/local-coach-client.js` supports explicit, between-attempt requests. The foundation UI integrates that action. It returns stale when the attempt/version changes; callers must handle unavailable/busy errors without discarding the learner’s work.
 
-For this version, Bonsai selects one of two authored cues per pathway and cites submitted observation IDs. Returned text comes from the approved cue catalog, not unconstrained generated boxing instructions. It does not decide force, stance quality or mastery. Low-confidence camera estimates get a deterministic reposition cue without inference. This threshold is an engineering default, not a validated tracking-quality threshold. Observations and confidence are declared by the caller, not independently measured by the companion.
+Bonsai selects approved authored cues and cites submitted observation IDs. Foundation requests use the canonical curriculum’s approved practice/reflection cues; the original pathway fallback has two cues per pathway. Returned text comes from the approved cue catalog, not unconstrained generated boxing instructions. It does not decide force, stance quality or mastery. Low-confidence camera estimates get a deterministic reposition cue without inference. This threshold is an engineering default, not a validated tracking-quality threshold. Observations and confidence are declared by the caller, not independently measured by the companion.
 
 Astra remains the existing explicit `/api/project` flow with frozen artifact context, validation, preview/apply/undo, and existing Codex sign-in. No new Codex agent, login, API key, shell endpoint or subscription proxy protocol is added. A local companion is still a server and Astra still requires network access and available usage.
 
@@ -34,22 +34,20 @@ return explicit errors without blocking the animation loop.
 
 Use the normal localhost school and local Trajectory Studio for this mode. Hosting,
 cloud secrets and a public tunnel are optional distribution infrastructure, not local-demo
-prerequisites. M5 still needs to wire the helper to its actual webcam attempt/feedback
-UI and record delivered feedback plus the next attempt; this route alone does not
-claim that interaction is complete.
+prerequisites. The foundation UI submits declared learner reports through this route. A current live request and delivered-feedback trace are still required to establish model readiness.
 
 ## Reproduce on M5
 
-1. Review/merge this PR into the current integrated main, preserving M5's foreground changes. Install the existing Python requirements and `npm ci --include=dev`.
+1. Check out the intended integrated revision in an isolated workspace. Install the README dependencies.
 2. Use the official PrismML **Bonsai-4B-gguf** language model, not the unrelated deepgrove model, Bonsai Image, Ternary 27B or an inferred 4B alias. See `deployment/bonsai-model.json` and `scripts/setup-bonsai-local.sh`. The script builds its own pinned runtime under ignored `data/bonsai-runtime`, downloads/checks pinned weights, and prints the loopback launch command. It does not alter LM Studio or Ollama installations or start a permanent service.
 3. Start Bonsai with the exact model alias `prism-ml/Bonsai-4B-gguf`. The adapter rejects another reported model ID. The alias check alone cannot attest the loaded weights; retain the setup checksum and actual launch command as deployment evidence.
-4. Start the existing school with an isolated demo data directory and the compatible Codex executable:
+4. Generate a companion token with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'` and set `MYSTERY_COMPANION_TOKEN` privately in both launch environments. Start the existing school with an isolated demo data directory and the compatible Codex executable:
 
    ```sh
    ASTRAL_CODEX_BIN=/path/to/compatible/codex .venv/bin/python server.py --port 5188 --data-dir data/presenter-demo
    ```
 
-5. Generate three distinct random values with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`: a companion token, demo access code, and cookie-signing secret. Keep them out of Git, screenshots and client assets. Set `MYSTERY_COMPANION_TOKEN` in the local launch environment, then run `.venv/bin/python companion.py --port 5199`. Optional settings are in `deployment/companion.env.example`.
+5. Run `.venv/bin/python companion.py --port 5199` with the same companion token. For hosted access, generate two additional distinct random values for the demo access code and cookie-signing secret. Keep all secrets out of Git, screenshots and client assets. Optional settings are in `deployment/companion.env.example`.
 6. Point a presenter-managed HTTPS tunnel at **5199 only**. Never tunnel the unprotected school server, Codex App Server, model server or MLflow UI. Authentication is enforced on every gateway request.
 7. In the linked Netlify site's Functions environment, set `MYSTERY_COMPANION_URL` to that HTTPS origin, `MYSTERY_COMPANION_TOKEN` to the matching local token, and the separate `MYSTERY_DEMO_CODE` and `MYSTERY_SESSION_SECRET`. Scope these to the intended trusted demo deploy context; do not grant unknown PR previews access to the live companion. Redeploy after configuring.
 8. Open `/connect.html` on the presenter browser or approved phone and enter the generated demo code. This issues a four-hour HttpOnly/Secure/SameSite cookie. Open the school normally. The current demo shares records among connected devices; this is **not per-student authentication or multi-tenant storage**.
@@ -60,7 +58,7 @@ The hosted frontend can render without a companion, but existing server-backed s
 
 `netlify.toml` uses `deployment/` as its dependency-discovery base so Netlify does not install the local Python/MLflow requirements. It installs the locked root JavaScript dependencies explicitly, builds with `npm run build:netlify`, publishes only `dist/`, and bundles `netlify/functions/companion.mjs`. The build copies public assets plus the pinned Three.js package; no Python environment, data directory, notebook, credentials, or model weights go into the deployment. `/deployment.json` identifies the built commit. `/api/*` goes to the authenticated relay with no caching. Missing secrets/companion yield a truthful 503 instead of simulated live coaching.
 
-Use the existing Netlify GitHub App integration with `ChaiWithJai/mystery-school`, main as the production branch and deploy previews for PRs. Main needs this PR's build command before its first successful production build. M5 owns final merge, tunnel and live-machine activation. No secrets belong in netlify.toml. Provisioning/preview evidence is recorded in the PR rather than inferred from this configuration.
+Use the existing Netlify GitHub App integration with `ChaiWithJai/mystery-school`, main as the production branch and deploy previews for PRs. The build configuration is included in main. The presenter owns tunnel and live-machine activation. No secrets belong in netlify.toml. Provisioning/preview evidence is recorded in the PR rather than inferred from this configuration.
 
 ## Attempt contract
 
@@ -94,7 +92,11 @@ No automatic escalation to Astra occurs. Use the existing explicit artifact proj
 - Integration: authenticated forwarding, missing/offline companion, output validation, duplicate retry, low-confidence branch, concurrency and durable trajectory.
 - Acceptance: real HTTP gateway request using a labeled deterministic model fixture; hosted asset/browser entry and operator connection page.
 
-Commands: `npm run check`, `npm test`, `python3 -m unittest discover -s tests -p test_companion.py -v`, `npm run build:netlify`, `netlify build`.
+Run `npm run check`, `npm test`, and
+`.venv/bin/python -m unittest discover -s tests -p test_companion.py -v`
+using the installed project environment. `npm run build:netlify` checks public
+asset packaging. The optional `netlify build` also requires the Netlify CLI,
+which is not installed by this repository's `npm ci`.
 
 Before claiming live readiness, M5 must run one actual Bonsai request and inspect its local trace; one actual Codex/Astra artifact request; a complete webcam attempt with delivered cue and replay; and a disconnect test while play continues. Verify tracking/feedback latency on the actual device. Fixture tests cannot substitute for these checks.
 
@@ -110,7 +112,7 @@ Official Codex docs distinguish ChatGPT subscription access from API billing and
 - https://docs.netlify.com/build/configure-builds/file-based-configuration/
 - https://docs.netlify.com/build/functions/configuration/
 
-Repository note: AGENTS.md mentions `npm run skills:verify`, but that script is absent at base a5632f2. The attempted check reported “Missing script”; this PR does not claim it passed or change the unrelated skill workflow.
+Historical workflow note: `skills:verify` was unavailable at the earlier reviewed base. It is not a current required command.
 
 ## Recorded delivery checks (2026-09-10)
 
