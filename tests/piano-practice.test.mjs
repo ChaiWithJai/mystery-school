@@ -116,6 +116,20 @@ test('computer repeat does not retrigger, global release and blur end held keys'
   api();
 });
 
+test('explicit notation demonstration schedules E6 without replacing the learner take', async t => {
+  const h=harness(t);const events=[];
+  const api=mountPianoPractice(h.host,{initialState:take,onEvent:(type,payload)=>events.push({type,payload})});t.after(api);
+  const before=api.getState();
+  await api.demonstrate({duration:3.75,events:[{type:'on',midi:88,time:.75},{type:'off',midi:88,time:2.25},{type:'on',midi:88,time:2.25},{type:'off',midi:88,time:3.75}]});
+  assert.deepEqual(api.getState(),before);
+  assert.equal(h.audio.oscillators.length,2);
+  assert.equal(h.audio.oscillators[0].frequency.values[0][0],noteFrequency(88));
+  assert.ok(Math.abs(h.audio.oscillators[1].startTime-h.audio.oscillators[0].startTime-1.5)<1e-10);
+  assert.equal(events.find(event=>event.type==='play').payload.source,'notation_exercise');
+  api();
+  await assert.rejects(api.demonstrate(take),/closed/);
+});
+
 test('performance editor publishes changed pitch/timing and reset removes own take', async t => {
   const h=harness(t);const api=mountPianoPractice(h.host,{initialState:take});t.after(api);
   await h.find('[data-editor]').fire('change',{target:{dataset:{index:'1',field:'midi'},value:'66'}});

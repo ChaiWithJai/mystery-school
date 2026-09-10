@@ -241,8 +241,10 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     publish(); render(); emit('record_start'); limitTimer = setTimeout(stop, 600000);
   });
   listen(find('[data-reset]'), 'click', () => { stop(); state = { ...state, events: [], duration: 0 }; publish(); render(); emit('reset'); });
-  listen(find('[data-replay]'), 'click', async () => {
-    stop(); const token = generation; const snapshot = normalizePianoState(state);
+  async function playSnapshot(value, source) {
+    if (disposed) throw new Error('This piano is closed.');
+    const snapshot = normalizePianoState(value);
+    stop(); const token = generation;
     try {
       await audioReady();
       if (disposed || generation !== token) return;
@@ -254,14 +256,15 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
         v.gain.gain.linearRampToValueAtTime(0, start + note.end + .06);
         v.oscillator.stop(start + note.end + .065); scheduled.push(v);
       }
-      replaying = true; render(); emit('play', { source: 'own_attempt', state: snapshot });
+      replaying = true; render(); emit('play', { source, state: snapshot });
       replayVisual = setInterval(() => {
         const time = context.currentTime - start;
         for (const midi of keyElements.keys()) paintKey(midi, notes.some(note => note.midi === midi && time >= note.start && time < note.end));
       }, 40);
       replayTimer = setTimeout(() => { clearInterval(replayVisual); scheduled.length = 0; replaying = false; for (const midi of keyElements.keys()) paintKey(midi, false); render(); }, (snapshot.duration + .12) * 1000);
     } catch (err) { stop(); if (!disposed) fail(err); }
-  });
+  }
+  listen(find('[data-replay]'), 'click', () => playSnapshot(state, 'own_attempt'));
   listen(find('[data-editor]'), 'change', event => {
     const { index, field } = event.target.dataset;
     if (index === undefined || !['midi', 'start', 'end'].includes(field)) return;
@@ -279,6 +282,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     if (context) void context.close().catch(() => {});
   }
   cleanup.getState = () => normalizePianoState(state);
+  cleanup.demonstrate = value => playSnapshot(value, 'notation_exercise');
   cleanup.setState = next => {
     if (disposed) throw new Error('This piano is closed.');
     const validated = normalizePianoState(next);

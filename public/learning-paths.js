@@ -1,4 +1,5 @@
 import { mountLearningExperiment } from './learning-experiment.js';
+import { RUNAWAY_OPENING_SOURCE } from './runaway-opening.js';
 import { mountMusicScene } from './music-scene.js';
 import { mountPianoScene } from './piano-scene.js';
 import { mountBoxingGame } from './boxing-game.js';
@@ -124,7 +125,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     q('.learning-care').ontoggle=e=>{if(e.target.open)events.track('learning.guidance.open',{pathway,character:person.name,actor_kind:actorKind,guidance_kind:'authored_demo',text:person.care});};
     let sources=[],ready=false,validateVideo=null;
     function currentSources(){
-      if(pathway==='music'&&draft.lab.practice?.reference)return [...sources,{label:draft.lab.practice.reference.title,url:draft.lab.practice.reference.url,locator:'Song reference; no automatic transcription or accuracy assessment',source_kind:'external_reference'}];
+      if(pathway==='music')return [...sources,{label:RUNAWAY_OPENING_SOURCE.attribution,url:RUNAWAY_OPENING_SOURCE.url,locator:RUNAWAY_OPENING_SOURCE.locator,source_kind:'notation_exercise'},...(draft.lab.practice?.reference?[{label:draft.lab.practice.reference.title,url:draft.lab.practice.reference.url,locator:'Song reference; no automatic transcription or accuracy assessment',source_kind:'external_reference'}]:[])];
       if(pathway==='movement')return [...sources,{label:'England Boxing coaching handbook',url:'https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf',locator:'Stance, guard, footwork and shadowboxing; printed pages 66–68 and 94–95',source_kind:'coaching_reference'}];
       if(!validateVideo)return sources;
       const reference=validateVideo(draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote);

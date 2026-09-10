@@ -606,7 +606,7 @@ class App:
                 "indexes the frozen artifact source_refs; source_quote must be a nonempty literal substring "
                 "of the corresponding experiment_sources content. Only that captured excerpt is available. "
                 "User video references and notes are not fetched or verified transcripts. Do not claim video analysis. "
-                "Movement boxing_params is optional or null. Only propose non-null boxing_params when the frozen "
+                "Movement boxing_params is required and nullable; use null when not applicable. Only propose non-null boxing_params when the frozen "
                 "artifact state.lab.boxing_round exists. cue is seconds (0.65 to 1.65); gap is simulation units "
                 "(10 to 22), not physical distance or impact-force. It applies only timing/gap and preserves "
                 "attempts, prediction, and question. Retain the other required movement fields for compatibility; "

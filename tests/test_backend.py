@@ -182,7 +182,7 @@ class BackendTests(unittest.TestCase):
     def experiment_result(pathway=None, artifact_id="synthetic-artifact"):
         branches = {
             "music": {"attack": 0.1, "notes": [{"midi": 60, "beats": 1}, {"midi": 64, "beats": 0.5}], "tempo": 90},
-            "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity"},
+            "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity", "boxing_params": None},
             "ideas": {"scenario": "A friend disagrees with your claim.", "question": "What can you choose?",
                       "source_quote": EPICTETUS_EXCERPT, "source_ref_index": 0}}
         experiment = None if pathway is None else dict(version=1, pathway=pathway, base_artifact_id=artifact_id,
@@ -237,12 +237,29 @@ class BackendTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_projection(nonfinite, self.app.schema, {})
 
-    def test_experiment_boxing_optional_bounds_and_frozen_baseline(self):
+    def test_inference_schema_requires_every_object_property(self):
+        def check(node, path="root"):
+            if isinstance(node, dict):
+                if node.get("type") == "object":
+                    self.assertEqual(set(node.get("required", [])), set(node.get("properties", {})), path)
+                    self.assertIs(node.get("additionalProperties"), False, path)
+                for key, value in node.items():
+                    check(value, path + "." + key)
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    check(value, path + "." + str(index))
+        check(self.app.schema)
+
+    def test_experiment_boxing_nullable_bounds_and_frozen_baseline(self):
         result = self.experiment_result("movement")
         artifact = {"id": "synthetic-artifact", "pathway": "movement", "state": {"lab": {}}}
         inputs = {"learning_artifact_context": artifact}
-        # Recorded movement proposals without this extension still validate unchanged.
-        validate_projection(result, self.app.schema, inputs)
+        legacy = json.loads(json.dumps(result))
+        del legacy["experiment"]["movement"]["boxing_params"]
+        # Strict inference rejects omission, but historical read views never normalize it.
+        with self.assertRaises(jsonschema.ValidationError):
+            validate_projection(legacy, self.app.schema, inputs)
+        self.assertEqual(job_view({"result": legacy})["result"], legacy)
         result["experiment"]["movement"]["boxing_params"] = None
         validate_projection(result, self.app.schema, inputs)
         result["experiment"]["movement"]["boxing_params"] = {"cue": 1, "gap": 16}

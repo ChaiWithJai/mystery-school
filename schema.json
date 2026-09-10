@@ -24,7 +24,7 @@
           }
         }]},
         "movement": {"anyOf": [{"type": "null"}, {
-          "type": "object", "additionalProperties": false, "required": ["duration", "distance", "shape", "compare_shape", "view"],
+          "type": "object", "additionalProperties": false, "required": ["duration", "distance", "shape", "compare_shape", "view", "boxing_params"],
           "properties": {
             "boxing_params": {"anyOf": [{"type": "null"}, {
               "type": "object", "additionalProperties": false, "required": ["cue", "gap"],
