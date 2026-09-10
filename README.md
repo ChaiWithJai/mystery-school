@@ -39,6 +39,9 @@ confirmation form. The request uses `learning_artifact_id`, and the backend
 copies the saved record into `learning_artifact_context`. Changes to the question,
 prediction, premise, correction, or notebook selection require confirmation again.
 Artifact requests exclude unrelated image uploads; notebook notes are optional.
+General projections also leave saved images out unless the person checks
+"Include my saved reference images". Changing that choice requires confirmation
+again. Uploading an image alone does not authorize sending it to the model.
 The returned projection offers a return to the same saved experiment. Generated
 scenarios do not overwrite its settings, words, or sources.
 
@@ -107,7 +110,7 @@ not prove authentication or model access.
   each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
-- The latest verified suite checkpoint is 43 JavaScript tests and 14 backend
+- The latest verified suite checkpoint is 49 JavaScript tests and 14 backend
   tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
   Their jobs, traces, sources, and reported usage are listed in the verification doc.
 - The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.

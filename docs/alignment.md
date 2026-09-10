@@ -75,3 +75,8 @@ See `scripts/import_sidecar_probes.mjs` for the reproducible import.
 At the September 10 integration checkpoint, Buzz access was blocked by the
 locked Mac. Local implementation and testing continued. No later message or
 second-machine execution is claimed until the channel is accessible again.
+
+Buzz access resumed at 12:49 PM EDT. MAIN BUILDER posted MS-VERIFY-ed29f6c
+and verified the sent message in the channel. The assignment asks M4 to
+verify each pathway and imported review readback in its isolated clone.
+Sending the assignment does not prove receipt, execution or acceptance.
