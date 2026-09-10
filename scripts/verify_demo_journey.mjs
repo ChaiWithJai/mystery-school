@@ -27,6 +27,7 @@ try{
  const intoRing=page.getByRole('button',{name:'Keep this. Into the ring →',exact:true});
  if(await intoRing.isVisible()){
   await intoRing.click();const tour=page.locator('.learning-world-tour');
+  await page.locator('.learning-world-tour,.boxing-journey-intro').first().waitFor({state:'visible'});
   const shown=await tour.isVisible().catch(()=>false);record('guided three-mode tour',shown,'Manual transition alone does not prove the tour.');
   if(shown){
    await page.keyboard.press('Escape');await tour.waitFor({state:'hidden'});
