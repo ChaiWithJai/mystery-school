@@ -239,3 +239,33 @@ test('reference drafts persist while incomplete, are bounded, and remain separat
   assert.equal(changes.at(-1).interpretation, 'My belief');
   cleanup();
 });
+
+test('story thought meets the source before revision and retains the exact first thought nearby', () => {
+  const {container, elements} = testContainer();
+  const lab = mountIdeasLab(container);
+  const labelled = label => elements.find(e => e.attributes['aria-label'] === label);
+  labelled('Offer your umbrella to the stranger').fire('click');
+  labelled('Make your own thought from this story').fire('click');
+  const first = elements.find(e => e.name === 'interpretation');
+  const revised = elements.find(e => e.name === 'revisedInterpretation');
+  first.value = '  I can make room.\nThe rain is not mine to stop.  ';
+  first.fire('input');
+  elements.find(e => e.textContent === 'Meet the source →').fire('click');
+  assert.equal(elements.find(e => e.className === 'ideas-lab__source').hidden, false);
+  assert.equal(revised.parent.hidden, true);
+  assert.equal(lab.getState().helpOpen, false);
+  elements.find(e => e.textContent === 'What do I think now? →').fire('click');
+  assert.equal(revised.parent.hidden, false);
+  assert.equal(labelled('My first thought').hidden, false);
+  assert.equal(labelled('My first thought').children[1].textContent, first.value);
+  assert.equal(lab.getState().revisedInterpretation, '');
+  labelled('Shape my first thought').fire('click');
+  assert.equal(first.parent.hidden, false);
+  labelled('Revisit my thought').fire('click');
+  assert.equal(revised.parent.hidden, false);
+  lab.setState({...lab.getState(), interpretation: 'A changed first account.'});
+  assert.equal(labelled('My first thought').children[1].textContent, 'A changed first account.');
+  lab.setState({...lab.getState(), interpretation: ''});
+  assert.equal(labelled('My first thought').hidden, true);
+  lab();
+});
