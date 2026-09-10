@@ -1,4 +1,4 @@
-import { normalizePianoState } from './piano-practice.js';
+import { normalizePianoState, performanceNotes } from './piano-practice.js';
 
 export const RUNAWAY_OPENING_SOURCE = Object.freeze({
   id: 'runaway-mn0103069-opening-two-strikes',
@@ -55,12 +55,20 @@ export const OPENING_PRESENTER_SOURCE = Object.freeze({
   limits: 'Two-strike exercise repeated at 80 BPM for presentation, not a seven-second song transcription or original recording.',
 });
 
-export function createOpeningPresenterTake() {
+export function createOpeningPresenterTake(offset = 0) {
+  if (!Number.isFinite(offset) || offset < 0 || offset >= 7) throw new RangeError('Presenter offset must be within the seven-second opening.');
   const original = createOpeningDemoTake();
-  return normalizePianoState({
+  const take = normalizePianoState({
     duration: 7,
     reference: { title: 'Authored repetition of the opening two-strike exercise', url: RUNAWAY_OPENING_SOURCE.url },
     events: [...original.events, ...original.events.map(event => ({ ...event, time: event.time + 3 }))],
+  });
+  if (offset === 0) return take;
+  return normalizePianoState({ ...take, duration: 7 - offset,
+    events: performanceNotes(take).filter(note => note.end > offset).flatMap(note => [
+      { type: 'on', midi: note.midi, time: Math.max(0, note.start - offset) },
+      { type: 'off', midi: note.midi, time: note.end - offset },
+    ]),
   });
 }
 

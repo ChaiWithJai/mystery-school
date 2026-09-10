@@ -5,7 +5,7 @@ import {RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,createOpeningPresenterTake,
 export const pianoScenePoint = midi => ({x:45+(midi-48)/48*1010,y:280-(midi-48)*5});
 export function mountPianoScene(container,adapter,track,onContinue){
   const piano=container.querySelector('.piano-practice');if(!piano)return null;
-  const presenterOpening=()=>{void adapter.demonstrate(createOpeningPresenterTake()).catch(error=>track('presenter.audio.error',{message:error.message}));};
+  const presenterOpening=event=>{void adapter.demonstrate(createOpeningPresenterTake(event.detail?.offset ?? 0)).catch(error=>track('presenter.audio.error',{message:error.message}));};
   piano.addEventListener('presenter-opening',presenterOpening);
   const soundtrack=mountDemoSoundtrack(track);
   const scene=document.createElement('section');scene.className='piano-scene';

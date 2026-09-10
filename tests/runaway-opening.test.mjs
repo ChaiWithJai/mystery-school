@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import { RUNAWAY_OPENING_SOURCE, createOpeningDemoTake, createOpeningPresenterTake, OPENING_PRESENTER_SOURCE, analyzeOpening, normalizeOpeningTarget, openingTempoLabel } from '../public/runaway-opening.js';
 import { normalizePianoState } from '../public/piano-practice.js';
 
+test('presenter resume keeps only remaining notes, including an interrupted held note', () => {
+  const take = createOpeningPresenterTake(2);
+  assert.equal(take.duration,5);
+  assert.deepEqual(take.events.slice(0,4),[
+    {type:'on',midi:88,time:0},{type:'off',midi:88,time:.25},
+    {type:'on',midi:88,time:.25},{type:'off',midi:88,time:1.75},
+  ]);
+  assert.deepEqual(createOpeningPresenterTake(6.9).events,[]);
+  for(const offset of [-1,7,NaN,Infinity])assert.throws(()=>createOpeningPresenterTake(offset),RangeError);
+  assert.equal(createOpeningPresenterTake().duration,7);
+});
+
 test('seven-second presenter take repeats only the bounded exercise with explicit authored provenance', () => {
   const take=createOpeningPresenterTake();
   assert.equal(take.duration,7);
