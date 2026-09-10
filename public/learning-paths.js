@@ -1,5 +1,7 @@
 import { mountLearningExperiment } from './learning-experiment.js';
 import { mountMusicScene } from './music-scene.js';
+import { mountPianoScene } from './piano-scene.js';
+import { mountBoxingGame } from './boxing-game.js';
 import { showMovieOpening } from './movie-opening.js';
 
 const PATHS={
@@ -80,8 +82,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     openDrawer('learning',({music:'Play. Listen. Try again.',movement:'Feel what time changes.',ideas:'Make a thought your own.'})[pathway],person.name.toUpperCase()+' / THE LIVING SCHOOL');
     const token=++opening;
     document.querySelector('#drawer').classList.add('learning-drawer');
-    let experimentDispose=null,musicScene=null;
-    const cleanup=()=>{opening++;musicScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
+    let experimentDispose=null,musicScene=null,pianoScene=null,boxingGame=null;
+    const cleanup=()=>{opening++;boxingGame?.dispose();pianoScene?.dispose();musicScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
     onCleanup(cleanup);
     const fresh=!drafts[pathway];
     let draft=drafts[pathway]||={lab:{},explanation:'',question:'',parentId:null,stage:'try'};
@@ -122,6 +124,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     q('.learning-care').ontoggle=e=>{if(e.target.open)events.track('learning.guidance.open',{pathway,character:person.name,actor_kind:actorKind,guidance_kind:'authored_demo',text:person.care});};
     let sources=[],ready=false,validateVideo=null;
     function currentSources(){
+      if(pathway==='music'&&draft.lab.practice?.reference)return [...sources,{label:draft.lab.practice.reference.title,url:draft.lab.practice.reference.url,locator:'Song reference; no automatic transcription or accuracy assessment',source_kind:'external_reference'}];
+      if(pathway==='movement')return [...sources,{label:'England Boxing coaching handbook',url:'https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf',locator:'Stance, guard, footwork and shadowboxing; printed pages 66–68 and 94–95',source_kind:'coaching_reference'}];
       if(!validateVideo)return sources;
       const reference=validateVideo(draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote);
       return reference.valid?[...sources,{url:reference.url,label:'User-supplied YouTube reference',locator:String(reference.seconds)+' seconds',source_kind:'user_reference_unverified',note:draft.lab.youtubeNote}]:sources;
@@ -148,13 +152,18 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
         api,sessionId,actorKind,pathway,getQuestion:()=>draft.question,
         getContext:()=>({question:draft.question.trim(),explanation:draft.explanation,source_refs:structuredClone(currentSources()),reference_draft:[draft.lab.youtubeUrl||'',draft.lab.youtubeTimestamp||'',draft.lab.youtubeNote||'']}),
         getState:()=>structuredClone(draft.lab),
-        setState:value=>{if(typeof dispose?.setState!=='function')throw Error('This experiment cannot apply changes yet.');dispose.setState(value);},
+        setState:value=>{if(typeof dispose?.setState!=='function')throw Error('This experiment cannot apply changes yet.');if(boxingGame&&value.boxing_round){boxingGame.setState(value.boxing_round);draft.lab.boxing_round=boxingGame.getState();}dispose.setState(value);},
         save:()=>save('new_question',actorKind,draft.question),
         track:(type,payload)=>events.track(type,payload)
       });
       q('[data-imagine]').hidden=true;
     };
-    try{const module=await import(person.module);if(token!==opening)return;validateVideo=module.validateYouTubeReference||null;sources=module.IDEAS_SOURCES||[{label:person.domain+' diagram',url:location.origin+'/'+person.module.slice(2),locator:'Implemented mathematical model; not a real-world measurement'}];q('[data-lab]').replaceChildren();dispose=module[person.mount](q('[data-lab]'),{initialState:draft.lab,onChange:value=>{const priorSources=JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote]);draft.lab=structuredClone(value);keep();musicScene?.render();if(JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote])!==priorSources)experimentDispose?.contextChanged();},onEvent:(type,payload)=>{musicScene?.event(type,payload);events.track('learning.'+pathway+'.action',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',type,payload});}});if(pathway==='music')musicScene=mountMusicScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}));ready=true;saveButtons.forEach(button=>{button.disabled=false;});}catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
+    try{const module=await import(person.module);if(token!==opening)return;validateVideo=module.validateYouTubeReference||null;sources=module.IDEAS_SOURCES||[{label:person.domain+' diagram',url:location.origin+'/'+person.module.slice(2),locator:'Implemented mathematical model; not a real-world measurement'}];q('[data-lab]').replaceChildren();dispose=module[person.mount](q('[data-lab]'),{initialState:draft.lab,onChange:value=>{const priorSources=JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote]);draft.lab={...structuredClone(value),...(draft.lab.boxing_round?{boxing_round:draft.lab.boxing_round}:{})};keep();musicScene?.render();pianoScene?.render();if(JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote])!==priorSources)experimentDispose?.contextChanged();},onEvent:(type,payload)=>{musicScene?.event(type,payload);pianoScene?.event(type,payload);events.track('learning.'+pathway+'.action',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',type,payload});}});if(pathway==='music'){musicScene=mountMusicScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}));pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');await open('movement');});}ready=true;saveButtons.forEach(button=>{button.disabled=false;});}catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
+    if(ready&&pathway==='movement'){
+      const host=document.createElement('div'),physics=document.createElement('details'),summary=document.createElement('summary');physics.className='universe-physics';summary.textContent='∿ Look closer at the motion';physics.append(summary,q('.movement-lab'));q('[data-lab]').append(host,physics);
+      const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Enter a story →';next.hidden=!(draft.lab.boxing_round?.attempts?.length);host.after(next);next.onclick=async()=>{next.disabled=true;try{await save(draft.parentId?'revision':'attempt');await open('ideas');}catch(error){next.disabled=false;toast(error.message);}};
+      boxingGame=mountBoxingGame(host,{getSettings:()=>structuredClone(draft.lab),initialState:draft.lab.boxing_round||{},onChange:state=>{draft.lab.boxing_round=structuredClone(state);next.hidden=!state.attempts.length;keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
+    }
     const recordedJob=new URLSearchParams(location.search).get('experiment');
     if(ready&&artifactId&&recordedJob){
       q('.learning-next').hidden=false;

@@ -12,7 +12,7 @@ test('parent artifact source references include a work, URL and section locator'
 });
 
 test('empty and malformed persisted state normalize to a complete JSON state', () => {
-  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '', modelComparison: null };
+  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, storyChoice: null, comparisonChoice: null, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '', modelComparison: null };
   for (const value of [undefined, null, [], 2, 'draft', { interpretation: {}, revisedInterpretation: 10, helpOpen: 'true' }]) {
     assert.deepEqual(validateIdeasState(value), expected);
   }
@@ -109,6 +109,51 @@ test('Astra comparison changes the activity without replacing learner words and 
   cleanup.setState(before);
   assert.deepEqual(cleanup.getState(), before);
   cleanup();
+});
+
+test('umbrella choice persists and restores the visible story without authoring learner words', () => {
+  const original = testContainer();
+  const changes = [], events = [];
+  const lab = mountIdeasLab(original.container, { onChange: state => changes.push(state), onEvent: (type, payload) => events.push({ type, payload }) });
+  original.elements.find(e => e.attributes['aria-label'] === 'Offer your umbrella to the stranger').fire('click');
+  assert.equal(changes.at(-1).storyChoice, 'offer_shelter');
+  assert.equal(events.at(-1).type, 'story.choice');
+  assert.equal(events.at(-1).payload.state.storyChoice, 'offer_shelter');
+  const saved = JSON.parse(JSON.stringify(lab.getState())); lab();
+  const reopened = testContainer(); const next = mountIdeasLab(reopened.container, { initialState: saved });
+  assert.equal(reopened.elements.find(e => e.className === 'ideas-lab__story').attributes['data-shared'], 'true');
+  assert.equal(next.getState().interpretation, '');
+  next.setState({ ...saved, storyChoice: 'return_umbrella' });
+  assert.equal(reopened.elements.find(e => e.className === 'ideas-lab__story').attributes['data-shared'], 'false');
+  next.setState(saved); assert.deepEqual(next.getState(), saved); next();
+  assert.equal(validateIdeasState({storyChoice:'invented'}).storyChoice, null);
+});
+
+test('comparison doorway records learner choice and leaves both exact drafts owned by learner', () => {
+  const { container, elements } = testContainer();
+  const lab = mountIdeasLab(container, { initialState: { interpretation: ' First. ', revisedInterpretation: ' Still mine. ', modelComparison: { scenario: 'Your friend disagrees.', question: 'What can you choose?', source_quote: IDEAS_SOURCE.excerpt, source_ref_index: 0 } } });
+  elements.find(e => e.textContent === 'Keep my view — explain why').fire('click');
+  assert.equal(lab.getState().comparisonChoice, 'keep');
+  assert.equal(lab.getState().unchanged, true);
+  assert.equal(lab.getState().interpretation, ' First. ');
+  assert.equal(lab.getState().revisedInterpretation, ' Still mine. ');
+  elements.find(e => e.textContent === 'Compare with my reading').fire('click');
+  assert.equal(lab.getState().comparisonChoice, 'reconsider');
+  assert.equal(lab.getState().unchanged, false); lab();
+});
+
+test('read aloud is explicit and stops when its lab closes', () => {
+  const { container, elements } = testContainer();
+  const spoken = []; let cancelled = 0;
+  container.ownerDocument.defaultView = {
+    speechSynthesis: { speak: utterance => spoken.push(utterance.text), cancel: () => cancelled++ },
+    SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
+  };
+  const lab = mountIdeasLab(container);
+  assert.equal(spoken.length, 0);
+  elements.find(e => e.attributes['aria-label'] === 'Hear this authored story').fire('click');
+  assert.deepEqual(spoken, ['An imagined moment. Two strangers. One umbrella.']);
+  lab(); assert.equal(cancelled, 1);
 });
 
 test('mount emits complete defaults once, uses two-argument events, and cleanup detaches', () => {

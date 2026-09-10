@@ -67,6 +67,8 @@ export function validateIdeasState(input = {}) {
     helpSeen: value.helpSeen === true || value.helpOpen === true,
     sourceOpened: value.sourceOpened === true,
     unchanged: value.unchanged === true,
+    storyChoice: ['offer_shelter', 'return_umbrella'].includes(value.storyChoice) ? value.storyChoice : null,
+    comparisonChoice: ['keep', 'reconsider'].includes(value.comparisonChoice) ? value.comparisonChoice : null,
     youtubeUrl: typeof value.youtubeUrl === 'string' ? value.youtubeUrl.slice(0, 2048) : '',
     youtubeTimestamp: typeof value.youtubeTimestamp === 'string' ? value.youtubeTimestamp.slice(0, 16) : '',
     youtubeNote: typeof value.youtubeNote === 'string' ? value.youtubeNote.slice(0, 4000) : '',
@@ -114,6 +116,18 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const listeners = [];
   let state = validateIdeasState(initialState);
   let disposed = false;
+  const speech = doc.defaultView?.speechSynthesis;
+  const Utterance = doc.defaultView?.SpeechSynthesisUtterance;
+  let speaking = false;
+  function stopSpeech() { if (speaking && speech) speech.cancel(); speaking = false; }
+  function speak(text) {
+    if (!speech || !Utterance) return;
+    stopSpeech(); speaking = true;
+    const utterance = new Utterance(text);
+    utterance.onend = utterance.onerror = () => { speaking = false; };
+    speech.speak(utterance);
+    emit('story.read-aloud', { text, voice: 'browser_speech_synthesis' });
+  }
 
   function node(tag, className, text) {
     const element = doc.createElement(tag);
@@ -322,17 +336,20 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const enterMap = node('button', 'ideas-lab__story-next', '✧'); enterMap.type = 'button';
   enterMap.setAttribute('aria-label', 'Make your own thought from this story'); enterMap.hidden = true;
   listen(umbrella, 'click', () => {
-    const shared = story.getAttribute('data-shared') !== 'true';
-    story.setAttribute('data-shared', String(shared));
-    umbrella.setAttribute('aria-label', shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
-    storyCaption.textContent = shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
-    bookDoor.hidden = enterMap.hidden = !shared;
+    const shared = state.storyChoice !== 'offer_shelter';
+    update({ storyChoice: shared ? 'offer_shelter' : 'return_umbrella' });
     emit('story.choice', { storyId: 'authored-rain-and-care', authored: true, action: shared ? 'offer_shelter' : 'return_umbrella', outcome: 'Authored illustration; not a prediction of another person’s response.' });
   });
-  const leaveStory = index => { story.hidden = true; chain.hidden = false; selectOrb(index); };
+  const leaveStory = index => { stopSpeech(); story.hidden = true; chain.hidden = false; selectOrb(index); };
   listen(bookDoor, 'click', () => leaveStory(0));
   listen(enterMap, 'click', () => leaveStory(1));
   story.append(rain, street, storyCaption, umbrella, bookDoor, enterMap);
+  if (speech && Utterance) {
+    const storyVoice = node('button', 'ideas-lab__voice', '◖))'); storyVoice.type = 'button';
+    storyVoice.setAttribute('aria-label', 'Hear this authored story');
+    listen(storyVoice, 'click', () => speak(`An imagined moment. ${storyCaption.textContent}`));
+    story.append(storyVoice);
+  }
   if (!state.interpretation && !state.revisedInterpretation) chain.hidden = true;
   else story.hidden = true;
   map.append(story);
@@ -340,22 +357,33 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const editor = node('div', 'ideas-lab__editor');
   const closeEditor = node('button', 'ideas-lab__close', '×');
   closeEditor.type = 'button'; closeEditor.setAttribute('aria-label', 'Return to the constellation');
-  listen(closeEditor, 'click', () => { editor.hidden = true; mapCards[activeOrb]?.focus(); });
-  listen(editor, 'keydown', event => { if (event.key === 'Escape') { editor.hidden = true; mapCards[activeOrb]?.focus(); } });
+  listen(closeEditor, 'click', () => { stopSpeech(); editor.hidden = true; mapCards[activeOrb]?.focus(); });
+  listen(editor, 'keydown', event => { if (event.key === 'Escape') { stopSpeech(); editor.hidden = true; mapCards[activeOrb]?.focus(); } });
   editor.append(closeEditor, source, first.section, revised.section, helpSection);
   root.append(editor, videoSection);
   const comparison = node('details', 'ideas-lab__model-comparison');
-  comparison.append(node('summary', '', '✦ Explore Astra’s new situation'));
+  const comparisonDoor = node('summary', '', '✦');
+  comparisonDoor.setAttribute('aria-label', 'Enter Astra’s new situation');
+  comparison.append(comparisonDoor);
   const comparisonTitle = node('h4', 'ideas-lab__step', 'Try your reading in another situation');
   const comparisonSource = node('blockquote');
   const comparisonScenario = node('p');
   const comparisonQuestion = node('p', 'ideas-lab__probe');
   const comparisonTry = node('button', 'ideas-lab__button', 'Compare with my reading');
   comparisonTry.type = 'button';
-  listen(comparisonTry, 'click', () => { selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison }); });
-  comparison.append(comparisonTitle, node('small', '', 'Astra-proposed scenario, not a claim from the source'),
+  listen(comparisonTry, 'click', () => { stopSpeech(); comparison.open = false; story.hidden = true; chain.hidden = false; update({ comparisonChoice: 'reconsider', unchanged: false }); selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison, choice: 'reconsider' }); });
+  const comparisonKeep = node('button', 'ideas-lab__button', 'Keep my view — explain why'); comparisonKeep.type = 'button';
+  listen(comparisonKeep, 'click', () => { stopSpeech(); comparison.open = false; story.hidden = true; chain.hidden = false; update({ comparisonChoice: 'keep', unchanged: true }); selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison, choice: 'keep' }); });
+  comparison.append(comparisonTitle, node('small', '', 'Astra’s thought experiment · the rain scene is authored separately'),
     comparisonSource, comparisonScenario, comparisonQuestion, comparisonTry);
-  root.append(comparison);
+  comparison.append(comparisonKeep);
+  if (speech && Utterance) {
+    const comparisonVoice = node('button', 'ideas-lab__button', 'Hear the situation'); comparisonVoice.type = 'button';
+    listen(comparisonVoice, 'click', () => speak(`Astra's thought experiment. ${state.modelComparison?.scenario || ''} ${state.modelComparison?.question || ''} Source excerpt: ${state.modelComparison?.source_quote || ''}`));
+    comparison.append(comparisonVoice);
+  }
+  listen(comparison, 'toggle', () => { if (!comparison.open) stopSpeech(); });
+  map.append(comparison);
   let activeOrb = state.revisedInterpretation ? 2 : 0;
   function selectOrb(index, notify = true) {
     activeOrb = index;
@@ -385,6 +413,11 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   root.append(status);
 
   function render() {
+    const shared = state.storyChoice === 'offer_shelter';
+    story.setAttribute('data-shared', String(shared));
+    umbrella.setAttribute('aria-label', shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
+    storyCaption.textContent = shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
+    bookDoor.hidden = enterMap.hidden = !shared;
     comparison.hidden = !state.modelComparison;
     comparisonSource.textContent = state.modelComparison?.source_quote || '';
     comparisonScenario.textContent = state.modelComparison?.scenario || '';
@@ -420,6 +453,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   emit('open');
   const cleanup = () => {
     if (disposed) return;
+    stopSpeech();
     disposed = true;
     for (const remove of listeners) remove();
     root.remove();

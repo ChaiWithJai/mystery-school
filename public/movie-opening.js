@@ -11,6 +11,3 @@ export function showMovieOpening(onSelect) {
   opening.querySelectorAll('[data-world]').forEach(button=>button.onclick=()=>{sessionStorage.setItem('mystery.opening-seen','1');opening.remove();onSelect(button.dataset.world);});
   opening.querySelector('button').focus({preventScroll:true});
 }
-if(!sessionStorage.getItem('mystery.opening-seen')&&!new URLSearchParams(location.search).has('artifact')) {
-  showMovieOpening(pathway=>{const url=new URL(location.href);url.searchParams.set('path',pathway);location.assign(url);});
-}
