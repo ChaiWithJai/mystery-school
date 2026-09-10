@@ -3,6 +3,19 @@ import { validateExperimentProposal, proposedLabState } from './experiment-propo
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const MOVEMENT_SETTINGS = ['duration', 'distance', 'shape', 'compare_shape', 'view'];
+export function describeExperimentValue(key, value) {
+  if (value === null || value === undefined) return 'None yet';
+  if (key === 'notes') return value.map(note => {
+    const name = ['C', 'C sharp', 'D', 'E flat', 'E', 'F', 'F sharp', 'G', 'A flat', 'A', 'B flat', 'B'][note.midi % 12];
+    return `${name}${Math.floor(note.midi / 12) - 1} for ${note.beats} ${note.beats === 1 ? 'beat' : 'beats'}`;
+  }).join(', then ');
+  if (key === 'tempo') return `${value} beats per minute`;
+  if (key === 'attack') return `${value} seconds to full volume`;
+  if (key === 'duration') return `${value} seconds`;
+  if (key === 'distance') return `${value} metres`;
+  if (key === 'modelComparison') return `Source: "${value.source_quote}". Situation: ${value.scenario} Question: ${value.question}`;
+  return typeof value === 'object' ? 'Saved experiment details' : String(value);
+}
 export function experimentDefinition(pathway, state) {
   if (pathway === 'ideas') {
     const { helpOpen, helpSeen, sourceOpened, ...content } = state;
@@ -54,8 +67,8 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     for (const key of Object.keys(nextState)) {
       if (same(oldState[key], nextState[key])) continue;
       const term = document.createElement('dt'), detail = document.createElement('dd');
-      term.textContent = key.replace(/_/g, ' ');
-      detail.textContent = `${JSON.stringify(oldState[key] ?? null)} → ${JSON.stringify(nextState[key])}`;
+      term.textContent = ({notes:'Your phrase',attack:'How each note begins',tempo:'Pace',modelComparison:'A situation to think through',compare_shape:'Reference movement',shape:'Your movement',view:'What the graph shows'})[key] || key.replace(/_/g, ' ');
+      detail.textContent = `Before: ${describeExperimentValue(key, oldState[key])}. After: ${describeExperimentValue(key, nextState[key])}.`;
       list.append(term, detail);
     }
   }

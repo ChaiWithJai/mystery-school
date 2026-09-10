@@ -1,0 +1,73 @@
+/* Keep the instrument and its next question in the same desktop workspace.
+   Small screens retain the original single-column flow and hidden panels
+   retain their existing behavior. No lab state or model behavior lives here. */
+@media (min-width: 1200px) and (min-height: 760px) {
+  .drawer.learning-drawer {
+    padding: 18px 28px;
+    overflow: auto;
+  }
+  .learning-drawer > h2 { font-size: 34px; margin: 8px 0 12px; }
+  .learning-drawer .learning-layout { max-width: 1800px; }
+  .learning-work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: auto auto auto auto 1fr;
+    column-gap: 24px;
+    align-items: start;
+  }
+  .learning-work > * { grid-column: 2; min-width: 0; }
+  .learning-work > .learning-steps { grid-column: 1 / -1; grid-row: 1; }
+  .learning-work > [data-lab] {
+    grid-column: 1;
+    grid-row: 2 / span 6;
+    max-height: calc(100dvh - 205px);
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #8da988 #122e29;
+    scrollbar-gutter: stable;
+    border-radius: 24px;
+    padding: 4px;
+  }
+  .learning-work > .learning-dock {
+    grid-row: 2;
+    display: grid;
+    gap: 4px;
+    padding: 8px;
+    margin: 4px 0 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .learning-dock button { justify-content: flex-start; font-size: 12px; padding: 10px 14px; }
+  .learning-dock button[data-panel="next"] { background: #d7e4b9; color: #173b2d; }
+  .learning-dock button[data-panel="next"]:hover,
+  .learning-dock button[data-panel="next"][aria-expanded="true"] { background: #f0edca; color: #173b2d; }
+  .learning-work > :is(.learning-save, .learning-share, .learning-next) {
+    grid-row: 4;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    max-height: calc(100dvh - 450px);
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #8da988 #122e29;
+  }
+  .learning-work > .learning-action-status { grid-row: 3; }
+  .learning-work > .learning-versions { grid-row: 5; margin: 10px 0; }
+  .learning-next > label { margin-top: 0; font-size: 13px; }
+  .learning-next textarea { min-height: 70px; }
+  .learning-experiment { margin-top: 14px; padding-top: 14px; }
+  .learning-experiment h3 { margin: 0 0 8px; font: 24px var(--serif); }
+  .learning-experiment label { font-size: 12px; line-height: 1.5; margin: 12px 0; }
+  .learning-experiment .primary { margin-top: 8px; background: #d7e4b9; color: #173b2d; }
+  .learning-experiment .primary:disabled { opacity: .5; }
+  .learning-experiment [data-preview] { padding: 12px; margin-top: 12px; }
+  .learning-experiment [data-progress]:not(:empty) { padding: 10px; border-left: 3px solid #e5ce8a; background: #284c3a; color: #f4eccf; }
+  .learning-experiment dd { margin: 4px 0 10px; font-size: 12px; }
+  .learning-drawer :is(button, input, textarea, summary):focus-visible { outline: 3px solid #ffe2a1; outline-offset: 3px; }
+  .learning-work [data-lab] > :is(.music-lab, .movement-lab) { padding: 20px; gap: 18px; }
+  .learning-work .music-lab__title { font-size: 27px; }
+  .learning-work .music-lab__phrase .music-lab__key { flex-basis: 40px; min-height: 66px; font-size: 14px; }
+  .learning-work .music-lab__playback { gap: 6px; }
+  .learning-work .music-lab__playback button { padding: 10px 12px; }
+}

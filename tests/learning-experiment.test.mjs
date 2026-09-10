@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mountLearningExperiment, experimentDefinition } from '../public/learning-experiment.js';
+import { mountLearningExperiment, experimentDefinition, describeExperimentValue } from '../public/learning-experiment.js';
+
+test('preview names notes and durations rather than displaying MIDI JSON', () => {
+  assert.equal(describeExperimentValue('notes', [{midi:64,beats:2},{midi:60,beats:4}]), 'E4 for 2 beats, then C4 for 4 beats');
+  assert.equal(describeExperimentValue('tempo', 100), '100 beats per minute');
+  assert.equal(describeExperimentValue('modelComparison', {source_quote:'A source',scenario:'A disagreement.',question:'What would you do?'}), 'Source: "A source". Situation: A disagreement. Question: What would you do?');
+});
 
 test('ideas reading navigation is separate from substantive learner and source content', () => {
   const state = { interpretation: 'My words', revisedInterpretation: '', youtubeUrl: 'draft', modelComparison: null, helpOpen: false, helpSeen: false, sourceOpened: false };
