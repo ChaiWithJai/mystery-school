@@ -1,83 +1,82 @@
 # Mystery School
 
-Mystery School is a desktop-first demo contract for Jai Bhagat's school on a computer: a sandbox for intuition.
+Mystery School is a local desktop app for Jai Bhagat's school on a computer.
+A learner can play music, try movement, and write about an idea in a rendered
+world. Saved work and model suggestions remain separate.
 
-The goal is to build a local app where a person can:
+All three pathways are required by
+[issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2).
+See [CONTRACT.md](CONTRACT.md) for the implementation contract.
 
-- Enter an atmospheric forest world.
-- Explore possible futures through questions, choices, and reflections.
-- Upload personal reference images.
-- Run explicit, visible Astra projections.
-- Review traces and annotations without pretending generated output is verified truth.
+## Learner journey
 
-The product stance is simple: authored demo scenes and live model projections must be visibly distinct, all model work must be observable, and local state must remain local unless the user explicitly sends it somewhere.
+The root page opens Runaway. Select "Listen" to hear the first seven seconds
+of a supplied local recording. Playback requires a browser gesture. "Keep
+playing" lets the recording continue into boxing, while "Try keys" opens
+separate piano practice. Saving from the piano continues directly into the
+ring without an intervening tour.
 
-See [CONTRACT.md](./CONTRACT.md) for the implementation contract.
-
-## Three learning pathways
-
-[Issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2) defines delivery.
-All three pathways are required. The forest and gear experiment do not replace
-them. The opening screen offers all three worlds. Direct pathway links skip
-that screen. Use the world chooser inside a pathway to switch worlds.
-
-| Person | Working interaction | Route |
+| Pathway | What the learner can do | Direct route |
 | --- | --- | --- |
-| Maya | Play and record piano notes, compare the opening two strikes of a notation exercise, and try a proposed practice tempo. Phrase variations remain separate from recorded attempts. | `/?path=music` |
-| Andre | Play a boxing timing game, try proposed cue timing and gap settings, and inspect a mathematical movement comparison. | `/?path=movement` |
-| Leena | Try a shared-shelter decision scene, interpret the Epictetus passage, and revise her own account. A lecture URL, timestamp and note remain unverified user references. | `/?path=ideas` |
+| Music | Listen to a local Runaway recording, play the mapped piano keys, and keep a recorded attempt. | `/?path=music` |
+| Movement | Choose a boxing body-map lesson, inspect its source, and try mirror practice. | `/?path=movement` |
+| Ideas | Explore a rendered world, read a source, and keep a discovery inside the writer. | `/?path=ideas` |
 
-Each pathway saves versions, presents a labeled staged response, and keeps a
-next question. Saved versions reopen through `?path=PATH&artifact=ID` and link
-to Trajectory Studio. Browser drafts persist locally; saved versions use the
-local API and have immutable parent links and MLflow trace IDs.
+The contextual world menu provides access to the other pathways. The forest
+and gear diagram remain secondary views, not replacements for the pathways.
+The timed presenter page at `/demo-60.html` is separate from the learner journey.
 
-The forest now has labeled pathway entrances and saved artifact markers. Select
-a saved marker to reopen that version, rather than starting a model request.
+Browser drafts persist locally. Saved versions use the local API and retain
+parent links and MLflow trace IDs. Reopen a version with
+`/?path=PATH&artifact=ID`, or inspect it in Trajectory Studio.
 
-"Ask Astra for a change" requires explicit consent and saves the starting
-experiment. The request uses `learning_artifact_id`, and the backend copies the
-saved record into `learning_artifact_context`. The proposal panel stays beside
-the local controls while the request runs. A supported result offers a preview,
-apply and undo. Changes to the question or source context invalidate consent.
-Changes to the experiment prevent an older proposal from overwriting those edits.
-Artifact requests exclude unrelated image uploads.
-General projections also leave saved images out unless the person checks
-"Include my saved reference images". Changing that choice requires confirmation
-again. Uploading an image alone does not authorize sending it to the model.
-General forest projections still use the separate confirmation form. No proposal
-is applied automatically. Music practice targets preserve recorded attempts and
-phrase settings. Ideas consequences are model-imagined possibilities, not
-predictions or correct answers.
+## Recording and piano sound
 
-The characters are fictional composites. Their dialogue and peer responses are
-authored, not live conversations. The experiments use deterministic code, not
-an ambient AI tutor. Music is synthesized sound, not a physical piano model.
-The piano exercise uses the inspected Musicnotes MN0103069 arrangement, not
-verified timing from the original recording. Boxing gaps use simulation units,
-not physical distance or impact force. Movement is not measured athlete data or
-impact advice. Participant learning has not been evaluated.
+The supplied song recording is local to the installation. The optional file
+`public/audio/local/runaway.mp3` is ignored by Git and excluded from the
+published build. A fresh clone does not include it. Choose audio you have
+permission to use through "Music settings"; the selected file stays in the
+browser and is not uploaded. The repository does not distribute the
+copyrighted song recording.
 
-See [pathway verification](docs/pathway-verification.md) for the recorded tests,
-remaining gaps, and the contribution from the other machine.
+Keyboard practice uses a bundled Salamander piano sample by Alexander Holm,
+transposed to the opening pitches, with synthesized sound as a fallback.
+The sampled instrument is separate from the song recording. Attribution and
+license details are in
+[the piano audio directory](public/audio/piano/SOURCE-LICENSE.txt).
 
-## Desktop Prototype
+The external arrangement and local practice exercises have different sources
+and timing. The bounded two-strike exercise is derived from the inspected
+Musicnotes MN0103069 arrangement. It is not a full-song transcription or
+verified timing from the original recording. See
+[the source review](docs/reviews/runaway-source-20260910.md) for evidence and
+limits. Opening an external reference contacts that site.
 
-The first implementation includes a Blender-authored forest, six explorable
-worlds, image references, a persistent notebook, explicit Astra jobs, and a
-trajectory review interface with anchored notes and correction links.
+## Astra requests and consent
 
-The browser renders the exported GLB with Three.js. Astra returns a structured
-scenario, atmosphere parameters and bounded experiment proposals, not newly generated geometry. Authored
-scenes, generated possibilities, and user observations remain distinct.
+Local play does not require a model request. "Ask Astra for a change" requires
+explicit confirmation and saves the starting experiment. The request includes
+`learning_artifact_id`, and the backend copies the saved record into
+`learning_artifact_context`. The local controls remain available during the
+request. Supported proposals offer preview, apply and undo, with a return
+link to the saved source.
 
-## Run
+Changes to the question or source context invalidate confirmation. Changes to
+the experiment prevent an older proposal from overwriting those edits.
+Music practice targets preserve recorded attempts and phrase settings.
+Ideas consequences are model-imagined possibilities, not correct answers or
+predictions. No proposal is applied automatically.
 
-Start from a clone with Python 3.11 and Node.js installed. Python 3.11 is the
-verified setup below; newer Python versions have not been checked. Local play
-does not require a Codex sign-in. Live Astra requests additionally require a
-compatible Codex CLI and model access. Model requests leave the device; the
-scene, notebook, references, and trace database are stored locally.
+Artifact requests exclude unrelated image uploads. General forest projections
+also exclude saved images unless the learner selects "Include my saved
+reference images" and confirms the request. Uploading an image alone does
+not authorize sending it to a model.
+
+## Run locally
+
+Use Python 3.11 and Node.js. Live Astra requests additionally require a
+compatible Codex CLI and model access. Model requests leave the device;
+saved work, references and traces use local storage.
 
 ```sh
 git clone https://github.com/ChaiWithJai/mystery-school.git
@@ -97,13 +96,12 @@ The API records MLflow traces in `data/mlflow.db`. In a second terminal:
   --default-artifact-root "file://$PWD/data/mlartifacts"
 ```
 
-To select a different installed CLI, set `ASTRAL_CODEX_BIN` to its executable
-when starting the server. Inspect `/api/diagnostics` for the selected executable
-and build identity. Executable availability does not prove authentication or
-model access. The app records failed requests visibly.
+Set `ASTRAL_CODEX_BIN` to select another installed CLI. Inspect
+`/api/diagnostics` for the executable and build identity. Availability does
+not prove authentication or model access. Failed requests remain visible.
+Keep the server on localhost; it is not a hardened shared deployment.
 
-For a check that starts its own server with empty temporary data and disables
-model executable discovery:
+## Tests and recorded evidence
 
 ```sh
 npm run check
@@ -112,100 +110,64 @@ npm test
 .venv/bin/python scripts/check-clean-setup.py --port 5196 --require-clean
 ```
 
-This verifies installation, startup and served files. It does not establish a
-fluid experience or replay a live model result. See
-[reproducible delivery](docs/reproducible-delivery.md) for the measured checkpoint
-and the separate recorded replay.
+The clean-setup check starts a server with empty temporary data and disables
+model executable discovery. Installation and automated checks do not prove
+the quality of sound, camera tracking, or the learner experience. See
+[reproducible delivery](docs/reproducible-delivery.md) for setup evidence.
 
-## Recorded replay
+The separate `/replay.html` page uses captured agent QA proposals for Piano,
+Boxing and Story. The Phrase option preserves an earlier music-editor replay.
+Replay makes no model request and saves no new backend records. Its local
+events disappear on reload. Bundled inputs and outputs remain in
+`public/fixtures/recorded-*.json`.
 
-After starting the local server, open `http://127.0.0.1:5188/replay.html`.
-Choose Piano, Boxing, or Story. Play, apply the captured proposal, try again,
-and undo. Phrase retains the earlier music-editor replay. Open "Source and
-replay events" for the original job/trace IDs and local page events.
-Bundled inputs and outputs are in `public/fixtures/recorded-*.json`.
+The scripts `verify_demo.mjs`, `verify_capture.mjs`, `verify_pathways.mjs`
+and `verify_learning_projection.mjs` in `scripts/` inspect existing local
+records without making model calls. They require the corresponding completed
+runs and are not fresh-clone checks. The learning projection verifier takes
+a job ID and uses GET requests only.
 
-The page reuses recorded agent QA output without making a model request or
-saving new backend records. Piano changes the opening practice tempo; Boxing
-changes the simulated jab timing and distance; Story offers source-bound,
-model-imagined choices. These are captured examples, not fresh inference or
-proof of learning. Events disappear on reload. Opening external references is
-optional and contacts those sites.
+Historical results, job IDs and limitations remain in
+[verification evidence](docs/verification.md),
+[pathway verification](docs/pathway-verification.md), and
+[live proposals](docs/live-proposals.md). The
+[learner pilot](docs/learner-pilot.md) is prepared, not conducted.
+Learning, transfer and camera quality have not been established by the
+automated checks.
 
-## Checkpoint: September 10, 2026
+## Review and provenance
 
-- Browser verified: Blender asset loading, island selection, question panels,
-  reference upload and preview.
-- Syntax and backend integration checks cover persistence, cancellation,
-  timeouts, invalid outputs, source preservation, uploads, and review APIs.
-- The first real Astra attempt failed because the shell CLI was outdated.
-  Its failure trace is retained locally. The app-bundled CLI then completed
-  a reference-based projection and a corrected child with the original preserved.
-- A third successful projection starts with a synthetic learner's bike question.
-  Its exact prompt, command arguments, reference bytes, and explicitly selected
-  notebook note are captured. Historical jobs do not have exact invocation files.
-- The opening preserves a learner's short request. Suggested questions require
-  explicit confirmation before a model request. Prediction is optional.
-- Browser checks verified that question, prediction, and premise drafts survive
-  closing Imagine, visiting References, and reopening. Drafts are separate for
-  each world and last only until the page reloads.
-- Learning outcomes and transfer are not yet evaluated with participants.
-- The verified host reports Apple M5 Pro. M4 compatibility remains untested.
-- An earlier verified suite checkpoint recorded 82 JavaScript tests and 22 backend
-  tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
-  Their jobs, traces, sources, and reported usage are listed in the verification doc.
-- The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.
-
-```sh
-npm run check
-npm test
-.venv/bin/python -m unittest discover -s tests -v
-node scripts/verify_demo.mjs
-node scripts/verify_capture.mjs
-node scripts/verify_pathways.mjs
-node scripts/verify_learning_projection.mjs 14e0de07-b8ea-4083-a395-e89dd2741841
-```
-
-The Node verification scripts inspect existing local jobs; they do not call a
-model. They require the corresponding completed walkthroughs in the local data
-directory and intentionally fail on a fresh clone. See
-[verification evidence](docs/verification.md) for their scope and remaining checks.
-The learning projection verifier uses GET requests only and exits with code 2
-when no linked live result exists. A passing integrity check is not evidence of
-learner understanding or model accuracy.
-
-## Imported review records
+Trajectory Studio keeps source messages, anchored notes, correction links
+and related records. Imported agent reviews remain distinct from live model
+calls and human annotations.
 
 `POST /api/sidecar-records` imports a declared `agent_review` envelope with
-`capture_method: "imported"`. Matching `source_system` and `source_event_id`
-return the same record for an identical envelope; changed content returns 409.
-`GET /api/sidecar-records` and `GET /api/sidecar-records/ID` expose the records.
-They also appear in Trajectory Studio with imported provenance.
+`capture_method: "imported"`. Identical retries with the same
+`source_system` and `source_event_id` return the same record; changed content
+returns 409. Accepting or dismissing a suggestion records a declared actor,
+producer and timestamp without replacing the original author. Declared
+identity is not authentication, and missing historical attribution stays unknown.
 
-Accepting or dismissing a suggestion records a separately declared decision
-actor, producer and timestamp. The original author stays unchanged. The UI
-labels declarations as unauthenticated. Historical decisions without attribution
-remain unknown. General model requests also retain declared actor provenance;
-missing historical fields are not backfilled as human actions.
+`node scripts/import_sidecar_probes.mjs` writes imported local records and
+checks identical retries. It does not call a model. Imported published probes
+are not raw Buzz telemetry or proof that a learner test was executed.
 
-`node scripts/import_sidecar_probes.mjs` imports the pinned, published Git probe
-documents and checks identical retries. Unlike the verification scripts above,
-it writes local records, but does not call a model. The imported documents are
-proposed agent checks, not executed learner tests or raw Buzz telemetry. Source
-publication times are distinct from import times; unavailable model, usage,
-cost, and original invocation data remain null or explicitly unavailable.
+Tracing records observable app events, submitted inputs, CLI events, results,
+errors and reported usage. It does not expose hidden reasoning. Unavailable
+usage, cost and historical invocation files remain unknown or explicitly
+unavailable.
 
-Tracing covers app events, submitted model inputs, observable CLI events,
-outputs, errors, reported usage, and review feedback. It does not expose hidden
-reasoning or automatically capture this entire build conversation. Unknown
-usage and dollar cost remain unknown, not zero. Data and runtime downloads are
-excluded from Git. Keep the server on localhost; this is not a hardened shared
-deployment.
+The characters and staged peer responses are authored, not live conversations.
+Movement diagrams and boxing game distances are not measurements of a person's
+body, impact force or athletic ability. Camera practice does not establish
+movement accuracy or provide injury-prevention advice.
 
-See [Blender instructions](blender/README.md) for editable assets and rebuilds.
-Coordinate this milestone in Buzz's `mystery-school` channel, not Slack or
-Google Workspace.
+## Other documentation
 
-## Netlify and local inference
+- [Blender instructions](blender/README.md) describe editable forest assets.
+- [Netlify and local inference](docs/netlify-local-inference.md) describes hosted capabilities and the private local backend.
+- [Boxing coach integration](docs/boxing-coach-integration.md) describes the separate coaching integration and its limits.
 
-The [private demo deployment guide](docs/netlify-local-inference.md) packages the website for Netlify, keeps the existing Codex/Astra backend on the presenter machine, and adds an authenticated Bonsai 4B cue adapter. M5 owns live scene integration and activation. The guide distinguishes tested infrastructure from pending live inference and webcam verification.
+`npm run build:netlify` prepares the hosted assets. The build excludes local
+song recordings and private runtime data; it does not provide the local
+Studio or MLflow database.

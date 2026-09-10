@@ -1,13 +1,11 @@
 import { mountLearningExperiment } from './learning-experiment.js';
 import { RUNAWAY_OPENING_SOURCE } from './runaway-opening.js';
-import { mountMusicScene } from './music-scene.js';
 import { mountPianoScene } from './piano-scene.js';
 import { mountBoxingGame } from './boxing-game.js';
 import { mountBoxingJourney, BOXING_JOURNEY_LESSONS as BOXING_LESSONS } from './boxing-journey.js';
 import { mountRealWorldReflection } from './real-world-reflection.js';
 import { mountStoryWorld } from './story-world.js';
 import {createBoxingMemory,createIdeasMemory,appendMemory} from './learning-memory.js';
-import { showLearningWorldTour } from './learning-world-tour.js';
 import { showMovieOpening } from './movie-opening.js';
 
 const PATHS={
@@ -19,6 +17,11 @@ const KEY='astral.learning-path-drafts.v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let drafts={};try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))drafts=saved;}catch{}
 let dispose=null,opening=0;
+
+export function boxingLessonSources(lessonId){
+  return BOXING_LESSONS.filter(lesson=>lesson.id===lessonId&&lesson.source)
+    .map(lesson=>({label:lesson.title,url:lesson.source,locator:'Demonstration at '+lesson.evidenceTimestampSeconds+' seconds',source_kind:'reviewed_video_reference'}));
+}
 
 export function savedVersionUrl(base,pathway,artifactId){
   if(!Object.hasOwn(PATHS,pathway)||typeof artifactId!=='string'||!artifactId)throw Error('A saved pathway and version ID are required.');
@@ -88,8 +91,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     openDrawer('learning',({music:'Play. Listen. Try again.',movement:'Feel what time changes.',ideas:'Make a thought your own.'})[pathway],person.name.toUpperCase()+' / THE LIVING SCHOOL');
     const token=++opening;
     document.querySelector('#drawer').classList.add('learning-drawer');
-    let tourCleanup=null,experimentDispose=null,musicScene=null,pianoScene=null,boxingGame=null,boxingMirror=null,worldReflection=null,storyWorld=null,storyHost=null;
-    const cleanup=()=>{opening++;tourCleanup?.();tourCleanup=null;storyWorld?.dispose();boxingMirror?.dispose();worldReflection?.dispose();boxingGame?.dispose();pianoScene?.dispose();musicScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
+    let experimentDispose=null,pianoScene=null,boxingGame=null,boxingMirror=null,worldReflection=null,storyWorld=null,storyHost=null;
+    const cleanup=()=>{opening++;storyWorld?.dispose();boxingMirror?.dispose();worldReflection?.dispose();boxingGame?.dispose();pianoScene?.dispose();experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
     onCleanup(cleanup);
     const fresh=!drafts[pathway];
     let draft=drafts[pathway]||={lab:{},explanation:'',question:'',parentId:null,stage:'try'};
@@ -105,9 +108,9 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     const root=body();root.innerHTML=`<div class="learning-layout"><aside class="learning-person"><details class="learning-care"><summary>${esc(person.name)} · ${esc(person.domain)} <span>↗</span></summary><p>${esc(person.moment)}</p><blockquote>${esc(person.voice)}</blockquote><p>${esc(person.care)}</p><small>Fictional character · authored guidance</small></details><button class="text-button" data-other>Other worlds ↗</button></aside><section class="learning-work"><nav class="learning-steps" aria-label="Learning circle"><span class="active">01 · Explore</span><span>02 · Keep</span><span>03 · Exchange</span><span>04 · Begin again</span></nav><div data-lab><p>Opening the experiment...</p></div><div class="learning-dock"><button class="text-button" aria-expanded="false" data-panel="save">◇ Keep a discovery</button><button class="text-button" aria-expanded="false" data-panel="share">↔ Invite a response</button><button class="text-button" aria-expanded="false" data-panel="next">✧ Follow a question</button></div><p class="learning-action-status" data-status role="status"></p><section class="learning-save" hidden><label for="path-explanation">What changed? <small>A few words, if you like.</small></label><textarea id="path-explanation" rows="2" placeholder="I tried... Nothing changed yet is also a valid answer.">${esc(draft.explanation)}</textarea><button class="primary" data-save>Keep this version</button></section><section class="learning-share" hidden><h3>A different pair of eyes.</h3><p>Demo conversation · nothing is sent.</p><button class="text-button" data-share>Try ${esc(person.peer.toLowerCase())}'s question</button><div data-response ${draft.stage==='share'||draft.stage==='next'?'':'hidden'}><blockquote>${esc(person.share)}</blockquote><small>Staged ${esc(person.peer.toLowerCase())} response</small><p>Return to your experiment above. You can revise it, keep it, or disagree.</p></div></section><section class="learning-next" hidden><label for="path-question">What do you want to try next?</label><textarea id="path-question" rows="2" placeholder="${esc(person.next)}">${esc(draft.question)}</textarea><button class="primary" data-next>Keep my next question</button><button class="text-button" data-imagine>Explore this question with Astra</button><p class="learning-label">Optional · review before sending to Astra.</p></section><details class="learning-versions"><summary>Notebook & traces · ${actorKind==='agent_review'?'agent QA':'visitor activity'}</summary><div data-history></div></details></section></div>`;
     const q=s=>root.querySelector(s);
     const tools=document.createElement('details');tools.className='universe-tools';
-    const toolsToggle=document.createElement('summary');toolsToggle.textContent='✧';toolsToggle.setAttribute('aria-label','Keep, share, ask, or open your notebook');tools.append(toolsToggle);
+    const toolsToggle=document.createElement('summary');toolsToggle.textContent='Notebook';toolsToggle.setAttribute('aria-label','Keep, share, ask, or open your notebook');tools.append(toolsToggle);
     tools.append(q('.learning-dock'),q('.learning-versions'),q('.learning-person'));q('.learning-work').append(tools);
-    const worlds=document.createElement('button');worlds.className='universe-worlds';worlds.textContent='↗';worlds.setAttribute('aria-label','Choose another world');worlds.onclick=()=>showMovieOpening(path=>open(path));q('.learning-work').append(worlds);
+    const worlds=document.createElement('button');worlds.className='universe-worlds';worlds.textContent='Worlds';worlds.setAttribute('aria-label','Choose another world');worlds.onclick=()=>showMovieOpening(path=>open(path));q('.learning-work').append(worlds);
     function versionLinks(record){
       const url=savedVersionUrl(location.href,pathway,record.id);
       const box=document.createElement('div');box.dataset.versionLinks=record.id;
@@ -138,7 +141,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     function currentSources(){
       if(pathway==='movement'&&draft.frozenMovementSources)return structuredClone(draft.frozenMovementSources);
       if(pathway==='music')return [...sources,{label:RUNAWAY_OPENING_SOURCE.attribution,url:RUNAWAY_OPENING_SOURCE.url,locator:RUNAWAY_OPENING_SOURCE.locator,source_kind:'notation_exercise'},...(draft.lab.practice?.reference?[{label:draft.lab.practice.reference.title,url:draft.lab.practice.reference.url,locator:'Song reference; no automatic transcription or accuracy assessment',source_kind:'external_reference'}]:[])];
-      if(pathway==='movement')return [...BOXING_LESSONS.filter(l=>l.id===draft.lab.boxing_mirror?.lessonId).map(l=>({label:l.title,url:l.source,locator:'Demonstration at '+l.evidenceTimestampSeconds+' seconds',source_kind:'reviewed_video_reference'})),{label:'KO Boxing basic program · day 1',url:'https://boxing.dharmicdata.org/program/basic/week/1/day/1',locator:'Canonical program page 3',source_kind:'curriculum_reference'},...sources,{label:'England Boxing coaching handbook',url:'https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf',locator:'Stance, guard, footwork and shadowboxing; printed pages 66–68 and 94–95',source_kind:'coaching_reference'}];
+      if(pathway==='movement')return [...boxingLessonSources(draft.lab.boxing_mirror?.lessonId),{label:'KO Boxing basic program · day 1',url:'https://boxing.dharmicdata.org/program/basic/week/1/day/1',locator:'Canonical program page 3',source_kind:'curriculum_reference'},...sources,{label:'England Boxing coaching handbook',url:'https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf',locator:'Stance, guard, footwork and shadowboxing; printed pages 66–68 and 94–95',source_kind:'coaching_reference'}];
       if(!validateVideo)return sources;
       const reference=validateVideo(draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote);
       return reference.valid?[...sources,{url:reference.url,label:'User-supplied YouTube reference',locator:String(reference.seconds)+' seconds',source_kind:'user_reference_unverified',note:draft.lab.youtubeNote}]:sources;
@@ -182,14 +185,13 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
           const priorSources=JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote]);
           draft.lab={...structuredClone(value),...Object.fromEntries(['boxing_round','boxing_mirror','real_world_reflection','story_world','knowledge_memories'].filter(key=>draft.lab[key]).map(key=>[key,draft.lab[key]]))};
           if(storyWorld){const world=storyWorld.getState();draft.lab.decisionResponses=world.decisionResponses;draft.lab.storyChoice=world.storyChoice;}
-          keep();musicScene?.render();pianoScene?.render();
+          keep();pianoScene?.render();
           if(JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote])!==priorSources)experimentDispose?.contextChanged();
         },
-        onEvent:(type,payload)=>{musicScene?.event(type,payload);pianoScene?.event(type,payload);events.track('learning.'+pathway+'.action',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',type,payload});}
+        onEvent:(type,payload)=>{pianoScene?.event(type,payload);events.track('learning.'+pathway+'.action',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',type,payload});}
       });
       if(pathway==='music'){
-        musicScene=mountMusicScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}));
-        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');if(token!==opening)return;tourCleanup?.();events.track('learning.tour.open',{pathway,actor_kind:actorKind,from:'music'});tourCleanup=showLearningWorldTour({onContinue:()=>{if(token!==opening)return;events.track('learning.tour.continue',{pathway,actor_kind:actorKind,to:'movement'});open('movement');},onCancel:()=>events.track('learning.tour.cancel',{pathway,actor_kind:actorKind})});});
+        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');if(token!==opening)return;events.track('learning.path.continue',{pathway,actor_kind:actorKind,to:'movement'});await open('movement');});
       }
       ready=true;saveButtons.forEach(button=>{button.disabled=false;});
     }catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
@@ -220,7 +222,11 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       storyHost=document.createElement('div');q('[data-lab]').prepend(storyHost);
       const reading=document.createElement('details');reading.className='story-reading';const readingTitle=document.createElement('summary');readingTitle.textContent='Read and reflect';reading.append(readingTitle,q('.ideas-lab'));q('[data-lab]').append(reading);
       const style=document.createElement('link');style.rel='stylesheet';style.href='/story-world.css';storyHost.append(style);
-      storyWorld=mountStoryWorld(storyHost,{initialState:{...draft.lab.story_world,memories:draft.lab.knowledge_memories||[],modelComparison:draft.lab.modelComparison,decisionResponses:draft.lab.decisionResponses,storyChoice:draft.lab.storyChoice},onChange:state=>{const writingChanged=state.learnerIntent!==(draft.lab.story_world?.learnerIntent||'')||state.learnerStory!==(draft.lab.story_world?.learnerStory||'');draft.lab.story_world=structuredClone(state);draft.lab.modelComparison=state.modelComparison;draft.lab.decisionResponses=state.decisionResponses;draft.lab.storyChoice=state.storyChoice;if(writingChanged)experimentDispose?.contextChanged();keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
+      storyWorld=mountStoryWorld(storyHost,{initialState:{...draft.lab.story_world,memories:draft.lab.knowledge_memories||[],modelComparison:draft.lab.modelComparison,decisionResponses:draft.lab.decisionResponses,storyChoice:draft.lab.storyChoice},onChange:state=>{const writingChanged=state.learnerIntent!==(draft.lab.story_world?.learnerIntent||'')||state.learnerStory!==(draft.lab.story_world?.learnerStory||'');draft.lab.story_world=structuredClone(state);draft.lab.modelComparison=state.modelComparison;draft.lab.decisionResponses=state.decisionResponses;draft.lab.storyChoice=state.storyChoice;if(writingChanged)experimentDispose?.contextChanged();keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload}),onKeep:async state=>{
+        draft.lab.story_world=structuredClone(state);
+        const record=await save(draft.parentId?'revision':'attempt');
+        return {saved:true,id:record.id};
+      }});
       const host=document.createElement('div');host.hidden=true;q('[data-lab]').append(host);
       const leave=document.createElement('button');leave.className='universe-next';leave.textContent='Take this into life ↗';q('[data-lab]').append(leave);
       worldReflection=mountRealWorldReflection(host,{initialState:draft.lab.real_world_reflection||{},onChange:state=>{draft.lab.real_world_reflection=structuredClone(state);keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload}),onKeep:async()=>{
@@ -261,6 +267,6 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     }
     await history();
   }
-  function chooser(){dispose?.();dispose=null;opening++;openDrawer('learning-choice','Follow what moves you.','THREE WORLDS / ONE SCHOOL');document.querySelector('#drawer').classList.add('learning-drawer');onCleanup(()=>{opening++;dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');});body().innerHTML=`<div class="learning-people">${Object.entries(PATHS).map(([id,p])=>`<button data-path="${id}"><span class="learning-world-icon learning-world-icon--${id}" aria-hidden="true">${({music:'♫',movement:'◌',ideas:'✧'})[id]}</span><small>${esc(p.domain)}</small><h3>${esc(p.name)}</h3><p>${esc(p.goal)}</p><span>Begin with ${esc(p.name)} ↗</span></button>`).join('')}</div><p class="learning-label">Interactive worlds · fictional characters</p>`;body().querySelectorAll('[data-path]').forEach(b=>b.onclick=()=>open(b.dataset.path));}
+  function chooser(){return showMovieOpening(path=>open(path));}
   return {open,chooser};
 }

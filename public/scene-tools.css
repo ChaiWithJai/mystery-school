@@ -1,4 +1,6 @@
 /* Requested tools form one readable sheet; the playing scene stays quiet. */
+.learning-drawer .universe-tools:not([open])>summary{width:auto;min-width:100px;height:42px;padding:0 18px;border-radius:24px;font:13px var(--sans,sans-serif);box-shadow:none}
+.learning-drawer .universe-worlds{width:auto;min-width:80px;border-radius:24px;padding:0 16px;font:13px var(--sans,sans-serif)}
 .learning-drawer .universe-tools{bottom:24px;right:28px}
 .learning-drawer .universe-tools>summary{width:48px;height:48px;box-sizing:border-box;color:#f5e8c9;background:#102720ed;font-size:28px;box-shadow:0 4px 24px #0004}
 .learning-drawer .universe-tools[open]{inset:76px 28px auto auto;width:min(620px,calc(100vw - 56px));max-width:none;max-height:calc(100dvh - 104px);box-sizing:border-box;padding:24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;overflow:auto;background:#102821fa;border:1px solid #afbd9766;border-radius:24px;box-shadow:0 20px 80px #000b;backdrop-filter:blur(24px)}

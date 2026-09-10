@@ -26,12 +26,27 @@ export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
     .demo-soundtrack a{color:inherit}
     .demo-soundtrack details{padding:8px 12px;margin:0;border:0}
     .demo-soundtrack details[open]{width:330px}
+    .demo-soundtrack.is-inline{position:static;max-width:none;border:0;background:transparent;display:flex;align-items:center;gap:12px;border-radius:0}
+    .demo-soundtrack.is-inline>p,.demo-soundtrack.is-inline [data-play]{display:none!important}
+    .demo-soundtrack.is-inline footer{padding:0;gap:12px}
+    .demo-soundtrack.is-inline label{white-space:nowrap;font-size:12px}
+    .demo-soundtrack.is-inline [data-stop]{display:none}
+    .demo-soundtrack.is-inline[data-state=playing] [data-stop]{display:block}
+    .piano-roll .demo-soundtrack details{position:static;background:transparent;padding:0;border:0;max-width:none;font-size:12px}
+    .piano-roll .demo-soundtrack details[open]{position:absolute;top:52px;left:0;right:auto;z-index:150;background:#102b24;border:1px solid #c5ba8c55;border-radius:16px;padding:16px;width:320px;box-shadow:0 18px 60px #0006}
+    .demo-soundtrack.is-carried{top:auto;bottom:24px;left:24px;right:auto;max-width:360px;border-radius:24px}
+    .demo-soundtrack.is-carried>p,.demo-soundtrack.is-carried>details,.demo-soundtrack.is-carried [data-play]{display:none}
   </style><p role="status" hidden></p><footer hidden><button data-play>Replay opening</button><label><input type="checkbox" data-keep>Keep playing</label><button data-stop>Stop</button></footer><details><summary>Song reference + audio</summary><a data-reference target="_blank" rel="noopener noreferrer">Hear Runaway on Virtual Piano ↗</a><p>The linked arrangement has Auto Play. It opens separately; this app does not control its playback.</p><p>For a seven-second recording inside this demo, choose audio you have permission to use. It stays in this browser and is not uploaded.</p><input type="file" accept="audio/*" aria-label="Choose local soundtrack"></details>`;
   const drawer = document.querySelector('#drawer');
   (drawer || document.body).append(root);
   const q = selector => root.querySelector(selector);
+  q('summary').textContent='Music settings';
+  q('[data-stop]').textContent='Pause music';
   q('[data-reference]').href = RUNAWAY_REFERENCE.playerURL;
   let local = null, localURL = null, continuous = false, disposed = false;
+  let playbackState = 'loading';
+  const subscribers = new Set();
+  const publish = state => {playbackState=state;for(const listener of subscribers)listener({state,ready:!!local,continuous});};
   const emit = (type, payload = {}) => track('soundtrack.' + type, {source_kind: local ? 'user_selected_local_audio' : RUNAWAY_REFERENCE.kind, ...payload, learner_attempt: false});
   const observer = new MutationObserver(() => { if (drawer?.classList.contains('hidden')) {if(continuous)document.body.append(root);else stop();} });
   if (drawer) observer.observe(drawer, {attributes: true, attributeFilter: ['class']});
@@ -43,7 +58,7 @@ export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
   }
   q('[data-reference]').onclick = () => emit('reference.open', {url: RUNAWAY_REFERENCE.playerURL, external_player: true});
   q('[data-play]').onclick = () => { void local?.play(); };
-  q('[data-stop]').onclick = stop;
+  q('[data-stop]').onclick = () => {continuous=false;q('[data-keep]').checked=false;local?.setContinuous(false);};
   q('[data-keep]').onchange = event => {continuous = event.target.checked; local?.setContinuous(continuous); emit('continuous', {enabled: continuous});};
   function loadRecording(url, playNow) {
     const status = q('[role=status]'); status.hidden = false;
@@ -55,7 +70,9 @@ export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
       root.dataset.state = state;
       status.textContent = ({playing: continuous ? 'Runaway / playing across the demo' : 'Runaway / first seven seconds', 'opening-ended': 'Your turn. Press L.', ended: 'Recording finished.', blocked: 'Press Play opening to turn the sound on.', error: 'Choose your local Runaway recording in audio options.', paused: 'Paused.'})[state];
       emit(state, {continuous});
+      publish(state);
     }});
+    publish('ready');
     q('footer').hidden = false; q('details').open = false;
     if (playNow) {if (continuous) local.setContinuous(true); else void local.play();}
   }
@@ -76,8 +93,13 @@ export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
   }).catch(()=>{
     if(disposed)return;
     q('[role=status]').hidden=false;q('[role=status]').textContent='Choose your local Runaway recording in audio options.';
+    publish('unavailable');
   });
   q('[data-play]').textContent='Play opening';
-  active = {get continuous(){return continuous;},play(restart=true){return local?.play(restart);},pause(){local?.pause();},leavePiano() {if (!continuous) stop();else document.body.append(root);}, stop};
+  active = {get continuous(){return continuous;},get ready(){return !!local;},
+    subscribe(listener){subscribers.add(listener);listener({state:playbackState,ready:!!local,continuous});return()=>subscribers.delete(listener);},
+    mountInline(container){root.classList.remove('is-carried');root.classList.add('is-inline');container.append(root);},
+    play(restart=true){if(!local){q('details').open=true;return Promise.reject(new Error('Choose your Runaway recording in Music settings.'));}return local.play(restart);},
+    pause(){local?.pause();},leavePiano() {if (!continuous) stop();else {root.classList.remove('is-inline');root.classList.add('is-carried');(document.querySelector('#drawer')||document.body).append(root);}}, stop};
   return active;
 }
