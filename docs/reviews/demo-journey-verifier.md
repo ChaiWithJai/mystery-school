@@ -1,5 +1,12 @@
 # Actual demo journey verification
 
+## Current acceptance contract
+
+The learner now saves from piano directly into boxing. The extra guided tour
+is intentionally removed, not a missing feature. The verifier checks that
+direct transition. Tour findings below describe historical builds only.
+Current desktop review is recorded in [real-path-polish.md](real-path-polish.md).
+
 Run `node scripts/verify_demo_journey.mjs` with Playwright installed. Configuration: `DEMO_BASE_URL`, `DEMO_EVIDENCE_DIR`, optional `DEMO_VIDEO_FIXTURE`, and optional `PLAYWRIGHT_MODULE` (module path when Playwright is installed outside this checkout). Exit2 means incomplete; output report and screenshots are written even after a failure, and the browser always closes.
 
 Uses a fresh browser and the defaultURL with only actor=agent_review. Missing default entry is recorded, then explicit music navigation is diagnostic only. Checks physical L, visible manual transitions, optional40-second local-video practice, and saved world exactURL restoration. It saves clearly labeled synthetic QA artifacts. It blocks /api/project rather than invoking inference. Missing memory controls are reported as incomplete, never inferred from saved JSON alone. A future differently named memory/tour interface needs its actual selectors reviewed before changing this script.

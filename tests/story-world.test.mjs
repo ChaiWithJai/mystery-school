@@ -4,6 +4,60 @@ import { normalizeStoryWorldState, stepStoryCamera, storyWorldShelter, isUnderSt
 import { ideasComparisonIdentity } from '../public/ideas-lab.js';
 import { normalizeStoryMemories, storyMemoryLinks, storyMemorySourceLinks } from '../public/story-world.js';
 import { createBoxingMemory, createIdeasMemory } from '../public/learning-memory.js';
+import { createStoryKeepController } from '../public/story-world.js';
+
+test('writer keep requires a host and explicit persistence acknowledgement', async () => {
+  const statuses = [];
+  const options = { getState: () => normalizeStoryWorldState(), onStatus: s => statuses.push(s) };
+  const absent = createStoryKeepController(options);
+  assert.equal(await absent.keep(), false);
+  assert.match(statuses.at(-1).message, /not been saved/);
+  assert.throws(() => createStoryKeepController({ ...options, onKeep: null }), TypeError);
+  for (const result of [undefined, false, {}, { saved: false }]) {
+    const keeper = createStoryKeepController({ ...options, onKeep: async () => result });
+    assert.equal(await keeper.keep(), false);
+    assert.match(statuses.at(-1).message, /Could not keep/);
+    assert.equal(statuses.at(-1).pending, false);
+  }
+});
+
+test('writer keep snapshots exact state, prevents duplicate requests and preserves concurrent edits', async () => {
+  const state = normalizeStoryWorldState({ learnerStory: '  My words\n', learnerIntent: 'My question', camera: { x: 2, z: 3 } });
+  const original = structuredClone(state), statuses = [];
+  let resolve, received, calls = 0;
+  const keeper = createStoryKeepController({ getState: () => state, onStatus: s => statuses.push(s), onKeep: snapshot => {
+    calls++; received = snapshot; return new Promise(r => { resolve = r; });
+  } });
+  const pending = keeper.keep();
+  assert.equal(statuses.at(-1).pending, true);
+  assert.deepEqual(received, original);
+  assert.equal(await keeper.keep(), false); assert.equal(calls, 1);
+  received.camera.x = 99; assert.equal(state.camera.x, 2);
+  state.learnerStory = 'New writing'; keeper.changed();
+  resolve({ saved: true }); assert.equal(await pending, true);
+  assert.equal(state.learnerStory, 'New writing');
+  assert.match(statuses.at(-1).message, /earlier version.*latest changes/);
+  assert.equal(statuses.at(-1).pending, false);
+});
+
+test('writer keep success becomes dirty after editing and failures allow retry', async () => {
+  const statuses = []; let fail = true;
+  const keeper = createStoryKeepController({ getState: () => ({ learnerStory: 'Unchanged' }), onStatus: s => statuses.push(s), onKeep: async () => {
+    if (fail) throw new Error('Storage unavailable');
+    return { saved: true };
+  } });
+  assert.equal(await keeper.keep(), false); assert.match(statuses.at(-1).message, /Storage unavailable/);
+  fail = false; assert.equal(await keeper.keep(), true); assert.equal(statuses.at(-1).message, 'This version was kept.');
+  keeper.changed(); assert.equal(statuses.at(-1).message, 'Changes not yet kept.');
+});
+
+test('disposed writer ignores late save completion and cannot save again', async () => {
+  const statuses = []; let resolve;
+  const keeper = createStoryKeepController({ getState: () => ({}), onStatus: s => statuses.push(s), onKeep: () => new Promise(r => { resolve = r; }) });
+  const pending = keeper.keep(); keeper.dispose(); const count = statuses.length;
+  resolve({ saved: true }); await pending;
+  assert.equal(statuses.length, count); assert.equal(await keeper.keep(), false);
+});
 
 const comparison = (scenario = 'Two people disagree in the rain.') => ({ scenario, question: 'What will you write?', source_quote: STORY_WORLD_SOURCE.excerpt, source_ref_index: 0,
   decision_scene: { kind: 'shared_shelter', choices: [

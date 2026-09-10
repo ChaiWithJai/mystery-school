@@ -12,8 +12,8 @@ export function demoBeatAt(seconds) {
 }
 export function finaleMarkup(id, portraitURL = '') {
   if(id==='civilization')return '<p class="demo-kicker">WHEN ANYONE CAN MAKE A WORLD</p><h1>What does this mean<br>for civilization?</h1>';
-  if(id==='teachers')return '<p class="demo-kicker">IF THESE KEYS CAN OPEN A SCHOOL</p><h1>What happens<br>to teachers?</h1>';
-  if(id==='jai')return `<div class="demo-teacher"><div class="demo-portrait" data-portrait></div><div><p class="demo-kicker">JAI BHAGAT / TEACHER</p><h1>This is what<br>I would teach.</h1><p class="demo-values"><span>Courage.</span><span>Passion.</span><span>Imagination.</span></p><p class="demo-caption">This school is how I do it.</p></div></div>`;
+  if(id==='teachers')return '<p class="demo-kicker">A CHATBOT IS NOT A TEACHER</p><h1>A good teacher can<br>change a life.</h1>';
+  if(id==='jai')return `<div class="demo-teacher"><div class="demo-portrait" data-portrait></div><div><p class="demo-kicker">JAI BHAGAT / TEACHER</p><h1>Start with what<br>the student loves.</h1><p class="demo-values"><span>Courage.</span><span>Passion.</span><span>Imagination.</span></p><p class="demo-caption">I build the sandbox. We learn together.</p></div></div>`;
   if(id==='architecture')return `<p class="demo-kicker">HOW WE BUILT THIS</p><h1>Human direction.<br>AI-built worlds.</h1><div class="demo-architecture"><div class="demo-build"><span><b>Astra</b>Code + visual iteration</span><span class="demo-arrow">↔</span><span><b>Buzz</b>Agent coordination</span><span class="demo-arrow">→</span><span><b>GitHub</b>Reviewed code</span></div><div class="demo-runtime"><div><b>Browser</b>Piano · camera · 3D world</div><span class="demo-arrow">→</span><div><b>Python</b>Saved work + request checks</div><span class="demo-arrow">→</span><div><b>Astra / Bonsai</b>Asked-for changes / local cues</div></div><div class="demo-traces"><b>MLflow</b> Traces · artifacts · reported usage</div></div><p class="demo-footnote">Bonsai requires a configured local runtime. Buzz coordinates builders, not learner requests.</p>`;
   return '';
 }

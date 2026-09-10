@@ -139,14 +139,46 @@ export function stepStoryCamera(camera, input, seconds, obstacles = []) {
 
 let instances = 0;
 
+/** Optional host persistence. Only an explicit saved acknowledgement counts as success. */
+export function createStoryKeepController({ onKeep, getState, onStatus }) {
+  if (onKeep !== undefined && typeof onKeep !== 'function') throw new TypeError('onKeep must be a function.');
+  let pending = false, disposed = false, revision = 0;
+  const report = message => { if (!disposed) onStatus({ pending, message }); };
+  report(onKeep ? '' : 'Keeping is not available here. This version has not been saved.');
+  return {
+    changed() { revision++; if (!pending) report(onKeep ? 'Changes not yet kept.' : 'Keeping is not available here. This version has not been saved.'); },
+    async keep() {
+      if (disposed || pending || !onKeep) return false;
+      const version = revision;
+      const snapshot = structuredClone(getState());
+      pending = true; report('Keeping this version...');
+      try {
+        const result = await onKeep(snapshot);
+        if (result?.saved !== true) throw new Error('The host did not confirm saving.');
+        pending = false;
+        report(version === revision ? 'This version was kept.' : 'The earlier version was kept. Keep again to save your latest changes.');
+        return true;
+      } catch (error) {
+        pending = false;
+        report(`Could not keep this version. ${error instanceof Error ? error.message : 'Please try again.'}`);
+        return false;
+      }
+    },
+    dispose() { disposed = true; },
+  };
+}
+
 /**
  * Host loads story-world.css. Reuses the homepage school.glb; no inference or global key listeners.
  * onChange receives detached full state; onEvent(type, payload) labels authored/model fiction.
  * Movement snapshots are emitted at most four times per second and once on key release.
+ * onKeep(detachedState) may persist through the host; resolve { saved: true } only after
+ * persistence completes, otherwise reject. No hook means keeping is unavailable.
  */
-export function mountStoryWorld(container, { initialState = {}, onChange = () => {}, onEvent = () => {} } = {}) {
+export function mountStoryWorld(container, { initialState = {}, onChange = () => {}, onEvent = () => {}, onKeep } = {}) {
   if (!container?.ownerDocument || typeof container.append !== 'function') throw new TypeError('A DOM container is required.');
   if (typeof onChange !== 'function' || typeof onEvent !== 'function') throw new TypeError('Callbacks must be functions.');
+  if (onKeep !== undefined && typeof onKeep !== 'function') throw new TypeError('onKeep must be a function.');
   let state = normalizeStoryWorldState(initialState);
   const doc = container.ownerDocument, win = doc.defaultView;
   const id = `story-world-${++instances}`;
@@ -173,13 +205,21 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   choiceRow.append(...choiceButtons, neither); controls.append(choiceRow, memoryControl);
   const writer = make('section', 'story-world__writer'); writer.setAttribute('aria-label', 'Write your own story');
   const closeWriter = button('Return to the world');
-  writer.append(make('p', 'story-world__eyebrow', 'YOUR WORDS / NEVER AUTO-WRITTEN'), make('h3', '', 'What happens here?'));
+  const writerHeader = make('header', 'story-world__writer-header');
+  writerHeader.append(make('h3', '', 'What happens here?'), closeWriter);
+  writer.append(writerHeader, make('p', 'story-world__eyebrow', 'YOUR WORDS / NEVER AUTO-WRITTEN'));
   const intentLabel = make('label', '', 'What do you want to explore?'); intentLabel.htmlFor = `${id}-intent`;
   const intent = make('textarea', ''); intent.id = intentLabel.htmlFor; intent.rows = 2; intent.maxLength = 2000;
   const storyLabel = make('label', '', 'Write the story in your own words'); storyLabel.htmlFor = `${id}-story`;
   const story = make('textarea', ''); story.id = storyLabel.htmlFor; story.rows = 8; story.maxLength = 12000;
   story.placeholder = 'Start anywhere. You decide what the people say, do, or leave unresolved.';
-  writer.append(intentLabel, intent, storyLabel, story, make('p', '', 'Your words stay yours. Keep a discovery to return to this version.'), closeWriter);
+  const keep = button('Keep a discovery'); keep.className = 'story-world__keep';
+  const keepStatus = make('p', 'story-world__keep-status'); keepStatus.setAttribute('role', 'status'); keepStatus.setAttribute('aria-live', 'polite');
+  const keeper = createStoryKeepController({ onKeep, getState: () => state, onStatus: ({ pending, message }) => {
+    keep.disabled = pending || !onKeep; keep.textContent = pending ? 'Keeping...' : 'Keep a discovery';
+    keepStatus.textContent = message;
+  } });
+  writer.append(intentLabel, intent, storyLabel, story, make('p', '', 'Your words stay yours. Keep a discovery to return to this version.'), keep, keepStatus);
   const sourcePanel = make('section', 'story-world__source'); sourcePanel.setAttribute('aria-label', 'Optional source passage');
   const closeSource = button('Return to the world');
   const sourceLink = make('a', '', 'Read section 1 in context'); sourceLink.href = IDEAS_SOURCE.url; sourceLink.target = '_blank'; sourceLink.rel = 'noopener noreferrer';
@@ -341,6 +381,7 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     writer.hidden = !state.writerOpen; sourcePanel.hidden = !state.sourceOpen; memoryPanel.hidden = !state.memoriesOpen;
     viewport.setAttribute('aria-hidden', String(panelOpen()));
     root.dataset.panel = panelOpen() ? 'open' : 'closed';
+    tools.inert = context.inert = controls.inert = panelOpen();
     write.setAttribute('aria-expanded', String(state.writerOpen)); source.setAttribute('aria-expanded', String(state.sourceOpen));
     intent.value = state.learnerIntent; story.value = state.learnerStory;
     memoryPlace.visible = memoryTarget.visible = memorySign.visible = state.memories.length > 0;
@@ -399,13 +440,14 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   listen(enter, 'click', () => { discoveryTrail.enableAudio(); viewport.focus({ preventScroll: true }); status.textContent = 'Follow the golden trail. W A S D to move; E to explore.'; });
   listen(write, 'click', () => openPanel('writer')); listen(source, 'click', () => openPanel('source'));
   listen(closeWriter, 'click', closePanels); listen(closeSource, 'click', closePanels);
+  listen(keep, 'click', () => { notify(); void keeper.keep(); });
   listen(memoryControl, 'click', () => openPanel('memories')); listen(closeMemories, 'click', closePanels);
   listen(memorySelect, 'change', () => { state.memoryArtifactId = memorySelect.value; refresh(); notify(); emit('memories.select', { source_artifact_id: state.memoryArtifactId, observation_kind: state.memories.find(record => record.source_artifact_id === state.memoryArtifactId)?.observation.kind, independently_verified: false }); });
   listen(sourceLink, 'click', () => emit('source.open', { url: IDEAS_SOURCE.url }));
   listen(reset, 'click', () => { keys.clear(); state.camera = { x: 0, z: 9, yaw: 0, pitch: 0 }; notify(); emit('navigation.reset'); });
   choiceButtons.forEach((b, i) => listen(b, 'click', () => choose(displayedStoryChoice(state,i)))); listen(neither, 'click', () => choose('neither'));
-  listen(intent, 'input', () => { state.learnerIntent = intent.value.slice(0, 2000); notify(); });
-  listen(story, 'input', () => { state.learnerStory = story.value.slice(0, 12000); notify(); });
+  listen(intent, 'input', () => { state.learnerIntent = intent.value.slice(0, 2000); keeper.changed(); notify(); });
+  listen(story, 'input', () => { state.learnerStory = story.value.slice(0, 12000); keeper.changed(); notify(); });
   listen(intent, 'change', () => emit('writing.intent')); listen(story, 'change', () => emit('writing.story'));
   listen(root, 'keydown', event => { if (event.key === 'Escape') { keys.clear(); if (panelOpen()) closePanels(); else { viewport.blur(); notify(); } } });
   const movementKeys = new Set(['w', 'a', 's', 'd', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
@@ -464,11 +506,12 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     setState(value) {
       if (disposed) throw new Error('This book-world is closed.');
       const next = normalizeStoryWorldState(value);
+      keeper.changed();
       keys.clear(); drag = null; state = next; discoveryTrail.setState(state.discoveryTrail); refresh(); notify(); emit('state.restored');
     },
     dispose() {
       if (disposed) return;
-      disposed = true; keys.clear(); discoveryTrail.dispose(); win.cancelAnimationFrame(frame); observer.disconnect(); listeners.forEach(remove => remove());
+      disposed = true; keeper.dispose(); keys.clear(); discoveryTrail.dispose(); win.cancelAnimationFrame(frame); observer.disconnect(); listeners.forEach(remove => remove());
       schoolBackdrop?.removeFromParent(); disposeSchoolResources(); geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); Object.values(materials).forEach(m => m.dispose()); renderer.dispose(); renderer.forceContextLoss(); root.remove();
     },
   };

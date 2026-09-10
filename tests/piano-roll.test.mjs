@@ -93,6 +93,28 @@ test('missing rendered target disables guidance rather than inventing a lane',as
   assert.match(h.root.querySelector('[data-feedback]').textContent,/visible space/);h.api();
 });
 
+test('primary Listen plays the supplied recording, never the synthesized exercise',()=>{
+  let plays=0,pauses=0,unsubscribed=false;
+  const soundtrack={ready:true,subscribe(fn){fn({state:'ready',ready:true});return()=>{unsubscribed=true;};},play(){plays++;return Promise.resolve();},pause(){pauses++;},mountInline(){}};
+  const h=harness({soundtrack});
+  assert.equal(h.root.querySelector('[data-hear]').textContent,'Listen to Runaway');
+  h.root.querySelector('[data-hear]').click();
+  assert.equal(plays,1);assert.equal(h.demos.length,0);
+  h.root.querySelector('[data-play]').click();assert.equal(pauses,1);
+  h.api();assert.equal(unsubscribed,true);
+});
+
+test('recording readiness prevents a silent primary Listen action',()=>{
+  let notify;
+  const soundtrack={ready:false,subscribe(fn){notify=fn;fn({state:'loading',ready:false});return()=>{};},mountInline(){}};
+  const h=harness({soundtrack});
+  assert.equal(h.root.querySelector('[data-hear]').disabled,true);
+  soundtrack.ready=true;notify({state:'ready',ready:true});
+  assert.equal(h.root.querySelector('[data-hear]').disabled,false);
+  notify({state:'blocked',ready:true});assert.match(h.root.querySelector('[data-feedback]').textContent,/Listen to Runaway/);
+  h.api();
+});
+
 test('compact desktop lane clears the song title and idle Stop stays hidden',async()=>{
   const h=harness();
   h.container.querySelector('.piano-scene__title').rect={bottom:180};

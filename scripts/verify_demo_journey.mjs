@@ -26,22 +26,13 @@ try{
  record('physical L captures E6 without piano focus',take?.events?.some(e=>e.type==='on'&&e.midi===88)&&take.events.some(e=>e.type==='off'&&e.midi===88),take);await shot('02-piano');
  const intoRing=page.getByRole('button',{name:'Keep this. Into the ring →',exact:true});
  if(await intoRing.isVisible()){
-  await intoRing.click();const tour=page.locator('.learning-world-tour');
-  await page.locator('.learning-world-tour,.boxing-journey-intro').first().waitFor({state:'visible'});
-  const shown=await tour.isVisible().catch(()=>false);record('guided three-mode tour',shown,'Manual transition alone does not prove the tour.');
-  if(shown){
-   await page.keyboard.press('Escape');await tour.waitFor({state:'hidden'});
-   const cancelled=await visible('.piano-roll')&&await intoRing.isVisible()&&await intoRing.isEnabled();
-   record('tour Escape retains piano and permits saving again',cancelled,{url:page.url()});
-   if(!cancelled)throw Error('Tour cancel did not restore the playable piano and retry control.');
-   await intoRing.click();await tour.waitFor({state:'visible'});
-   record('repeat Save reopens tour after cancellation',true,{url:page.url()});
-   await tour.locator('.learning-world-tour__continue').click();await tour.waitFor({state:'hidden'});
-  }
+  await intoRing.click();
+  await page.locator('.boxing-journey-intro').waitFor({state:'visible'});
+  record('saved piano advances directly without a tour',!await visible('.learning-world-tour'),{url:page.url()});
   await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});
  }else record('manual advance piano to boxing',false,'No visible explicit transition.');
  if(await visible('.boxing-journey-intro')){
-  await page.locator('.boxing-journey-intro [data-try]').click();await page.locator('.boxing-mirror').waitFor({state:'visible'});record('body map opens mirror',true);
+  await page.locator('.boxing-journey-intro [data-try]:visible').click();await page.locator('.boxing-mirror').waitFor({state:'visible'});record('body map opens mirror',true);
  }
  if(await visible('.boxing-mirror')){
   if(fixture){await page.locator('.boxing-mirror input[type=file]').setInputFiles(resolve(fixture));await page.locator('.boxing-mirror.is-live').waitFor();const start=page.locator('.boxing-mirror [data-round]');if(await start.isEnabled()){const mediaDuration=await page.locator('.boxing-mirror-self').evaluate(v=>v.duration);if(!Number.isFinite(mediaDuration)||mediaDuration<41)throw Error('QA video must exceed 41 seconds; short clips are not looped or counted as a full practice.');report.fixture={path:resolve(fixture),duration:mediaDuration,kind:'source-video QA, not learner performance or evidence of selected technique'};await start.click();await page.waitForTimeout(41000);const rounds=await page.evaluate(()=>JSON.parse(localStorage.getItem('astral.learning-path-drafts.v1')||'{}').movement?.lab?.boxing_mirror?.practiceRounds||[]);record('40-second local video practice retained',rounds.some(r=>r.status==='elapsed'&&r.durationMs>=40000),rounds.map(({points,...r})=>({...r,positionSamples:points?.length})));}else record('40-second local video practice retained',false,'Practice control not enabled.');}

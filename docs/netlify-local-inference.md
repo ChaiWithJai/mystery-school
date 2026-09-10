@@ -41,13 +41,13 @@ prerequisites. The foundation UI submits declared learner reports through this r
 1. Check out the intended integrated revision in an isolated workspace. Install the README dependencies.
 2. Use the official PrismML **Bonsai-4B-gguf** language model, not the unrelated deepgrove model, Bonsai Image, Ternary 27B or an inferred 4B alias. See `deployment/bonsai-model.json` and `scripts/setup-bonsai-local.sh`. The script builds its own pinned runtime under ignored `data/bonsai-runtime`, downloads/checks pinned weights, and prints the loopback launch command. It does not alter LM Studio or Ollama installations or start a permanent service.
 3. Start Bonsai with the exact model alias `prism-ml/Bonsai-4B-gguf`. The adapter rejects another reported model ID. The alias check alone cannot attest the loaded weights; retain the setup checksum and actual launch command as deployment evidence.
-4. Start the existing school with an isolated demo data directory and the compatible Codex executable:
+4. Generate a companion token with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'` and set `MYSTERY_COMPANION_TOKEN` privately in both launch environments. Start the existing school with an isolated demo data directory and the compatible Codex executable:
 
    ```sh
    ASTRAL_CODEX_BIN=/path/to/compatible/codex .venv/bin/python server.py --port 5188 --data-dir data/presenter-demo
    ```
 
-5. Generate three distinct random values with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`: a companion token, demo access code, and cookie-signing secret. Keep them out of Git, screenshots and client assets. Set `MYSTERY_COMPANION_TOKEN` in the local launch environment, then run `.venv/bin/python companion.py --port 5199`. Optional settings are in `deployment/companion.env.example`.
+5. Run `.venv/bin/python companion.py --port 5199` with the same companion token. For hosted access, generate two additional distinct random values for the demo access code and cookie-signing secret. Keep all secrets out of Git, screenshots and client assets. Optional settings are in `deployment/companion.env.example`.
 6. Point a presenter-managed HTTPS tunnel at **5199 only**. Never tunnel the unprotected school server, Codex App Server, model server or MLflow UI. Authentication is enforced on every gateway request.
 7. In the linked Netlify site's Functions environment, set `MYSTERY_COMPANION_URL` to that HTTPS origin, `MYSTERY_COMPANION_TOKEN` to the matching local token, and the separate `MYSTERY_DEMO_CODE` and `MYSTERY_SESSION_SECRET`. Scope these to the intended trusted demo deploy context; do not grant unknown PR previews access to the live companion. Redeploy after configuring.
 8. Open `/connect.html` on the presenter browser or approved phone and enter the generated demo code. This issues a four-hour HttpOnly/Secure/SameSite cookie. Open the school normally. The current demo shares records among connected devices; this is **not per-student authentication or multi-tenant storage**.
@@ -92,7 +92,11 @@ No automatic escalation to Astra occurs. Use the existing explicit artifact proj
 - Integration: authenticated forwarding, missing/offline companion, output validation, duplicate retry, low-confidence branch, concurrency and durable trajectory.
 - Acceptance: real HTTP gateway request using a labeled deterministic model fixture; hosted asset/browser entry and operator connection page.
 
-Commands: `npm run check`, `npm test`, `python3 -m unittest discover -s tests -p test_companion.py -v`, `npm run build:netlify`, `netlify build`.
+Run `npm run check`, `npm test`, and
+`.venv/bin/python -m unittest discover -s tests -p test_companion.py -v`
+using the installed project environment. `npm run build:netlify` checks public
+asset packaging. The optional `netlify build` also requires the Netlify CLI,
+which is not installed by this repository's `npm ci`.
 
 Before claiming live readiness, M5 must run one actual Bonsai request and inspect its local trace; one actual Codex/Astra artifact request; a complete webcam attempt with delivered cue and replay; and a disconnect test while play continues. Verify tracking/feedback latency on the actual device. Fixture tests cannot substitute for these checks.
 

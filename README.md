@@ -4,9 +4,9 @@
 
 Mystery School is a prototype sandbox for teachers to reach students through things they care about. A teacher might use boxing to open a question about physics, piano to explore patterns and change, or a book to help a student articulate an idea of their own.
 
-The teacher is the human in the loop: they know the student, advocate for them, choose an experience, and interpret what happens. AI helps propose bounded changes; it does not replace that relationship. The goal is to help students who need another way in, more challenge, or more individual attention.
+A chatbot is not a teacher. The teacher is the human in the loop: they know the student, advocate for them, choose an experience, and interpret what happens. AI helps propose bounded changes; it does not replace that relationship. The goal is to help students who need another way in, more challenge, or more individual attention.
 
-The current demo connects playable piano, movement, and a visual world. A complete teacher-facing lesson authoring workflow and student management system are not established by this prototype. The teaching premise: to develop taste, you need experiences to compare and things of your own to make.
+The current demo connects playable piano, movement, and a visual world. A complete teacher-facing lesson authoring workflow and student management system are not established by this prototype. Jai's teaching purpose is to cultivate courage, passion, and imagination. Students keep their own words and can disagree, pause, or try another way.
 
 Built for the Cerebral Valley GPT-6 Astra hackathon in New York on September 10, 2026. Earlier code and documents use the name **Astral School**.
 
@@ -16,13 +16,13 @@ Built for the Cerebral Valley GPT-6 Astra hackathon in New York on September 10,
 
 ## Experience the school
 
-Begin at the playable piano. Keep a take, enter movement, save what you noticed, and find that observation in the school world.
+Begin at the playable piano. Listen to the supplied recording, try the keys, keep a take, and enter movement directly. Save what you noticed and find that observation in the school world. All three pathways remain required by [issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2).
 
 | Experience | What you do | Instructional direction |
 | --- | --- | --- |
-| Piano | Play, retain a take, and compare timing in a notation exercise. | Use rhythm and change to enter mathematical thinking. |
-| Movement | Explore a simulation, select a foundation, and try a camera-mirror round. | Use embodied experience to motivate questions about motion and physics. |
-| Ideas | Explore a world, examine a source, and revise an interpretation. | Turn reading and experience into understanding you can explain. |
+| Piano | Listen to Runaway, play the keys, retain a take, and compare timing in a separate notation exercise. | Use rhythm and change to enter mathematical thinking. |
+| Movement | Explore a left uppercut and hook, inspect both sources, and try mirror practice. Other foundations remain available. | Use embodied experience to motivate questions about motion and physics. |
+| Ideas | Explore a world, examine a source, and save your words directly inside the writer. | Turn reading and experience into understanding you can explain. |
 
 These prototype activities are not a complete calculus curriculum or measured evidence of learning. Camera estimates do not measure force, depth, or technique mastery.
 
@@ -65,7 +65,15 @@ Open [the school](http://127.0.0.1:5188/) and play a piano key. Permit camera ac
 
 Open [the presenter cut](http://127.0.0.1:5188/demo-60.html) for a timed presentation, or [recorded replay](http://127.0.0.1:5188/replay.html) for labeled model examples without inference or new backend saves.
 
-The commercial Runaway recording is not distributed. The bundled piano sample has separate attribution. See [sources and reuse](docs/sources-and-reuse.md) before preparing media.
+### Recording and saved work
+
+**Listen to Runaway** plays the first seven seconds of a supplied recording. Browser policy may require a click. **Keep playing** carries it into boxing; **Try the keys** starts the separate piano exercise. The optional local file is `public/audio/local/runaway.mp3`, ignored by Git and excluded from hosted builds. A fresh clone does not include it. Choose audio you have permission to use through **Music settings**; the selected file is not uploaded.
+
+The bundled piano sample is separate from the recording and has its own attribution. The notation exercise is not a full-song transcription or synchronized score. See [sources and reuse](docs/sources-and-reuse.md) before preparing media.
+
+Browser drafts stay local. Saved versions use the API and reopen through `/?path=PATH&artifact=ID`. The `data/demo` example above is a separate store; omit `--data-dir` to use an existing default `data/` store. Changing the data directory does not migrate earlier records.
+
+General projections exclude saved images unless explicitly selected and confirmed. Uploading a reference is not consent to send it to a model. Artifact requests exclude unrelated image uploads.
 
 ## Understand the AI
 

@@ -31,7 +31,7 @@ export function compareGuidedStrike(midi, time, index, target = null) {
  * This module never sets adapter state or records demonstration notes as learner input.
  */
 export function mountPianoRoll(container, { keyboard = container.querySelector('.piano-practice__keyboard'), adapter,
-  target = adapter?.getState?.().practice_target ?? null, onEvent = () => {}, getPlaybackClock = null } = {}) {
+  target = adapter?.getState?.().practice_target ?? null, onEvent = () => {}, getPlaybackClock = null, soundtrack = null } = {}) {
   let currentTarget = normalizeOpeningTarget(target);
   if (!keyboard) throw new TypeError('Mount the actual piano keyboard before its roll.');
   const doc = container.ownerDocument;
@@ -43,6 +43,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   const q = selector => root.querySelector(selector);
   q('[data-stop]').hidden=true;
   q('[data-hear]').textContent='Hear exercise';
+  if(soundtrack?.subscribe){q('[data-hear]').textContent='Listen to Runaway';q('[data-play]').textContent='Try the keys';soundtrack.mountInline?.(q('.piano-roll__controls'));}
   q('details p').textContent='Piano exercise, not the original recording or a full-song score. Timing feedback uses a 0.2-second practice window, not a mastery grade.';
   q('[data-feedback]').textContent = 'Press L or tap the glowing key.';
   q('[data-source]').href = RUNAWAY_OPENING_SOURCE.url;
@@ -79,7 +80,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
     for (const [key,value] of Object.entries({x1:0,x2:stageWidth,y1:stageHeight-1,y2:stageHeight-1})) q('[data-hit]').setAttribute(key,value);
     const unavailable = !lane || stageHeight < 30;
     q('[data-play]').disabled = unavailable;
-    q('[data-hear]').disabled = unavailable || typeof adapter?.demonstrate !== 'function';
+    q('[data-hear]').disabled = soundtrack?.subscribe ? !soundtrack.ready : unavailable || typeof adapter?.demonstrate !== 'function';
     if (unavailable) q('[data-feedback]').textContent = 'The E6 key needs visible space above it. Resize or reveal the keyboard.';
     q('[data-tempo]').textContent = openingTempoLabel(currentTarget);
   }
@@ -152,8 +153,14 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
     q('[data-feedback]').textContent = !observation.pitch_matches ? 'Try E6, the lit lane.' : observation.timing === 'within_practice_window' ? 'Near the cue.' : `${Math.abs(observation.timing_difference_seconds).toFixed(2)} s ${observation.timing}.`;
     emit('guide.strike',{observation,clock_kind:clockKind});
   }
-  listen(q('[data-hear]'),'click',()=>{void start('hear');});
-  listen(q('[data-play]'),'click',()=>{void start('practice');});
+  const unsubscribe=soundtrack?.subscribe?.(({state,ready})=>{
+    q('[data-hear]').disabled=!ready;
+    q('[data-hear]').textContent=state==='loading'?'Loading Runaway...':'Listen to Runaway';
+    const message={playing:'Listen to the opening. Then try L.',blocked:'Press Listen to Runaway to turn the sound on.','opening-ended':'Your turn. Press L or tap the glowing key.',unavailable:'Add your recording in Music settings.',error:'The recording could not play. Open Music settings.'}[state];
+    if(message&&mode==='idle')q('[data-feedback]').textContent=message;
+  });
+  listen(q('[data-hear]'),'click',()=>{if(soundtrack?.subscribe){stop('listen');void soundtrack.play().catch(error=>{q('[data-feedback]').textContent=error.message;});}else void start('hear');});
+  listen(q('[data-play]'),'click',()=>{soundtrack?.pause?.();void start('practice');});
   listen(q('[data-stop]'),'click',()=>stop());
   listen(win,'resize',()=>{layout();if(mode==='idle')draw();});
   listen(win,'scroll',()=>{layout();if(mode==='idle')draw();},true);
@@ -161,7 +168,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   listen(doc,'visibilitychange',()=>{if(doc.hidden)stop('hidden');});
   const observer = win.ResizeObserver ? new win.ResizeObserver(()=>{layout();if(mode==='idle')draw();}) : null;
   observer?.observe(keyboard);
-  function cleanup() { if(disposed)return;stop('closed');disposed=true;observer?.disconnect();listeners.forEach(remove=>remove());root.remove(); }
+  function cleanup() { if(disposed)return;stop('closed');disposed=true;unsubscribe?.();observer?.disconnect();listeners.forEach(remove=>remove());root.remove(); }
   cleanup.start=start;cleanup.stop=stop;cleanup.event=event;cleanup.layout=()=>{layout();draw(mode==='idle'?-2:now()-origin);};
   cleanup.setTarget=value=>{const validated=normalizeOpeningTarget(value);if(disposed)throw new Error('This guide is closed.');if(JSON.stringify(validated)===JSON.stringify(currentTarget))return;stop('target_changed');currentTarget=validated;layout();draw();};
   cleanup.getState=()=>({target:structuredClone(currentTarget),mode,clock_kind:clockKind,observations:structuredClone(strikes)});

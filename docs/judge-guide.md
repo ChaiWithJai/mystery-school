@@ -17,7 +17,10 @@ Allow camera permission and check speakers before presenting. The full manual pr
 
 ## Map the four judging criteria
 
-The participant guide assigns 25% to each criterion.
+The PR author reports four equally weighted criteria from a supplied participant
+guide. That guide is not archived or directly linked in this repository, so
+the weighting remains unverified here. Confirm it with the organizers before
+submission; the matrix below is a preparation aid, not an official rubric.
 
 | Criterion | Evidence to inspect | Limit |
 | --- | --- | --- |
@@ -28,13 +31,17 @@ The participant guide assigns 25% to each criterion.
 
 ## Identify event contributions
 
-The repository was created on September 10, 2026. Initial contract `1282699` and implementation `494e728` precede the three-path integration `7ec7324`. Later work adds bounded proposals, visual scenes, deployment infrastructure, foundation integration, and presenter polish. This documentation review uses base `cc443a7` (PR 17 merge). Inspect [commit history](https://github.com/ChaiWithJai/mystery-school/commits/main/) and individual PR diffs for exact changes.
+Initial contract `1282699` and implementation `494e728` precede the three-path integration `7ec7324`. Later work adds bounded proposals, visual scenes, deployment infrastructure, foundation integration, and presenter polish. The original documentation review used `cc443a7` (PR 17 merge). This guide was reconciled with `4d3cf99` (PR 18 merge), including recording playback, in-world saving, and the two-punch practice. Inspect [commit history](https://github.com/ChaiWithJai/mystery-school/commits/main/) and individual PR diffs for exact changes.
 
 Event-day timestamps do not prove that every component originated at the event. Prior instructional methodology, the imported boxing detector, libraries, pretrained models, music samples, and external teaching sources are reused inputs. The [reuse ledger](sources-and-reuse.md) distinguishes them from integration work.
 
 ## Finish submission readiness
 
-The supplied participant guide specifies a September 10, 2026 **5:30 PM EDT** deadline, a public repository, an accessible demo, a public one-minute video, and all team members listed. Finalist presentations allow three minutes plus two minutes of questions. Confirm any organizer changes directly.
+The PR author reports a September 10, 2026 **5:30 PM EDT** deadline, a public
+repository, an accessible demo, a public one-minute video, and a complete team
+roster. They also report three-minute finalist presentations plus two minutes
+of questions. These requirements are not independently verified by this
+integration review. Confirm the current guide and submission form directly.
 
 | Item | Documentation audit status |
 | --- | --- |
@@ -46,6 +53,12 @@ The supplied participant guide specifies a September 10, 2026 **5:30 PM EDT** de
 | Media/reuse rights | See source ledger; repository-wide license not specified |
 | Eligibility clarification | Unconfirmed; see the specific overlap below |
 
-The participant guide bans sports analyzers/coaches and an “AI for Education” chatbot. The intended product is a teacher-operated learning sandbox, with movement motivating physics. Current features nevertheless include boxing practice cues and camera estimates. The author’s instructional explanation is recorded; organizer clearance is not. Describe both intent and behavior accurately and obtain an organizer determination rather than assuming the product description resolves this overlap.
+The PR author reports exclusions for sports analyzers/coaches and an “AI for
+Education” chatbot. The source guide is not available here to verify their
+wording or applicability. The intended product is a teacher-operated learning
+sandbox, with movement motivating physics. Current features nevertheless
+include boxing practice cues and camera estimates. Organizer clearance is
+not established. Describe both intent and behavior accurately and request an
+organizer determination rather than assuming framing resolves eligibility.
 
 [Event page](https://cerebralvalley.ai/e/openai-gpt-6-astra-nyc) · [Submission form](https://cerebralvalley.ai/e/openai-gpt-6-astra-nyc/hackathon/submit)
