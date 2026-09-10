@@ -161,6 +161,26 @@ cover late save responses, help retention across detours, and the 100-link bound
 Omitted or failed events and unrecoverable draft history are marked incomplete.
 Historical artifacts are not retroactively assigned event links.
 
+## Visual integration
+
+PR5's full-world experiment layout was reconciled with saved-version sharing in
+`8fc1b5d`. Main retained all three pathways, event buffers, incomplete-capture
+labels and stale-save guards. The 82 JavaScript tests pass on that integration.
+
+Agent browser QA checked the dock, changed controls, saved, and reopened exact
+versions on the M5 runtime:
+
+| Path | Artifact | Observed restoration |
+| --- | --- | --- |
+| Music | `bae51466-2f66-41f9-b793-3c6d5d22fca2` | 0.4-second attack and annotation |
+| Movement | `1fe21c86-fc91-4853-a144-861f621524e9` | 3-second duration, midpoint and annotation |
+| Ideas | `9b44ecdd-4dc9-4bf5-8bbc-445c6842eb1d` | Existing interpretation, new QA note, exact URL and panel-event link |
+
+Main inspected the ideas rendering and fixed inherited paragraph, saved-link
+field and save-status colors for the dark background. Browser computed styles
+confirmed the new colors. No model calls were made for these checks. Playback
+quality and learner outcomes were not re-evaluated by this visual pass.
+
 ## Remaining evidence
 
 - Deterministic music, movement, and interpretation interactions now support

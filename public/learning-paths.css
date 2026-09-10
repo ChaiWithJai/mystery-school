@@ -35,3 +35,6 @@
 .learning-drawer .learning-care{margin:0;padding:0;border:0}.learning-drawer .learning-care summary{padding:0;min-height:24px}.learning-drawer .learning-person>.text-button{padding:0;min-height:24px}.learning-drawer .learning-person{align-items:center}.learning-drawer .learning-steps{margin:4px 0 12px}.learning-drawer>h2{margin:10px 0 14px}.learning-drawer>header{min-height:28px}.learning-drawer .learning-layout{gap:8px}
 @media(max-height:700px){.drawer.learning-drawer{padding-top:12px;padding-bottom:12px}.learning-drawer>h2{font-size:28px;margin:5px 0 12px}.learning-drawer .learning-person{font-size:11px}.learning-drawer .learning-steps{margin:0 0 8px}}
 .learning-action-status{font-size:12px;color:#e8d9ac;text-align:center;margin:8px 0}.learning-action-status:empty{display:none}
+.learning-drawer p{color:#bbccbb}
+.learning-drawer [data-version-links] input{box-sizing:border-box;max-width:100%;width:100%;background:#0d2825;color:#edf2e0;border:1px solid #adc39c55;border-radius:8px;padding:10px}
+.learning-drawer [data-status]{color:#e8d9ac}
