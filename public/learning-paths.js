@@ -7,6 +7,7 @@ import { mountBoxingMirror } from './boxing-mirror.js';
 import { BOXING_LESSONS } from './boxing-curriculum.js';
 import { mountRealWorldReflection } from './real-world-reflection.js';
 import { mountStoryWorld } from './story-world.js';
+import {createBoxingMemory,appendMemory} from './learning-memory.js';
 import { showMovieOpening } from './movie-opening.js';
 
 const PATHS={
@@ -79,7 +80,7 @@ export async function persistLearningSnapshot({events,payload,isCurrent,persist,
 export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,track,toast,onImagine,onOpen,onArtifactSaved}){
   const draftEvents=createLearningDraftScopes(track);
   function keep(){try{localStorage.setItem(KEY,JSON.stringify(drafts));}catch{toast('This browser could not keep the draft. Save a version before leaving.');}}
-  async function open(pathway,artifactId){
+  async function open(pathway,artifactId,deposit=null){
     const person=PATHS[pathway];if(!person)return;
     const actorKind=new URLSearchParams(location.search).get('actor')==='agent_review'?'agent_review':'user_action';
     onOpen?.(pathway,artifactId);
@@ -94,7 +95,13 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     let draft=drafts[pathway]||={lab:{},explanation:'',question:'',parentId:null,stage:'try'};
     if(artifactId){try{const saved=await api('/api/artifacts/'+encodeURIComponent(artifactId));if(token!==opening)return;if(saved.pathway!==pathway)throw Error('That version belongs to another pathway.');draft=drafts[pathway]={lab:saved.state.lab||{},explanation:saved.state.explanation||'',question:saved.state.question||'',parentId:saved.id,frozenMovementSources:pathway==='movement'?structuredClone(saved.source_refs||[]):null,stage:saved.state.circle_stage||(saved.stage==='new_question'?'next':saved.stage==='sharing_response'?'share':'try')};keep();}catch(e){if(token===opening){body().innerHTML='<p role="alert">This saved version is unavailable. Your other drafts have not been changed.</p><button class="text-button" data-back>Choose a learner</button>';body().querySelector('[data-back]').onclick=chooser;toast(e.message);}return;}}
     if(token!==opening)return;
+    if(deposit){
+      draft.lab.knowledge_memories=appendMemory(draft.lab.knowledge_memories||[],deposit);
+      draft.lab.story_world={...draft.lab.story_world,writerOpen:false,sourceOpen:false,memoriesOpen:true,memoryArtifactId:deposit.source_artifact_id};
+      keep();
+    }
     const events=draftEvents(draft,sessionId,fresh||!!artifactId);
+    if(deposit)events.track('learning.memory.deposit',{pathway,actor_kind:actorKind,source_artifact_id:deposit.source_artifact_id,source_trace_id:deposit.source_trace_id,kind:deposit.kind});
     const root=body();root.innerHTML=`<div class="learning-layout"><aside class="learning-person"><details class="learning-care"><summary>${esc(person.name)} · ${esc(person.domain)} <span>↗</span></summary><p>${esc(person.moment)}</p><blockquote>${esc(person.voice)}</blockquote><p>${esc(person.care)}</p><small>Fictional character · authored guidance</small></details><button class="text-button" data-other>Other worlds ↗</button></aside><section class="learning-work"><nav class="learning-steps" aria-label="Learning circle"><span class="active">01 · Explore</span><span>02 · Keep</span><span>03 · Exchange</span><span>04 · Begin again</span></nav><div data-lab><p>Opening the experiment...</p></div><div class="learning-dock"><button class="text-button" aria-expanded="false" data-panel="save">◇ Keep a discovery</button><button class="text-button" aria-expanded="false" data-panel="share">↔ Invite a response</button><button class="text-button" aria-expanded="false" data-panel="next">✧ Follow a question</button></div><p class="learning-action-status" data-status role="status"></p><section class="learning-save" hidden><label for="path-explanation">What changed? <small>A few words, if you like.</small></label><textarea id="path-explanation" rows="2" placeholder="I tried... Nothing changed yet is also a valid answer.">${esc(draft.explanation)}</textarea><button class="primary" data-save>Keep this version</button></section><section class="learning-share" hidden><h3>A different pair of eyes.</h3><p>Demo conversation · nothing is sent.</p><button class="text-button" data-share>Try ${esc(person.peer.toLowerCase())}'s question</button><div data-response ${draft.stage==='share'||draft.stage==='next'?'':'hidden'}><blockquote>${esc(person.share)}</blockquote><small>Staged ${esc(person.peer.toLowerCase())} response</small><p>Return to your experiment above. You can revise it, keep it, or disagree.</p></div></section><section class="learning-next" hidden><label for="path-question">What do you want to try next?</label><textarea id="path-question" rows="2" placeholder="${esc(person.next)}">${esc(draft.question)}</textarea><button class="primary" data-next>Keep my next question</button><button class="text-button" data-imagine>Explore this question with Astra</button><p class="learning-label">Optional · review before sending to Astra.</p></section><details class="learning-versions"><summary>Notebook & traces · ${actorKind==='agent_review'?'agent QA':'visitor activity'}</summary><div data-history></div></details></section></div>`;
     const q=s=>root.querySelector(s);
     const tools=document.createElement('details');tools.className='universe-tools';
@@ -173,7 +180,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
         initialState:draft.lab,
         onChange:value=>{
           const priorSources=JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote]);
-          draft.lab={...structuredClone(value),...Object.fromEntries(['boxing_round','boxing_mirror','real_world_reflection','story_world'].filter(key=>draft.lab[key]).map(key=>[key,draft.lab[key]]))};
+          draft.lab={...structuredClone(value),...Object.fromEntries(['boxing_round','boxing_mirror','real_world_reflection','story_world','knowledge_memories'].filter(key=>draft.lab[key]).map(key=>[key,draft.lab[key]]))};
           if(storyWorld){const world=storyWorld.getState();draft.lab.decisionResponses=world.decisionResponses;draft.lab.storyChoice=world.storyChoice;}
           keep();musicScene?.render();pianoScene?.render();
           if(JSON.stringify([currentSources(),draft.lab.youtubeUrl,draft.lab.youtubeTimestamp,draft.lab.youtubeNote])!==priorSources)experimentDispose?.contextChanged();
@@ -190,14 +197,29 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       const host=document.createElement('div'),physics=document.createElement('details'),summary=document.createElement('summary');physics.className='universe-physics';summary.textContent='∿ Look closer at the motion';physics.append(summary,q('.movement-lab'));const mirrorHost=document.createElement('div');q('[data-lab]').append(mirrorHost,physics);physics.append(host);
       boxingMirror=mountBoxingMirror(mirrorHost,{initialState:draft.lab.boxing_mirror||{},lessons:BOXING_LESSONS,onChange:state=>{const lessonChanged=state.lessonId!==draft.lab.boxing_mirror?.lessonId;draft.lab.boxing_mirror=structuredClone(state);if(lessonChanged){draft.frozenMovementSources=null;experimentDispose?.contextChanged();}keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
       draft.lab.boxing_mirror=boxingMirror.getState();keep();
-      const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Enter a story →';next.hidden=false;mirrorHost.after(next);next.onclick=async()=>{next.disabled=true;try{await save(draft.parentId?'revision':'attempt');await open('ideas');}catch(error){next.disabled=false;toast(error.message);}};
+      const next=document.createElement('button');next.className='universe-next';next.textContent='Keep my observation →';next.hidden=false;mirrorHost.after(next);
+      next.onclick=async()=>{
+        next.disabled=true;
+        try{
+          if(!draft.lab.boxing_mirror?.reflection?.trim()){
+            const input=mirrorHost.querySelector('textarea');
+            const reflection=input?.closest('details');if(reflection)reflection.open=true;
+            input?.focus();throw Error('Write what you noticed first. Nothing will be invented for you.');
+          }
+          const record=await save(draft.parentId?'revision':'attempt');
+          if(token!==opening)return;
+          const memory=createBoxingMemory(record);
+          if(!memory)throw Error('The saved version has no observation. Your draft is still here.');
+          await open('ideas',null,memory);
+        }catch(error){if(token===opening){next.disabled=false;toast(error.message);}}
+      };
       boxingGame=mountBoxingGame(host,{getSettings:()=>structuredClone(draft.lab),initialState:draft.lab.boxing_round||{},onChange:state=>{draft.lab.boxing_round=structuredClone(state);keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
     }
     if(ready&&pathway==='ideas'){
       storyHost=document.createElement('div');q('[data-lab]').prepend(storyHost);
       const reading=document.createElement('details');reading.className='story-reading';const readingTitle=document.createElement('summary');readingTitle.textContent='Read and reflect';reading.append(readingTitle,q('.ideas-lab'));q('[data-lab]').append(reading);
       const style=document.createElement('link');style.rel='stylesheet';style.href='/story-world.css';storyHost.append(style);
-      storyWorld=mountStoryWorld(storyHost,{initialState:{...draft.lab.story_world,modelComparison:draft.lab.modelComparison,decisionResponses:draft.lab.decisionResponses,storyChoice:draft.lab.storyChoice},onChange:state=>{const writingChanged=state.learnerIntent!==(draft.lab.story_world?.learnerIntent||'')||state.learnerStory!==(draft.lab.story_world?.learnerStory||'');draft.lab.story_world=structuredClone(state);draft.lab.modelComparison=state.modelComparison;draft.lab.decisionResponses=state.decisionResponses;draft.lab.storyChoice=state.storyChoice;if(writingChanged)experimentDispose?.contextChanged();keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
+      storyWorld=mountStoryWorld(storyHost,{initialState:{...draft.lab.story_world,memories:draft.lab.knowledge_memories||[],modelComparison:draft.lab.modelComparison,decisionResponses:draft.lab.decisionResponses,storyChoice:draft.lab.storyChoice},onChange:state=>{const writingChanged=state.learnerIntent!==(draft.lab.story_world?.learnerIntent||'')||state.learnerStory!==(draft.lab.story_world?.learnerStory||'');draft.lab.story_world=structuredClone(state);draft.lab.modelComparison=state.modelComparison;draft.lab.decisionResponses=state.decisionResponses;draft.lab.storyChoice=state.storyChoice;if(writingChanged)experimentDispose?.contextChanged();keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
       const host=document.createElement('div');host.hidden=true;q('[data-lab]').append(host);
       const leave=document.createElement('button');leave.className='universe-next';leave.textContent='Take this into life ↗';q('[data-lab]').append(leave);
       worldReflection=mountRealWorldReflection(host,{initialState:draft.lab.real_world_reflection||{},onChange:state=>{draft.lab.real_world_reflection=structuredClone(state);keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
@@ -223,7 +245,12 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       q('[data-imagine]').onclick();
       await experimentDispose?.resume(recordedJob,artifactId);
     }
-    events.track('learning.path.open',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',goal:person.goal});await history();
+    events.track('learning.path.open',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',goal:person.goal});
+    if(deposit&&ready&&token===opening){
+      try{await save(draft.parentId?'revision':'attempt',actorKind,'Kept a boxing observation in the knowledge world.');}
+      catch(error){if(token===opening)toast('Your observation is in this browser draft, but its world version could not be saved: '+error.message);}
+    }
+    await history();
   }
   function chooser(){dispose?.();dispose=null;opening++;openDrawer('learning-choice','Follow what moves you.','THREE WORLDS / ONE SCHOOL');document.querySelector('#drawer').classList.add('learning-drawer');onCleanup(()=>{opening++;dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');});body().innerHTML=`<div class="learning-people">${Object.entries(PATHS).map(([id,p])=>`<button data-path="${id}"><span class="learning-world-icon learning-world-icon--${id}" aria-hidden="true">${({music:'♫',movement:'◌',ideas:'✧'})[id]}</span><small>${esc(p.domain)}</small><h3>${esc(p.name)}</h3><p>${esc(p.goal)}</p><span>Begin with ${esc(p.name)} ↗</span></button>`).join('')}</div><p class="learning-label">Interactive worlds · fictional characters</p>`;body().querySelectorAll('[data-path]').forEach(b=>b.onclick=()=>open(b.dataset.path));}
   return {open,chooser};

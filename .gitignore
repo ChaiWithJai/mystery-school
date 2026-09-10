@@ -7,3 +7,7 @@ mlartifacts/
 mlruns/
 .env*
 .venv/
+
+dist/
+.netlify/
+output/deployment-review/
