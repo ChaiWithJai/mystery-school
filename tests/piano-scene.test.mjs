@@ -30,7 +30,9 @@ test('scene label, single Hear button and comparison follow the applied target w
   const mountPianoRoll=()=>{const cleanup=()=>{rollDisposed=true;};cleanup.setTarget=value=>rollTargets.push(value);cleanup.event=(type,payload)=>rollEvents.push({type,payload});return cleanup;};
   const source=readFileSync(new URL('../public/piano-scene.js',import.meta.url),'utf8');
   const body=source.slice(source.indexOf('export function mountPianoScene')).replace('export function','function');
-  const mount=vm.runInNewContext(`${body};mountPianoScene`,{document,mountPianoRoll,pianoScenePoint,performanceNotes,noteName,RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel});
+  let soundtrackLeft=false;
+  const mountDemoSoundtrack=()=>({leavePiano(){soundtrackLeft=true;}});
+  const mount=vm.runInNewContext(`${body};mountPianoScene`,{document,mountDemoSoundtrack,mountPianoRoll,pianoScenePoint,performanceNotes,noteName,RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel});
   const container=new Element();const calls=[];const events=[];
   const target={exercise_id:RUNAWAY_OPENING_SOURCE.id,quarter_bpm:60};
   const state={practice:createOpeningDemoTake(target),practice_target:null};
@@ -54,6 +56,7 @@ test('scene label, single Hear button and comparison follow the applied target w
   assert.equal(invitation.querySelector('p').textContent,'Try the glowing key.');
   view.dispose();
   assert.equal(rollDisposed,true);
+  assert.equal(soundtrackLeft,true);
   assert.deepEqual(rollTargets,[null,target,null]);
   assert.equal(rollEvents[0].type,'performance.stop');
   assert.equal(invitation.hidden,true);
