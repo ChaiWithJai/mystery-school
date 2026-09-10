@@ -34,6 +34,14 @@ class CompanionTests(unittest.TestCase):
         events=[json.loads(line) for line in (Path(self.temp.name)/'coach-trajectory.jsonl').read_text().splitlines()]
         self.assertEqual([e['event'] for e in events],['coach.request','model.request','model.response','coach.completed'])
         self.assertEqual(events[1]['request'],calls[0]);self.assertEqual(events[-1]['result']['attempt_id'],'test-attempt')
+    def test_unit_cache_is_invalidated_by_companion_revision(self):
+        calls=[]
+        def model(body):calls.append(body);return completion(body)
+        self.service.model_request=model
+        first=self.service.coach(copy.deepcopy(ATTEMPT))
+        self.service.build='new-revision'
+        second=self.service.coach(copy.deepcopy(ATTEMPT))
+        self.assertNotEqual(first['request_id'],second['request_id']);self.assertEqual(len(calls),2)
     def test_integration_low_tracking_does_not_call_model(self):
         self.service.model_request=lambda _:self.fail('must not call model')
         attempt=copy.deepcopy(ATTEMPT);attempt['tracking_confidence']=0.2;attempt['observations'][0]['source_kind']='camera_estimate'
@@ -55,7 +63,7 @@ class CompanionTests(unittest.TestCase):
         url=f'http://127.0.0.1:{server.server_port}/api/coach'
         try:
             with self.assertRaises(HTTPError) as error:urlopen(Request(url,data=json.dumps(ATTEMPT).encode()),timeout=3)
-            self.assertEqual(error.exception.code,401)
+            self.assertEqual(error.exception.code,401);error.exception.close()
             request=Request(url,data=json.dumps(ATTEMPT).encode(),headers={'Authorization':'Bearer '+'t'*40,'Content-Type':'application/json'})
             with urlopen(request,timeout=3) as response:result=json.load(response)
             self.assertEqual(result['status'],'completed');self.assertEqual(result['state_version'],1)

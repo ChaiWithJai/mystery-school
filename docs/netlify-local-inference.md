@@ -63,7 +63,7 @@ Use the existing Netlify GitHub App integration with `ChaiWithJai/mystery-school
 }
 ```
 
-POST this to `/api/coach` through the authenticated connection. `pathway` is music/movement/ideas. Actors are human/agent_review/scripted_demo; this is a declaration, not identity verification. Source kinds are camera_estimate/simulation/learner_report/piano_event/source_passage. Submit only compact relevant observations; never send camera frames in this contract. The response preserves session/attempt/version, evidence IDs, model/provider, reported usage, measured request latency, request ID and trace ID. Identical requests reuse the durable result; a revised attempt needs a new state version. The private coach handles one inference at a time; a concurrent request gets 429 rather than an unbounded queue. A local request times out after 15 seconds; Netlify has a 20-second upstream deadline.
+POST this to `/api/coach` through the authenticated connection. `pathway` is music/movement/ideas. Actors are human/agent_review/scripted_demo; this is a declaration, not identity verification. Source kinds are camera_estimate/simulation/learner_report/piano_event/source_passage. Submit only compact relevant observations; never send camera frames in this contract. The response preserves session/attempt/version, evidence IDs, model/provider, reported usage, measured request latency, request ID and trace ID. Identical requests on the same companion source revision reuse the durable result; a revised attempt needs a new state version. The private coach handles one inference at a time; a concurrent request gets 429 rather than an unbounded queue. A local request times out after 15 seconds; Netlify has a 20-second upstream deadline.
 
 No automatic escalation to Astra occurs. Use the existing explicit artifact projection when deeper help is requested, preserving its confirmation and source selection.
 
@@ -97,7 +97,7 @@ Repository note: AGENTS.md mentions `npm run skills:verify`, but that script is 
 
 ## Recorded delivery checks (2026-09-10)
 
-Base: `a5632f2793ad3b49b755ca14fdf14ae750e83174`; isolated `codex/netlify-local-inference` branch. The review was run with uncommitted changes in this PR; final PR SHA and deploy metadata identify the published version. Local Node suite: 182 passed; new Python gateway suite: 7 passed. Syntax and Netlify build/function bundling passed.
+Base: `a5632f2793ad3b49b755ca14fdf14ae750e83174`; isolated `codex/netlify-local-inference` branch. The review was run with uncommitted changes in this PR; final PR SHA and deploy metadata identify the published version. Local Node suite: 182 passed; new Python gateway suite: 8 passed. Syntax and Netlify build/function bundling passed.
 
 Chromium `151.0.7922.34`, 1080×592: the built static music route entered with no page exceptions while the API was unavailable; pressing/releasing a piano key produced one retained timeline mark. The unavailable-server notice remained honest. This checks browser interaction and packaged assets, not perceived audio quality, live camera tracking or inference latency. The separate connection form was visible and inspected. Screenshots are local ignored output under `output/deployment-review/`.
 

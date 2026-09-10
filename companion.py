@@ -99,7 +99,7 @@ class Companion:
         attempt=validate_attempt(body)
         if not self.gate.acquire(blocking=False): raise Problem(429,'Local coach is busy; keep playing and retry later')
         trace=None; start=time.monotonic(); result=None
-        request_id=hashlib.sha256(encoded(attempt)).hexdigest()
+        request_id=hashlib.sha256(encoded({'attempt':attempt,'companion_source_sha256':self.build})).hexdigest()
         identity={k:attempt[k] for k in ('session_id','attempt_id','state_version','actor_kind')}
         event=dict(identity, request_id=request_id,build_sha256=self.build,model=MODEL,prompt_version='bounded-cue-v1',capture_scope=CAPTURE_SCOPE)
         cache=self.data/(request_id+'.json')
