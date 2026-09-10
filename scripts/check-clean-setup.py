@@ -26,6 +26,7 @@ def main():
     if args.require_clean and worktree_status:
         raise RuntimeError("Clean checkout required:\n" + "\n".join(worktree_status))
     with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         probe.bind(("127.0.0.1", args.port))
     report = {"scope": "empty-data startup and served-file integrity; no inference",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
