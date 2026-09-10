@@ -11,7 +11,7 @@ remain pending. See `alignment.md` for the attributed handoff.
 | Draft preservation | Neo: edit all three Imagine fields, close, visit References, reopen; compare another world | Memory lasts until reload. |
 | Explicit selection | Neo: projection disabled before confirmation and enabled after it | Selection is not evidence of understanding. |
 | Learner request | Neo: the opening request appears unchanged in Imagine | Speech and sketch interpretation require a facilitator. |
-| Backend | Latest checkpoint: 20 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
+| Backend | Latest checkpoint: 22 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
 | JavaScript | Latest checkpoint: 82 tests pass | Deterministic tests are not participant learning evidence. |
 | Actual model correction | `verify_demo.mjs` passes for the saved parent and child | QA annotation, not participant feedback. |
 | Exact request capture | `verify_capture.mjs` passes for the bike walkthrough | Capture begins with new jobs; older prompts cannot be reconstructed as fact. |
@@ -108,6 +108,19 @@ dollar cost are null. Imported JSON is collapsed in Trajectory Studio, with its
 original text offsets retained for annotations.
 
 ## Observed finding and verification
+
+The explicit synthetic display fixture is
+`docs/review-records/synthetic-studio-check.json`, pinned to c8cd7dc. Import
+returned 201, identical retry returned 200, and API/MLflow readback retained the
+exact source. Record `cea643d2-0fc1-481b-a219-ab0531d36f45` has trace
+`tr-f347b209a9494589bba6b72f9af404ab`. Agent browser QA inspected the rendered
+import label, synthetic tool input/result, conclusion and matching trace link.
+The tool content is explicitly a fixture, not a claimed executed tool call.
+
+Two additional backend regressions cover MLflow readback exceptions and mismatched
+outputs. Both require 503 instead of success, unchanged persisted source, and
+recovery with the same record/trace after reopening. The full suite is 22 tests.
+No live model calls were used for these checks.
 
 The acceptance-attribution audit now has a recorded failure and a completed
 verification, rather than only proposed probes. Source envelopes are in
