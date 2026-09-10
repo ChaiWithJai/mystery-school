@@ -14,6 +14,24 @@ Jai's 13:50 Buzz correction rejects the earlier prototype-readiness verdict. Fix
 
 Lead the review with observed interaction quality and these delivery results, then report supporting tests. A successful check is specific to its SHA and conditions. Record unsupported and untested behavior explicitly; the prior static-prototype pass is not a pass on these gates.
 
+### Music correction: a song someone actually wants to play
+
+The subsequent `MS-SONG-NOT-SLIDER` Buzz handoff records Jai's concrete intention:
+learn to play **Runaway by Kanye West**. The music acceptance story is now
+listen to the actual reference → attempt on a playable keyboard → hear the
+captured attempt → identify a specific difference → practice → return to the
+song. An envelope control or generated five-note variation cannot establish
+that outcome. Preserve space for the instrument and reference together.
+
+Verify the new piano module against its committed implementation when published.
+Observe pointer/computer-keyboard held notes, release, attempt capture and replay;
+distinguish captured performance from an authored example. Tie any feedback to
+an inspected reference and the actual attempt. No claimed accuracy, mastery or
+song transcription follows from the current synthesized phrase or API proposal.
+This new gate remains unverified; it does not remove movement or sourced personal
+understanding from delivery. Present note/rhythm changes in musical language,
+not raw MIDI JSON in the learner's proposal preview.
+
 Review the artifact a person can make, change and return to. Mystery School delivers **all three** connected pathways: Maya's music/calculus, Andre's movement/physics and Leena's Great Books/YouTube account of understanding. [Issue #2](https://github.com/ChaiWithJai/mystery-school/issues/2) defines the experience; [#1](https://github.com/ChaiWithJai/mystery-school/issues/1) defines inspectable provenance. Earlier proposals that defer two paths or substitute gears do not define completion.
 
 The circle is **care → try → needed concept → own artifact → sharing response → new question**. The person's desire survives every step. Maya wants a song for her grandmother; Andre wants to understand a reach with his training partner; Leena wants an account she can explain to a friend. Characters are fictional composites. Unheard knowing, Guarded hope and Restless invention describe situations a person may encounter, not diagnoses or fixed ability groups.
