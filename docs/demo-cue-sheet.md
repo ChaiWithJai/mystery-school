@@ -28,10 +28,10 @@ product work, not shipped capabilities.
 | --- | --- | --- |
 | 0–7 seconds | Hear the piano, then strike **L** with the falling E6 cue. | Make something before explaining it. |
 | 7–12 seconds | Keep the take and go directly **Into the ring**. | Start with what the student loves. |
-| 12–52 seconds | In Stick & move, choose **Try this in my mirror**, start the camera, then **40-second practice**. | Legs are wheels. Move before the punch; move again after it. |
+| 12–52 seconds | Explore uppercut and hook, choose **Try both in my mirror**, then start a camera practice. | The student tries. The teacher helps them notice and explain. |
 | 52–60 seconds | Keep a short observation in **What did you notice?**, then **Keep my observation**. Find that exact memory in the school world. | Experience becomes something you can examine, revise and carry into life. |
 
-Allow up to 90 seconds for spoken narration and camera setup. The transitions are manual. The five foundations are available behind the body-map selector; do not try to teach all five in the 40-second segment.
+Allow up to 90 seconds for spoken narration and camera setup. The transitions are manual. Other foundations remain under **More from the school**. Keep the demonstration focused on the two left-hand movements.
 
 Before presenting, grant camera access through **Start camera** and check the actual room framing, then stop the mirror and return to `/`. Verify audible piano output on the presentation speakers. Browser QA with a source-video fixture does not establish either physical-camera framing or audible output.
 

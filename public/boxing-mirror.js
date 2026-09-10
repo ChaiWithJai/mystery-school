@@ -5,7 +5,8 @@ const knownTime=v=>Number.isFinite(v)&&v>=0?v:null;
 function provenance(e){return {captureId:knownString(e.captureId),lessonId:knownString(e.lessonId),sourceMode:['camera','local-video'].includes(e.sourceMode)?e.sourceMode:null,detectorTime:knownTime(e.detectorTime),mediaTime:knownTime(e.mediaTime),seekSegment:Number.isInteger(e.seekSegment)&&e.seekSegment>=0?e.seekSegment:null};}
 const textValue=v=>String(v||'').slice(0,2000);
 const reflectionText=v=>typeof v==='string'?v:'';
-const cleanAttempt=e=>({t:e.t,type:e.type,hand:e.hand==='R'?'R':'L',estimated:true,...provenance(e),...(e.sessionId?{sessionId:textValue(e.sessionId)}:{})});
+const pSafeMode=v=>['camera','local-video'].includes(v)?v:null;
+const cleanAttempt=e=>({t:e.t,type:e.type,hand:['L','R'].includes(e.hand)?e.hand:null,estimated:true,...provenance(e),...(e.sessionId?{sessionId:textValue(e.sessionId)}:{})});
 export function mirrorPosition(points,t){
   if(!points||![23,24].every(i=>points[i]&&[points[i].x,points[i].y].every(Number.isFinite)&&(points[i].visibility??1)>=.5))return null;
   const clamp=v=>Math.max(0,Math.min(1,v)),ankles=[27,28].filter(i=>points[i]&&(points[i].visibility??1)>=.5&&Number.isFinite(points[i].x)&&Number.isFinite(points[i].y)).map(i=>({side:i===27?'L':'R',x:clamp(points[i].x),y:clamp(points[i].y)}));
@@ -13,10 +14,48 @@ export function mirrorPosition(points,t){
 }
 const cleanRound=r=>({id:textValue(r.id),lessonId:textValue(r.lessonId),sessionId:textValue(r.sessionId),startedAt:textValue(r.startedAt),durationMs:Number.isFinite(r.durationMs)?Math.max(0,r.durationMs):0,status:['elapsed','stopped','running'].includes(r.status)?r.status:'stopped',source:textValue(r.source),cue:textValue(r.cue),coordinateSpace:'normalized_image',depthMeasured:false,points:(Array.isArray(r.points)?r.points:[]).filter(p=>Number.isFinite(p.t)&&Number.isFinite(p.x)&&Number.isFinite(p.y)).map(p=>({t:p.t,x:Math.max(0,Math.min(1,p.x)),y:Math.max(0,Math.min(1,p.y)),ankles:(Array.isArray(p.ankles)?p.ankles:[]).filter(a=>Number.isFinite(a.x)&&Number.isFinite(a.y)).map(a=>({side:a.side==='R'?'R':'L',x:Math.max(0,Math.min(1,a.x)),y:Math.max(0,Math.min(1,a.y))}))}))});
 const attempts=v=>(Array.isArray(v)?v:[]).filter(e=>e&&Number.isFinite(e.t)&&['JAB','CROSS','HOOK','UPPERCUT'].includes(e.type)).map(cleanAttempt);
+export function targetPunchProgress(value,lesson,sessionId){
+  const types=[...new Set((Array.isArray(lesson?.targetPunch)?lesson.targetPunch:[lesson?.targetPunch]).filter(t=>['HOOK','UPPERCUT'].includes(t)))];
+  const hand=lesson?.targetHand==='R'?'R':'L';
+  if(value.activeDrillId){
+    const drill=value.drillPractices?.find(d=>d.id===value.activeDrillId&&d.lessonId===lesson?.id);
+    return types.map(type=>({type,hand,estimated:!!drill?.achievements.some(a=>a.lessonId===lesson.id&&a.hand===hand&&a.type===type&&drill.captures.some(c=>c.captureId===a.captureId&&c.sessionId===a.sessionId))}));
+  }
+  return types.map(type=>({type,hand,estimated:!!sessionId&&(value.attempts||[]).some(a=>a.lessonId===lesson.id&&a.sessionId===sessionId&&a.hand===hand&&a.type===type)}));
+}
+const cleanDrills=value=>(Array.isArray(value)?value:[]).filter(d=>d?.id&&d.lessonId).map(d=>({id:textValue(d.id),lessonId:textValue(d.lessonId),startedAt:textValue(d.startedAt),captures:(Array.isArray(d.captures)?d.captures:[]).filter(c=>c?.captureId&&c.sessionId).map(c=>({captureId:textValue(c.captureId),sessionId:textValue(c.sessionId)})),achievements:attempts(d.achievements)}));
+export function newMirrorPractice(value,lesson,{id=crypto.randomUUID(),startedAt=new Date().toISOString()}={}){
+  const next=cleanMirrorState(value);
+  if(!lesson?.targetPunch) return next;
+  if(next.drillPractices.some(d=>d.id===id))throw new TypeError('Practice ID must be new.');
+  next.lessonId=lesson.id;
+  next.lessonProgress[lesson.id]={reflection:next.reflection,referenceOpenedAt:'',...next.lessonProgress[lesson.id],reportedTried:false,mirrorStartedAt:'',sessionId:'',sourceMode:null};
+  next.sourceMode=null;
+  next.activeDrillId=id;next.drillPractices.push({id,lessonId:lesson.id,startedAt,captures:[],achievements:[]});
+  return next;
+}
+export function recordDrillAchievement(value,lesson,event){
+  const next=cleanMirrorState(value),drill=next.drillPractices.find(d=>d.id===next.activeDrillId&&d.lessonId===lesson?.id);
+  if(!drill||!Number.isFinite(event?.t)||event.lessonId!==drill.lessonId||!drill.captures.some(c=>c.captureId===event.captureId&&c.sessionId===event.sessionId))return next;
+  const target=targetPunchProgress(next,lesson,event.sessionId).find(t=>t.type===event.type&&t.hand===event.hand);
+  if(target&&!target.estimated)drill.achievements.push(cleanAttempt(event));
+  return next;
+}
+export function reportMirrorPractice(value,{recordedAt=new Date().toISOString()}={}){
+  const next=cleanMirrorState(value),drill=next.drillPractices.find(d=>d.id===next.activeDrillId&&d.lessonId===next.lessonId);
+  if(drill&&!next.drillReports.some(r=>r.practiceId===drill.id))next.drillReports.push({lessonId:drill.lessonId,practiceId:drill.id,sessionId:next.lessonProgress[drill.lessonId]?.sessionId||'',recordedAt,reportedCompleted:true,evidenceType:'learner_report'});
+  return next;
+}
+export function currentTargetSource(value,lesson){
+  const targets=targetPunchProgress(value,lesson,value.lessonProgress?.[lesson?.id]?.sessionId);
+  const target=targets.find(t=>!t.estimated)||targets.at(-1);
+  const ref=lesson?.targetSources?.[target?.type];
+  return ref?{...ref,target:target.type}:{url:lesson?.source,embedUrl:lesson?.embedUrl,evidenceTimestampSeconds:lesson?.evidenceTimestampSeconds,label:lesson?.title,target:target?.type};
+}
 export function cleanMirrorState(value={}) {
   const progress={};
   for(const [id,p]of Object.entries(value.lessonProgress||{})){if(!p||typeof p!=='object')continue;progress[id]={reflection:reflectionText(p.reflection),referenceOpenedAt:textValue(p.referenceOpenedAt),mirrorStartedAt:textValue(p.mirrorStartedAt),reportedTried:p.reportedTried===true,sessionId:textValue(p.sessionId),sourceMode:['camera','local-video'].includes(p.sourceMode)?p.sourceMode:null};}
-  return {version:3,practiceRounds:(Array.isArray(value.practiceRounds)?value.practiceRounds:[]).filter(r=>r&&r.id).map(cleanRound),detector:VERSION,lessonId:textValue(value.lessonId),reflection:reflectionText(value.reflection),attempts:attempts(value.attempts).slice(-60),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null,lessonProgress:progress,observations:(Array.isArray(value.observations)?value.observations:[]).filter(o=>o&&o.id&&o.lessonId).map(o=>({id:textValue(o.id),lessonId:textValue(o.lessonId),reflection:reflectionText(o.reflection),recordedAt:textValue(o.recordedAt),referenceOpenedAt:textValue(o.referenceOpenedAt),mirrorStartedAt:textValue(o.mirrorStartedAt),reportedTried:o.reportedTried===true,source:textValue(o.source),cue:textValue(o.cue),sessionId:textValue(o.sessionId),sourceMode:['camera','local-video'].includes(o.sourceMode)?o.sourceMode:null,attempts:attempts(o.attempts)}))};
+  return {version:3,activeDrillId:textValue(value.activeDrillId),drillPractices:cleanDrills(value.drillPractices),drillReports:(Array.isArray(value.drillReports)?value.drillReports:[]).filter(r=>r&&r.lessonId&&r.reportedCompleted===true).map(r=>({lessonId:textValue(r.lessonId),...(r.practiceId?{practiceId:textValue(r.practiceId)}:{}),sessionId:textValue(r.sessionId),recordedAt:textValue(r.recordedAt),reportedCompleted:true,evidenceType:'learner_report'})),practiceRounds:(Array.isArray(value.practiceRounds)?value.practiceRounds:[]).filter(r=>r&&r.id).map(cleanRound),detector:VERSION,lessonId:textValue(value.lessonId),reflection:reflectionText(value.reflection),attempts:attempts(value.attempts).slice(-60),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null,lessonProgress:progress,observations:(Array.isArray(value.observations)?value.observations:[]).filter(o=>o&&o.id&&o.lessonId).map(o=>({id:textValue(o.id),lessonId:textValue(o.lessonId),reflection:reflectionText(o.reflection),recordedAt:textValue(o.recordedAt),referenceOpenedAt:textValue(o.referenceOpenedAt),mirrorStartedAt:textValue(o.mirrorStartedAt),reportedTried:o.reportedTried===true,source:textValue(o.source),cue:textValue(o.cue),sessionId:textValue(o.sessionId),sourceMode:pSafeMode(o.sourceMode),attempts:attempts(o.attempts)}))};
 }
 const referenceReady=(p,lesson)=>Boolean(p?.referenceOpenedAt||(lesson?.id==='jai.attention'&&lesson.evidenceType==='jai_authored_reflection'&&lesson.source===null));
 export function keepMirrorObservation(value,lesson,{id,recordedAt,sessionId}={}) {
@@ -35,10 +74,29 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
   const emit=(type,detail={})=>onEvent(type,{...detail,detector:VERSION,rawFramesStored:false});
   const snapshot=()=>cleanMirrorState({...state,practiceRounds:[...state.practiceRounds,...(activeRound?[{...activeRound,durationMs:performance.now()-roundStarted,status:'running'}]:[])]});
   const changed=()=>onChange(snapshot());
+  const drill=document.createElement('section');drill.className='boxing-target-drill';drill.hidden=true;drill.innerHTML='<div data-targets></div><small>Detector estimates</small><button data-complete-practice>I completed this practice</button><p role="status" data-congratulations></p>';root.append(drill);
+  let displayedReference='';
+  function renderDrill(){
+    const l=lessons.find(x=>x.id===state.lessonId),p=currentProgress(),targets=targetPunchProgress(state,l,p.sessionId);
+    drill.hidden=!targets.length;root.classList.toggle('has-target-drill',!!targets.length);if(!targets.length)return;
+    const nextTarget=targets.findIndex(t=>!t.estimated);
+    cue.textContent=l.cues?.[nextTarget<0?targets.length-1:nextTarget]||l.cues?.[0]||'';
+    const ref=currentTargetSource(state,l),identity=JSON.stringify([l.id,ref.target,ref.url,ref.embedUrl]);
+    if(identity!==displayedReference){q('[data-lesson-player]').replaceChildren();displayedReference=identity;}
+    source.href=ref.url||'#';source.hidden=!ref.url;source.textContent=ref.label||'Lesson source ↗';q('[data-watch]').hidden=!ref.embedUrl;
+    const list=drill.querySelector('[data-targets]');list.replaceChildren(...targets.map((t,i)=>{const el=document.createElement('span');el.className=t.estimated?'is-estimated':'';el.textContent=`${t.estimated?'✓':i+1} ${t.hand==='L'?'Left':'Right'} ${t.type.toLowerCase()}`;return el;}));
+    const reported=state.drillReports.some(r=>r.lessonId===l.id&&(state.activeDrillId?r.practiceId===state.activeDrillId:!r.practiceId&&r.sessionId===(p.sessionId||'')));
+    const spotted=targets.every(t=>t.estimated);drill.classList.toggle('is-celebrating',reported||spotted);
+    drill.querySelector('[data-congratulations]').textContent=reported?'Nice work! You completed your practice.':spotted?'Nice work! Both left-hand shapes spotted.':'';
+    drill.querySelector('small').textContent=reported?'Your completion report · not a technique score':'Movement estimates · not a technique score';
+  }
+  function ensurePractice(){const l=lessons.find(x=>x.id===state.lessonId);if(l?.targetPunch&&!state.drillPractices.some(d=>d.id===state.activeDrillId&&d.lessonId===l.id))state=newMirrorPractice(state,l);}
+  drill.querySelector('[data-complete-practice]').onclick=()=>{ensurePractice();state=reportMirrorPractice(state);currentProgress().reportedTried=true;renderProgress();emit('boxing.mirror.practice_reported',{lessonId:state.lessonId,practiceId:state.activeDrillId,sessionId:currentProgress().sessionId||'',reportedCompleted:true,evidenceType:'learner_report',techniqueVerified:false});changed();};
   function finishRound(reason){if(!activeRound)return;clearInterval(roundTimer);const kept=cleanRound({...activeRound,durationMs:performance.now()-roundStarted,status:reason});state.practiceRounds.push(kept);activeRound=null;q('[data-round-clock]').textContent=reason==='elapsed'?'40 seconds kept':'Practice stopped';q('[data-round]').hidden=false;emit('boxing.mirror.practice_kept',{...kept,points:undefined,positionSamples:kept.points.length});changed();}
   q('[data-round]').onclick=()=>{if(!root.classList.contains('is-live')||activeRound)return;const l=lessons.find(x=>x.id===state.lessonId);roundStarted=performance.now();lastPositionAt=0;activeRound={id:crypto.randomUUID(),lessonId:state.lessonId,sessionId,startedAt:new Date().toISOString(),source:l?.source||'',cue:l?.cues?.[0]||'',points:[]};q('[data-round]').hidden=true;q('[data-round-clock]').textContent='40 s';emit('boxing.mirror.practice_start',{id:activeRound.id,lessonId:state.lessonId,sessionId,durationSeconds:40,coordinateSpace:'normalized_image'});roundTimer=setInterval(()=>{const remaining=Math.max(0,40-(performance.now()-roundStarted)/1000);q('[data-round-clock]').textContent=`${Math.ceil(remaining)} s`;if(!remaining){finishRound('elapsed');release();status.textContent='What changed in your approach and exit?';q('.boxing-mirror-reflection').open=true;}},100);changed();};
   const currentProgress=()=>state.lessonProgress[state.lessonId]||(state.lessonProgress[state.lessonId]={reflection:'',referenceOpenedAt:'',mirrorStartedAt:'',reportedTried:false});
   function renderProgress(){
+    renderDrill();
     const p=currentProgress(),index=lessons.findIndex(l=>l.id===state.lessonId),kept=state.observations.filter(o=>o.lessonId===state.lessonId);
     q('[data-progress]').textContent=`Day one · ${index+1}/${lessons.length} · ${kept.length?'tried · learner reported':'not yet kept'}`;
     for(const [i,b]of [...q('.boxing-mirror-path').children].entries()){const saved=state.observations.some(o=>o.lessonId===lessons[i].id);b.textContent=saved?'◉':String(i+1);b.setAttribute('aria-current',i===index?'step':'false');b.setAttribute('aria-label',`${i+1}. ${lessons[i].title} · ${saved?'tried, learner reported':'untried'}`);}
@@ -52,7 +110,7 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
   q('[data-tried]').onchange=()=>{currentProgress().reportedTried=q('[data-tried]').checked;renderProgress();changed();};
   q('[data-next]').onclick=()=>{const l=lessons.find(x=>x.id===state.lessonId);const before=state.observations.length;state=keepMirrorObservation(state,l,{sessionId});if(state.observations.length===before)return;emit('boxing.mirror.observation_kept',state.observations.at(-1));const index=lessons.indexOf(l);release();if(index<lessons.length-1){state.lessonId=lessons[index+1].id;lesson();}else{renderProgress();q('[data-next-status]').textContent='Day-one observations kept. The full program is still ahead.';}changed();};
   function lesson(){const l=lessons.find(x=>x.id===state.lessonId)||lessons[0];if(!l){q('aside').hidden=true;return;}state.lessonId=l.id;select.value=l.id;lessonVideo.pause();q('[data-lesson-player]').replaceChildren();q('[data-watch]').hidden=!l.embedUrl;lessonVideo.src=l.videoUrl||'';lessonVideo.hidden=!l.videoUrl;cue.textContent=(l.cues||[])[0]||l.title;source.href=l.source||'#';source.hidden=!l.source;status.textContent=l.source?'Watch the demonstration, then try it in your mirror.':'Choose one body part. Watch it move in your mirror.';reflection.value=currentProgress().reflection;state.reflection=reflection.value;renderProgress();}
-  q('[data-watch]').onclick=()=>{const l=lessons.find(x=>x.id===state.lessonId);if(!l?.embedUrl)return;openReference();const iframe=document.createElement('iframe');iframe.src=l.embedUrl;iframe.title=l.title;iframe.allow='encrypted-media; picture-in-picture';iframe.allowFullscreen=true;q('[data-lesson-player]').replaceChildren(iframe);emit('boxing.mirror.reference_open',{lessonId:l.id,source:l.source,evidenceTimestampSeconds:l.evidenceTimestampSeconds});};
+  q('[data-watch]').onclick=()=>{const l=lessons.find(x=>x.id===state.lessonId),ref=currentTargetSource(state,l);if(!ref.embedUrl)return;openReference();const iframe=document.createElement('iframe');iframe.src=ref.embedUrl;iframe.title=ref.label||l.title;iframe.allow='encrypted-media; picture-in-picture';iframe.allowFullscreen=true;q('[data-lesson-player]').replaceChildren(iframe);emit('boxing.mirror.reference_open',{lessonId:l.id,target:ref.target,source:ref.url,evidenceTimestampSeconds:ref.evidenceTimestampSeconds});};
   lessons.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.title;select.append(o);});state.lessonId ||= lessons[0]?.id||'';if(state.reflection&&!state.lessonProgress[state.lessonId])currentProgress().reflection=state.reflection;lesson();
   select.onchange=()=>{release();state.lessonId=select.value;lesson();changed();emit('boxing.mirror.lesson',{lessonId:state.lessonId});};reflection.oninput=()=>{state.reflection=reflection.value;currentProgress().reflection=reflection.value;renderProgress();changed();};
   function release(){finishRound('stopped');q('[data-round]').disabled=true;epoch++;cancelAnimationFrame(frame);worker?.terminate();worker=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.pause();video.srcObject=null;video.removeAttribute('src');if(url)URL.revokeObjectURL(url);url=null;busy=false;ctx.clearRect(0,0,canvas.width,canvas.height);root.classList.remove('is-live');start.hidden=false;stop.hidden=true;}
@@ -68,13 +126,15 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
     const lm=smoother.update(points,t),ls=lm.get(11),rs=lm.get(12),sw=Math.hypot(ls.x-rs.x,ls.y-rs.y);if(sw<.02)return;
     ctx.strokeStyle='#b7f5bb';ctx.lineWidth=3;ctx.shadowColor='#99efa6';ctx.shadowBlur=10;
     status.textContent=(lessons.find(l=>l.id===state.lessonId)?.cues||[])[0]||'Move slowly. Watch your return to guard.';
-    for(const [hand,wi,ei,si]of [['L',15,13,11],['R',16,14,12]]){const e=hands[hand].update(lm.get(wi),lm.get(ei),lm.get(si),{sw,hipY:(lm.get(23).y+lm.get(24).y)/2},t);if(e){const attempt={t:Math.round(t-started),type:e.type,hand,estimated:true,sessionId,...provenance(origin)};state.attempts.push(attempt);state.attempts=state.attempts.slice(-60);estimate.textContent=`${e.type.toLowerCase()} · detector estimate`;emit('boxing.mirror.estimate',attempt);changed();}}
+    for(const [hand,wi,ei,si]of [['L',15,13,11],['R',16,14,12]]){const e=hands[hand].update(lm.get(wi),lm.get(ei),lm.get(si),{sw,hipY:(lm.get(23).y+lm.get(24).y)/2},t);if(e){const attempt={t:Math.round(t-started),type:e.type,hand,estimated:true,sessionId,...provenance(origin)};state=recordDrillAchievement(state,lessons.find(l=>l.id===state.lessonId),attempt);state.attempts.push(attempt);state.attempts=state.attempts.slice(-60);estimate.textContent=`${e.type.toLowerCase()} · detector estimate`;emit('boxing.mirror.estimate',attempt);renderDrill();changed();}}
   }
   async function begin(localFile){release();const token=epoch;status.textContent='Opening your mirror…';start.hidden=true;
     try {
       if(localFile){url=URL.createObjectURL(localFile);video.src=url;video.loop=false;video.controls=true;root.classList.add('is-local-video');state.sourceMode='local-video';}else{const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720},audio:false});if(!alive||token!==epoch){acquired.getTracks().forEach(t=>t.stop());return;}stream=acquired;video.controls=false;root.classList.remove('is-local-video');video.srcObject=stream;state.sourceMode='camera';}
       await video.play();if(!alive||token!==epoch)return;root.classList.add('is-live');stop.hidden=false;q('[data-round]').disabled=false;status.textContent='Loading local movement tracking…';smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};started=performance.now();sessionId=crypto.randomUUID();currentProgress().mirrorStartedAt=new Date().toISOString();currentProgress().sessionId=sessionId;currentProgress().sourceMode=state.sourceMode;currentProgress().reportedTried=false;renderProgress();changed();emit('boxing.mirror.start',{mode:state.sourceMode,lessonId:state.lessonId});
       capture=Object.freeze({captureId:crypto.randomUUID(),lessonId:state.lessonId,sourceMode:state.sourceMode});seekSegment=0;
+      ensurePractice();const drillPractice=state.drillPractices.find(d=>d.id===state.activeDrillId&&d.lessonId===state.lessonId);
+      if(drillPractice)drillPractice.captures.push({captureId:capture.captureId,sessionId});renderDrill();changed();
       const instance=new Worker(new URL('./boxing-mirror-worker.js',import.meta.url));worker=instance;
       let failures=0,pending=null;
       const current=()=>alive&&token===epoch&&worker===instance;
@@ -89,5 +149,5 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
   }
   video.onseeking=()=>{seekSegment++;smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};};
   start.onclick=()=>begin();file.onchange=()=>{const selected=file.files[0];file.value='';if(selected)begin(selected);};stop.onclick=()=>{release();status.textContent='What changed when you watched yourself?';emit('boxing.mirror.stop',{estimates:state.attempts.length});};video.onended=()=>{status.textContent='What did you notice? Keep one observation.';emit('boxing.mirror.video_complete');};
-  return {getState:snapshot,setState(v){state=cleanMirrorState(v);reflection.value=state.reflection;lesson();},dispose(){alive=false;release();lessonVideo.pause();lessonVideo.removeAttribute('src');root.remove();}};
+  return {getState:snapshot,newPractice(){if(!alive)throw new Error('Mirror is closed.');release();state=newMirrorPractice(state,lessons.find(l=>l.id===state.lessonId));sessionId='';currentProgress().sessionId='';currentProgress().mirrorStartedAt='';currentProgress().reportedTried=false;renderProgress();changed();return state.activeDrillId;},setState(v){state=cleanMirrorState(v);reflection.value=state.reflection;lesson();},dispose(){alive=false;release();lessonVideo.pause();lessonVideo.removeAttribute('src');root.remove();}};
 }

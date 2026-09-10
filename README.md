@@ -10,6 +10,10 @@ can start there: try a movement, notice how distance changes over time, then
 name the relationship. The sandbox gives them something to explore together.
 It does not decide what a student is capable of.
 
+Some students need another way into a subject; others need more depth. A
+physics lesson needs a conceptual question and the student's explanation.
+Recognizing a punch shape does not establish understanding of physics.
+
 Jai's school on a computer demonstrates that direction through piano, boxing,
 and a writable book world. The teacher's work is to cultivate courage, passion,
 and imagination, especially when a student needs more time or another approach.
@@ -43,7 +47,7 @@ ring without an intervening tour.
 | Pathway | What the learner can do | Direct route |
 | --- | --- | --- |
 | Music | Listen to a local Runaway recording, play the mapped piano keys, and keep a recorded attempt. | `/?path=music` |
-| Movement | Choose a boxing body-map lesson, inspect its source, and try mirror practice. | `/?path=movement` |
+| Movement | Explore a left uppercut and hook, inspect their sources, and try mirror practice. Other foundations remain available. | `/?path=movement` |
 | Ideas | Explore a rendered world, read a source, and keep a discovery inside the writer. | `/?path=ideas` |
 
 The contextual world menu provides access to the other pathways. The forest

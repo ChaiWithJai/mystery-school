@@ -20,7 +20,10 @@ let dispose=null,opening=0;
 
 export function boxingLessonSources(lessonId){
   return BOXING_LESSONS.filter(lesson=>lesson.id===lessonId&&lesson.source)
-    .map(lesson=>({label:lesson.title,url:lesson.source,locator:'Demonstration at '+lesson.evidenceTimestampSeconds+' seconds',source_kind:'reviewed_video_reference'}));
+    .flatMap(lesson=>{
+      const references=lesson.targetSources?Object.values(lesson.targetSources):[{label:lesson.title,url:lesson.source,evidenceTimestampSeconds:lesson.evidenceTimestampSeconds}];
+      return references.map(reference=>({label:reference.label,url:reference.url,locator:'Demonstration at '+reference.evidenceTimestampSeconds+' seconds',source_kind:'reviewed_video_reference'}));
+    });
 }
 
 export function savedVersionUrl(base,pathway,artifactId){
