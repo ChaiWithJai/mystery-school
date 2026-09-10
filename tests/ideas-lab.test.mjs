@@ -76,11 +76,13 @@ test('mount rejects invalid containers and callbacks before DOM work', () => {
 // Minimal DOM double exercises the host callback contract without a browser dependency.
 function testContainer() {
   const elements = [];
-  const doc = { createElement(tag) {
+  const doc = { createElementNS(namespace, tag) { return this.createElement(tag); }, createElement(tag) {
     const element = {
       tag, ownerDocument: doc, children: [], attributes: {}, handlers: {}, textContent: '',
       append(...children) { this.children.push(...children); children.forEach(child => { child.parent = this; }); },
       setAttribute(key, value) { this.attributes[key] = value; },
+      getAttribute(key) { return this.attributes[key]; },
+      focus() {},
       addEventListener(type, handler) { (this.handlers[type] ??= new Set()).add(handler); },
       removeEventListener(type, handler) { this.handlers[type]?.delete(handler); },
       fire(type, event = {}) { this.handlers[type]?.forEach(handler => handler(event)); },

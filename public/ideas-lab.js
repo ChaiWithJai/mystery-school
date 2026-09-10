@@ -140,7 +140,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   root.append(node('p', 'ideas-lab__eyebrow', 'Leena / Ideas after work'));
   const title = node('h3', 'ideas-lab__title', 'Make a thought your own.');
   title.id = `${prefix}-title`;
-  root.append(title, node('p', 'ideas-lab__intro', 'Touch a light. Follow the connection.'));
+  root.append(title, node('p', 'ideas-lab__intro', 'An old idea. A thought only you can make.'));
 
   const source = node('section', 'ideas-lab__source');
   source.append(node('h4', 'ideas-lab__step', '01 / Read the source'));
@@ -251,6 +251,23 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   mapTitle.id = `${prefix}-map-title`;
   map.setAttribute('aria-labelledby', mapTitle.id);
   map.append(mapTitle);
+  const sky = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  sky.setAttribute('viewBox', '0 0 900 470');
+  sky.setAttribute('preserveAspectRatio', 'none');
+  sky.setAttribute('class', 'ideas-lab__sky');
+  sky.setAttribute('aria-hidden', 'true');
+  // These paths connect the source, first reading and revision controls below.
+  for (const d of ['M 190 300 C 270 300 320 130 450 130', 'M 450 130 C 620 130 590 300 735 275']) {
+    const path = doc.createElementNS(sky.namespaceURI, 'path');
+    path.setAttribute('d', d); sky.append(path);
+  }
+  for (let i = 0; i < 36; i++) {
+    const star = doc.createElementNS(sky.namespaceURI, 'circle');
+    star.setAttribute('cx', String((i * 137 + 31) % 900));
+    star.setAttribute('cy', String((i * 79 + 19) % 440));
+    star.setAttribute('r', String(i % 5 === 0 ? 2 : 1)); sky.append(star);
+  }
+  map.append(sky);
   const chain = node('ol', 'ideas-lab__chain');
   const mapTexts = [];
   const mapCards = [];
@@ -268,6 +285,11 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     mapCards.push(card);
     card.setAttribute('aria-label', ['Open source passage', 'Shape my first thought', 'Revisit my thought'][index]);
     listen(card, 'click', () => selectOrb(index));
+    const symbol = node('span', `ideas-lab__symbol ideas-lab__symbol--${index}`);
+    symbol.setAttribute('aria-hidden', 'true');
+    if (index === 0) { symbol.append(node('span', 'ideas-lab__page'), node('span', 'ideas-lab__page')); }
+    else symbol.textContent = index === 1 ? '✧' : '✦';
+    card.append(symbol);
     card.append(node('h5', '', item.label));
     const text = node('p');
     mapTexts.push(text);
@@ -277,11 +299,53 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     chain.append(entry);
   }
   map.append(chain);
+  const story = node('section', 'ideas-lab__story');
+  story.setAttribute('aria-label', 'Authored story: two strangers in the rain');
+  story.append(node('small', 'ideas-lab__story-origin', 'An imagined moment'));
+  const storyCaption = node('p', 'ideas-lab__story-caption', 'Two strangers. One umbrella.');
+  storyCaption.setAttribute('role', 'status');
+  const rain = node('div', 'ideas-lab__rain'); rain.setAttribute('aria-hidden', 'true');
+  const street = node('div', 'ideas-lab__street'); street.setAttribute('aria-hidden', 'true');
+  for (const name of ['you', 'stranger']) {
+    const person = node('span', `ideas-lab__person ideas-lab__person--${name}`);
+    person.append(node('i', 'ideas-lab__head'), node('i', 'ideas-lab__body'), node('i', 'ideas-lab__leg'), node('i', 'ideas-lab__leg'));
+    street.append(person);
+  }
+  const umbrella = node('button', 'ideas-lab__umbrella'); umbrella.type = 'button';
+  umbrella.setAttribute('aria-label', 'Offer your umbrella to the stranger');
+  const umbrellaIcon = node('span', '', '☂'); umbrellaIcon.setAttribute('aria-hidden', 'true');
+  umbrella.append(umbrellaIcon);
+  const bookDoor = node('button', 'ideas-lab__story-book'); bookDoor.type = 'button';
+  bookDoor.setAttribute('aria-label', 'Discover the idea behind this story');
+  bookDoor.append(node('span', 'ideas-lab__page'), node('span', 'ideas-lab__page'));
+  bookDoor.hidden = true;
+  const enterMap = node('button', 'ideas-lab__story-next', '✧'); enterMap.type = 'button';
+  enterMap.setAttribute('aria-label', 'Make your own thought from this story'); enterMap.hidden = true;
+  listen(umbrella, 'click', () => {
+    const shared = story.getAttribute('data-shared') !== 'true';
+    story.setAttribute('data-shared', String(shared));
+    umbrella.setAttribute('aria-label', shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
+    storyCaption.textContent = shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
+    bookDoor.hidden = enterMap.hidden = !shared;
+    emit('story.choice', { storyId: 'authored-rain-and-care', authored: true, action: shared ? 'offer_shelter' : 'return_umbrella', outcome: 'Authored illustration; not a prediction of another person’s response.' });
+  });
+  const leaveStory = index => { story.hidden = true; chain.hidden = false; selectOrb(index); };
+  listen(bookDoor, 'click', () => leaveStory(0));
+  listen(enterMap, 'click', () => leaveStory(1));
+  story.append(rain, street, storyCaption, umbrella, bookDoor, enterMap);
+  if (!state.interpretation && !state.revisedInterpretation) chain.hidden = true;
+  else story.hidden = true;
+  map.append(story);
   root.append(map);
   const editor = node('div', 'ideas-lab__editor');
-  editor.append(source, first.section, revised.section, helpSection);
+  const closeEditor = node('button', 'ideas-lab__close', '×');
+  closeEditor.type = 'button'; closeEditor.setAttribute('aria-label', 'Return to the constellation');
+  listen(closeEditor, 'click', () => { editor.hidden = true; mapCards[activeOrb]?.focus(); });
+  listen(editor, 'keydown', event => { if (event.key === 'Escape') { editor.hidden = true; mapCards[activeOrb]?.focus(); } });
+  editor.append(closeEditor, source, first.section, revised.section, helpSection);
   root.append(editor, videoSection);
-  const comparison = node('section', 'ideas-lab__model-comparison');
+  const comparison = node('details', 'ideas-lab__model-comparison');
+  comparison.append(node('summary', '', '✦ Explore Astra’s new situation'));
   const comparisonTitle = node('h4', 'ideas-lab__step', 'Try your reading in another situation');
   const comparisonSource = node('blockquote');
   const comparisonScenario = node('p');
@@ -295,11 +359,17 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   let activeOrb = state.revisedInterpretation ? 2 : 0;
   function selectOrb(index, notify = true) {
     activeOrb = index;
+    editor.hidden = !notify;
+    root.setAttribute('data-focus', String(index));
     source.hidden = index !== 0;
     first.section.hidden = index !== 1;
     revised.section.hidden = index !== 2;
     helpSection.hidden = index === 0;
     mapCards.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+    if (notify) {
+      const focusTarget = index === 1 ? first.input : index === 2 ? revised.input : closeEditor;
+      focusTarget.focus({ preventScroll: true });
+    }
     if (notify) emit('focus', { node: ['source', 'interpretation', 'revision'][index] });
   }
   const begin = node('button', 'ideas-lab__button', 'What do I think? →');
@@ -333,7 +403,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     helpButton.setAttribute('aria-expanded', String(state.helpOpen));
     const conceptMap = deriveConceptMap(state);
     conceptMap.nodes.forEach((item, index) => {
-      mapTexts[index].textContent = item.text || (index === 1 ? 'A thought waiting to take shape' : 'What changes when you look again?');
+      mapTexts[index].textContent = index === 0 ? 'An idea across centuries' : item.text || (index === 1 ? 'Your thought' : 'Look again');
       mapCards[index].setAttribute('data-has-thought', String(Boolean(item.text)));
     });
     conceptMap.edges.forEach((edge, index) => { mapEdges[index].textContent = edge.label; });
