@@ -36,7 +36,7 @@ try{
    if(!cancelled)throw Error('Tour cancel did not restore the playable piano and retry control.');
    await intoRing.click();await tour.waitFor({state:'visible'});
    record('repeat Save reopens tour after cancellation',true,{url:page.url()});
-   await tour.getByRole('button',{name:'Into the ring',exact:true}).click();await tour.waitFor({state:'hidden'});
+   await tour.locator('.learning-world-tour__continue').click();await tour.waitFor({state:'hidden'});
   }
   await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});
  }else record('manual advance piano to boxing',false,'No visible explicit transition.');

@@ -1,5 +1,19 @@
 # Runaway soundtrack
 
+## Current source decision
+
+Jai selected the Virtual Piano arrangement again. It is now the visible
+reference through `https://virtualpiano.net/?song-post-28667`, the Play this song
+link on his exact sheet. Verified the source's Auto Play changes to Auto Pause.
+The sheet specifies tempo 160 and transposition +4. Automatic YouTube loading
+was removed. The local two-strike exercise is labeled Hear exercise; it is not
+represented as the complete Virtual Piano arrangement.
+
+The reference opens separately. Cross-site playback and a seven-second cutoff
+on Virtual Piano are not controlled by this app. Local-file playback remains
+available under Audio options. The records below describe earlier checks and
+the replaced YouTube approach, not the current default source.
+
 ## Requested behavior
 
 Play the first seven seconds on entering Runaway. Let the presenter keep the

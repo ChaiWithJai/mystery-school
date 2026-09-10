@@ -42,6 +42,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   container.append(root);
   const q = selector => root.querySelector(selector);
   q('[data-stop]').hidden=true;
+  q('[data-hear]').textContent='Hear exercise';
   q('details p').textContent='Piano exercise, not the original recording or a full-song score. Timing feedback uses a 0.2-second practice window, not a mastery grade.';
   q('[data-feedback]').textContent = 'Press L or tap the glowing key.';
   q('[data-source]').href = RUNAWAY_OPENING_SOURCE.url;
