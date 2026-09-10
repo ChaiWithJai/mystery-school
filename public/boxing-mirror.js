@@ -4,7 +4,7 @@ const knownString=v=>typeof v==='string'&&v?v:null;
 const knownTime=v=>Number.isFinite(v)&&v>=0?v:null;
 function provenance(e){return {captureId:knownString(e.captureId),lessonId:knownString(e.lessonId),sourceMode:['camera','local-video'].includes(e.sourceMode)?e.sourceMode:null,detectorTime:knownTime(e.detectorTime),mediaTime:knownTime(e.mediaTime),seekSegment:Number.isInteger(e.seekSegment)&&e.seekSegment>=0?e.seekSegment:null};}
 export function cleanMirrorState(value={}) {
-  return {version:1,detector:VERSION,lessonId:String(value.lessonId||''),reflection:String(value.reflection||'').slice(0,2000),attempts:(Array.isArray(value.attempts)?value.attempts:[]).slice(-60).filter(e=>e&&Number.isFinite(e.t)&&['JAB','CROSS','HOOK','UPPERCUT'].includes(e.type)).map(e=>({t:e.t,type:e.type,hand:e.hand==='R'?'R':'L',estimated:true,...provenance(e)})),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null};
+  return {version:1,detector:VERSION,lessonId:String(value.lessonId||''),reflection:typeof value.reflection==='string'?value.reflection:'',attempts:(Array.isArray(value.attempts)?value.attempts:[]).slice(-60).filter(e=>e&&Number.isFinite(e.t)&&['JAB','CROSS','HOOK','UPPERCUT'].includes(e.type)).map(e=>({t:e.t,type:e.type,hand:e.hand==='R'?'R':'L',estimated:true,...provenance(e)})),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null};
 }
 export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onEvent=()=>{},lessons=[]}={}) {
   let state=cleanMirrorState(initialState),stream,worker,frame=0,busy=false,alive=true,epoch=0,url,started=0,smoother,hands,capture,seekSegment=0;

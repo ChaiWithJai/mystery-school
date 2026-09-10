@@ -1,10 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cleanMirrorState} from '../public/boxing-mirror.js';
+import {createBoxingMemory} from '../public/learning-memory.js';
+import {normalizeStoryWorldState} from '../public/story-world.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 test('mirror artifacts retain observations and estimated events, never raw frames',()=>{const s=cleanMirrorState({reflection:'I noticed my return',frames:[{private:true}],attempts:[{t:200,type:'JAB',hand:'L',power:99,landmarks:[1]},{t:NaN,type:'HOOK'}]});assert.equal(s.reflection,'I noticed my return');assert.deepEqual(s.attempts,[{t:200,type:'JAB',hand:'L',estimated:true,captureId:null,lessonId:null,sourceMode:null,detectorTime:null,mediaTime:null,seekSegment:null}]);assert.equal('frames' in s,false);});
 test('mirror state bounds event history and excludes invalid modes',()=>{const s=cleanMirrorState({sourceMode:'remote-upload',attempts:Array.from({length:100},(_,i)=>({t:i,type:'CROSS',hand:'R'}))});assert.equal(s.sourceMode,null);assert.equal(s.attempts.length,60);assert.equal(s.attempts[0].t,40);});
+
+test('long reflection survives saved mirror and knowledge memory without truncation',()=>{
+  const reflection='  My observation.\n'.repeat(200)+'Keep this ending.  ';
+  const mirror=cleanMirrorState({reflection});
+  assert.equal(mirror.reflection,reflection);
+  const saved=JSON.parse(JSON.stringify({id:'long-observation',pathway:'movement',actor_kind:'user_action',state:{lab:{boxing_mirror:mirror}}}));
+  const memory=createBoxingMemory(saved);
+  assert.equal(memory.observation.text,reflection);
+  const world=normalizeStoryWorldState({memories:[memory],learnerStory:'My existing story.'});
+  assert.equal(world.memories[0].observation.text,reflection);
+  assert.equal(world.learnerStory,'My existing story.');
+});
+
+test('invalid reflection values never become invented observation text',()=>{
+  for(const reflection of [undefined,null,42,true,{},['words']])assert.equal(cleanMirrorState({reflection}).reflection,'');
+});
 
 const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 function harness({bitmapFailure=false,transferFailure=false}={}) {
@@ -50,6 +68,20 @@ test('capture estimates preserve immutable identity and separate media time acro
   const select=h.root.querySelector('select');select.value='lesson-b';select.onchange();
   await h.begin();await h.ready();h.result();const latest=h.view.getState().attempts.at(-1);assert.notEqual(latest.captureId,first.captureId);assert.equal(latest.lessonId,'lesson-b');
   assert.deepEqual(h.view.getState().attempts[0],first);assert.deepEqual(cleanMirrorState(h.view.getState()).attempts[0],JSON.parse(JSON.stringify(first)));h.view.dispose();
+});
+
+test('mirror textarea and restoration retain the complete long observation',()=>{
+  const h=harness();
+  try{
+    const input=h.root.querySelector('textarea');
+    const reflection='Observation '.repeat(300)+'The last words matter.';
+    input.value=reflection;input.oninput();
+    const saved=JSON.parse(JSON.stringify(h.view.getState()));
+    assert.equal(saved.reflection,reflection);
+    h.view.setState(saved);
+    assert.equal(input.value,reflection);
+    assert.equal(h.view.getState().reflection,reflection);
+  }finally{h.view.dispose();}
 });
 
 test('results in flight before seek are discarded',async()=>{
