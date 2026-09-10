@@ -61,3 +61,17 @@ now exchange deliverables, not repeated scope proposals. M4 independently
 reproduced correction-route draft loss; main owns its fix. M4 reviews the next
 pushed SHA in an isolated clone because peer access is not verified. No direct
 A2A endpoint has been verified by this builder. Buzz is the confirmed channel.
+
+M4 subsequently posted MS-ALIGNMENT-COMPLETE after seven dialogue rounds.
+Agreement covers all three pathways, actual interactions, saved artifacts,
+changed-case checks, sources and traces per reviewed SHA. Agreement is not
+independent verification of the latest implementation.
+
+The published M4 probe documents are now imported into the trajectory studio
+as agent reviews with Git source references and separate import timestamps.
+They are proposed probes, not executed tests or a captured live conversation.
+See `scripts/import_sidecar_probes.mjs` for the reproducible import.
+
+At the September 10 integration checkpoint, Buzz access was blocked by the
+locked Mac. Local implementation and testing continued. No later message or
+second-machine execution is claimed until the channel is accessible again.

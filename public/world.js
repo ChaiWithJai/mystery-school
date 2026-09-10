@@ -2,8 +2,29 @@ import * as THREE from 'three';
 
 const PALETTE={pine:0x2b654e,moss:0x7c9470,earth:0x526c52,rock:0x405a4e,gold:0xd7bc70,cream:0xe8dfb5};
 const rng=seed=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+const ISLAND_IDS=['memory','questions','experiments','futures','people','reflection'];
+
+export function selectLearningArtifacts(artifacts,pathway){
+  const unique=new Map();
+  for(const record of Array.isArray(artifacts)?artifacts:[]){
+    if(record&&typeof record.id==='string'&&record.id&&record.pathway===pathway)unique.set(record.id,record);
+  }
+  return [...unique.values()].sort((a,b)=>{
+    const at=Date.parse(a.created_at||a.timestamp)||0,bt=Date.parse(b.created_at||b.timestamp)||0;
+    return at-bt;
+  }).slice(-6);
+}
+
+export function learningArtifactLabel(record){
+  const stage={attempt:'Attempt',revision:'Revision',sharing_response:'Staged response',new_question:'New question'}[record.stage]||'Saved version';
+  const agent=record.actor_kind==='agent_review'||/^AGENT QA TEST\b/.test(record.note||'')||/^AGENT QA TEST\b/.test(record.state?.explanation||'');
+  const staged=record.actor_kind==='staged_peer_response'||record.stage==='sharing_response';
+  return `${stage}${agent?' / agent QA':''}${staged&&record.stage!=='sharing_response'?' / staged':''}`;
+}
+
 export class SchoolWorld{
-  constructor(container,labels,onSelect,onProjection=()=>{}){
+  constructor(container,labels,onSelect,onProjection=()=>{},onLearningSelect=()=>{}){
+    this.onLearningSelect=onLearningSelect;this.learningMap={pathways:[],artifacts:[],activePathway:null};this.learningEntries=[];
     this.container=container;this.labelContainer=labels;this.onSelect=onSelect;this.onProjection=onProjection;this.versionLabels=[];this.versionRoot=new THREE.Group();this.random=rng(4271);this.paused=matchMedia('(prefers-reduced-motion: reduce)').matches;this.selected=null;this.lens='together';this.blender=false;
     this.scene=new THREE.Scene();this.scene.background=new THREE.Color(0x173e35);this.scene.fog=new THREE.FogExp2(0x173e35,.019);
     this.camera=new THREE.PerspectiveCamera(37,1,.1,250);this.camera.position.set(23,23,28);this.look=new THREE.Vector3(0,0,0);this.targetLook=new THREE.Vector3(-3,0,0);this.targetPosition=new THREE.Vector3(24,26,34);this.sceneCenter=new THREE.Vector3();
@@ -15,7 +36,7 @@ export class SchoolWorld{
     this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();let start=null;
     container.addEventListener('pointerdown',e=>{start={x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY};});
     container.addEventListener('pointermove',e=>{if(!start||!e.buttons)return;const dx=e.clientX-start.lastX,dy=e.clientY-start.lastY;start.lastX=e.clientX;start.lastY=e.clientY;const offset=this.targetPosition.clone().sub(this.targetLook);const spherical=new THREE.Spherical().setFromVector3(offset);spherical.theta-=dx*.005;spherical.phi=THREE.MathUtils.clamp(spherical.phi+dy*.005,.25,1.35);this.targetPosition.copy(this.targetLook).add(new THREE.Vector3().setFromSpherical(spherical));});
-    container.addEventListener('pointerup',e=>{if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)>8)return;const r=container.getBoundingClientRect();this.pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);const hit=this.raycaster.intersectObjects(this.hitTargets,true)[0];if(hit){let obj=hit.object;while(obj&&obj.userData.index===undefined&&!obj.userData.jobId)obj=obj.parent;if(obj?.userData.jobId)this.onProjection(obj.userData.jobId);else if(obj&&obj.userData.index!==undefined)this.onSelect(obj.userData.index);}});
+    container.addEventListener('pointerup',e=>{if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)>8)return;const r=container.getBoundingClientRect();this.pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);this.raycaster.setFromCamera(this.pointer,this.camera);const hit=this.raycaster.intersectObjects(this.hitTargets,true).find(h=>{for(let o=h.object;o;o=o.parent)if(!o.visible)return false;return true;});if(hit){let obj=hit.object;while(obj&&obj.userData.index===undefined&&!obj.userData.jobId&&!obj.userData.learningTarget)obj=obj.parent;if(obj?.userData.learningTarget)this.activateLearning(obj.userData.learningTarget);else if(obj?.userData.jobId)this.onProjection(obj.userData.jobId);else if(obj&&obj.userData.index!==undefined){const pathway=this.learningMap.pathways.find(p=>p.islandIndex===obj.userData.index);if(pathway)this.activateLearning({pathway:pathway.id,artifactId:null});else this.onSelect(obj.userData.index);}}});
     container.addEventListener('wheel',e=>{e.preventDefault();this.zoom(e.deltaY>0?1.06:.94);},{passive:false});
     this.animate();
   }
@@ -77,6 +98,88 @@ export class SchoolWorld{
     for(let i=0;i<7;i++){const ring=new THREE.Mesh(new THREE.RingGeometry(13+i*2.3,13.015+i*2.3,200),new THREE.MeshBasicMaterial({color:0x6c8e74,side:THREE.DoubleSide,transparent:true,opacity:.08}));ring.rotation.x=-Math.PI/2;ring.position.y=-4.95;this.scene.add(ring);}
   }
   addLabels(){const names=['Memory','Questions','Experiments','Possible futures','Other people','Reflection'];this.islands.forEach((g,k)=>{const b=document.createElement('button');b.className='world-label'+(k===0?' overview-center':'');b.innerHTML=k===0?'Jai’s school':`<span class="num">0${k}</span>${names[k-1]}`;b.setAttribute('aria-label',k===0?'Explore Jai’s school':`Explore ${names[k-1]}`);b.addEventListener('click',()=>this.onSelect(k-1));this.labelContainer.appendChild(b);this.labels.push({button:b,group:g,index:k-1});});}
+  learningAnchor(index){return this.blenderRoot?.getObjectByName(index===-1?'island_library':`island_${ISLAND_IDS[index]}`)||this.islands[index+1];}
+  activateLearning(target){
+    this.setLearningMap({...this.learningMap,activePathway:target.pathway});
+    this.onLearningSelect({...target});
+  }
+  // Declarative input only. Fetching, persistence and opening activities stay in app.js.
+  setLearningMap({pathways=[],artifacts=[],activePathway=null}={}){
+    const seenIds=new Set(),seenIslands=new Set();
+    pathways=(Array.isArray(pathways)?pathways:[]).filter(p=>{
+      if(!p||!['music','movement','ideas'].includes(p.id)||!Number.isInteger(p.islandIndex)||p.islandIndex<0||p.islandIndex>5||seenIds.has(p.id)||seenIslands.has(p.islandIndex))return false;
+      seenIds.add(p.id);seenIslands.add(p.islandIndex);return true;
+    }).map(p=>({id:p.id,label:String(p.label||p.id),islandIndex:p.islandIndex}));
+    const active=pathways.find(p=>p.id===activePathway);
+    const oldActive=this.learningMap.activePathway;
+    this.learningMap={pathways,artifacts:Array.isArray(artifacts)?artifacts:[],activePathway:active?.id||null};
+    this.rebuildLearningMap();
+    if(active&&oldActive!==active.id)this.focus(active.islandIndex);
+    else if(!active&&oldActive)this.overview();
+  }
+  rebuildLearningMap(){
+    const focused=document.activeElement;
+    const focusTarget=focused?.matches?.('.learning-doorway,.learning-artifact')?{pathway:focused.dataset.pathway,artifactId:focused.dataset.artifactId||null}:null;
+    for(const entry of this.learningEntries){
+      entry.button.remove();entry.group.removeFromParent();
+      entry.group.traverse(o=>{o.geometry?.dispose();if(o.isLine)o.material.dispose();});
+    }
+    this.learningEntries=[];
+    const {pathways,artifacts,activePathway}=this.learningMap;
+    this.labels.forEach(label=>{label.button.hidden=pathways.some(p=>p.islandIndex===label.index);});
+    for(const pathway of pathways){
+      const anchor=this.learningAnchor(pathway.islandIndex);if(!anchor)continue;
+      const doorway=new THREE.Group();doorway.name=`learning_doorway_${pathway.id}`;doorway.position.set(0,.18,1.7);anchor.add(doorway);
+      const target={pathway:pathway.id,artifactId:null};doorway.userData.learningTarget=target;
+      this.mesh(new THREE.CylinderGeometry(.27,.30,.10,16),this.materials.cream,doorway);
+      this.mesh(new THREE.TorusGeometry(.24,.023,7,32),this.materials.gold,doorway,0,.34,0);
+      const button=document.createElement('button');button.type='button';button.className='world-label learning-doorway';button.textContent=pathway.label;
+      button.dataset.pathway=pathway.id;button.setAttribute('aria-label',`Open pathway: ${pathway.label}`);button.setAttribute('aria-pressed',String(activePathway===pathway.id));button.onclick=()=>this.activateLearning(target);
+      this.labelContainer.appendChild(button);this.learningEntries.push({button,group:doorway,pathway:pathway.id,artifact:false});
+      if(pathway.id!==activePathway)continue;
+      const records=selectLearningArtifacts(artifacts,pathway.id),positions=new Map();
+      records.forEach((record,i)=>{
+        const group=new THREE.Group();group.name=`learning_artifact_${record.id}`;
+        group.position.set((i%3-1)*2.25,.12,3.5+Math.floor(i/3)*1.7);anchor.add(group);
+        group.userData.learningTarget={pathway:pathway.id,artifactId:record.id};
+        this.mesh(new THREE.CylinderGeometry(.19,.23,.12,12),this.materials.moss,group);
+        this.mesh(new THREE.BoxGeometry(.21,.045,.15),this.materials.cream,group,0,.09,0);
+        const parent=positions.get(record.parent_id);
+        if(parent){const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([parent.clone().sub(group.position),new THREE.Vector3()]),new THREE.LineBasicMaterial({color:PALETTE.gold,transparent:true,opacity:.4}));group.add(line);}
+        positions.set(record.id,group.position.clone());
+        const button=document.createElement('button');button.type='button';button.className='world-label learning-artifact';button.textContent=`${i+1}. ${learningArtifactLabel(record)}`;
+        button.dataset.artifactId=record.id;button.dataset.pathway=pathway.id;
+        button.title=[learningArtifactLabel(record),record.goal,record.note].filter(Boolean).join('\n');
+        button.setAttribute('aria-label',`Reopen ${learningArtifactLabel(record)} for ${pathway.label}, saved ${record.created_at||record.timestamp||'version'}, ID ${record.id}`);
+        button.onclick=()=>this.activateLearning({pathway:pathway.id,artifactId:record.id});
+        this.labelContainer.appendChild(button);this.learningEntries.push({button,group,pathway:pathway.id,artifact:true});
+      });
+    }
+    if(focusTarget){const entry=this.learningEntries.find(e=>e.pathway===focusTarget.pathway&&(e.button.dataset.artifactId||null)===focusTarget.artifactId);entry?.button.focus({preventScroll:true});}
+  }
+  renderLearningLabels(w,h){
+    for(const entry of this.learningEntries){
+      const p=entry.group.localToWorld(new THREE.Vector3(0,entry.artifact ? .32 : .75,0)).project(this.camera);
+      entry.button.hidden=p.z< -1||p.z>1||Math.abs(p.x)>1.03||Math.abs(p.y)>1.03;
+      let x=(p.x*.5+.5)*w,y=(-p.y*.5+.5)*h;
+      if(!entry.artifact&&!entry.button.hidden){
+        const halfWidth=entry.button.offsetWidth/2,halfHeight=entry.button.offsetHeight/2;
+        x=Math.max(halfWidth+12,Math.min(w-halfWidth-12,x));
+        y=Math.max(halfHeight+12,Math.min(h-halfHeight-12,y));
+      }
+      entry.button.style.left=`${x}px`;entry.button.style.top=`${y}px`;
+    }
+    if(this.learningMap.activePathway){
+      // Pathway labels take priority; retain the central school before other generic labels.
+      const occupied=this.learningEntries.filter(e=>!e.button.hidden).map(e=>e.button.getBoundingClientRect());
+      for(const {button} of this.labels){
+        if(button.hidden||button.style.visibility==='hidden')continue;
+        const rect=button.getBoundingClientRect();
+        if(occupied.some(r=>rect.left<r.right+6&&rect.right>r.left-6&&rect.top<r.bottom+6&&rect.bottom>r.top-6))button.style.visibility='hidden';
+        else occupied.push(rect);
+      }
+    }
+  }
   setProjections(jobs){
     const records=jobs.filter(j=>j.status==='succeeded'&&j.result);
     const signature=records.map(j=>j.id).join('|');if(this.versionSignature===signature)return;this.versionSignature=signature;
@@ -98,12 +201,12 @@ export class SchoolWorld{
     if(!this.hitTargets.includes(this.versionRoot))this.hitTargets.push(this.versionRoot);
   }
   resize(){const{clientWidth:w,clientHeight:h}=this.container;this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
-  focus(index){this.selected=index;const g=this.islands[index+1]||this.islands[0];const p=g.position.clone();this.targetLook.copy(p).add(new THREE.Vector3(2.5,.3,0));this.targetPosition.copy(p).add(new THREE.Vector3(8,9,13));this.labels.forEach(l=>{l.button.classList.toggle('active',l.index===index);l.button.style.opacity=l.index===index?'1':'.42';});}
-  overview(entered=true){this.selected=null;this.targetLook.set(entered?0:-3,0,0);this.targetPosition.set(entered?22:24,entered?24:26,entered?29:34);this.labels.forEach(l=>{l.button.classList.remove('active');l.button.style.opacity='1';});}
+  focus(index){this.selected=index;const g=this.learningAnchor(index)||this.islands[0];g.updateWorldMatrix(true,false);const p=g.getWorldPosition(new THREE.Vector3());this.targetLook.copy(p).add(new THREE.Vector3(2.5,.3,0));this.targetPosition.copy(p).add(new THREE.Vector3(8,9,13));this.labels.forEach(l=>{l.button.classList.toggle('active',l.index===index);l.button.style.opacity=l.index===index?'1':'.42';});if(this.learningMap.activePathway&&!this.learningMap.pathways.some(p=>p.id===this.learningMap.activePathway&&p.islandIndex===index)){this.learningMap.activePathway=null;this.rebuildLearningMap();}}
+  overview(entered=true){this.selected=null;if(this.learningMap.activePathway){this.learningMap.activePathway=null;this.rebuildLearningMap();}this.targetLook.set(entered?0:-3,0,0);this.targetPosition.set(entered?22:24,entered?24:26,entered?29:34);this.labels.forEach(l=>{l.button.classList.remove('active');l.button.style.opacity='1';});}
   zoom(factor){const offset=this.targetPosition.clone().sub(this.targetLook).multiplyScalar(factor);const length=THREE.MathUtils.clamp(offset.length(),8,70);offset.setLength(length);this.targetPosition.copy(this.targetLook).add(offset);}
   setLens(name){this.lens=name;this.applyVisual(name==='alone'?{tree_density:.3,connection_strength:.1,light:.55,openness:.3}:name==='open'?{tree_density:.7,connection_strength:1,light:.9,openness:.9}:{tree_density:.75,connection_strength:.65,light:.65,openness:.6});}
   applyVisual(v){this.visual=v;this.lines.forEach(l=>l.material.opacity=.1+v.connection_strength*.85);this.sun.intensity=2+v.light*3;this.renderer.toneMappingExposure=.85+v.light*.55;this.trees.forEach((t,i)=>{t.visible=i%10<3+Math.round(v.tree_density*7);});this.root.scale.setScalar(.94+v.openness*.09);if(this.blenderRoot){this.blenderRoot.scale.setScalar(.94+v.openness*.09);this.blenderFoliage?.forEach(o=>{o.visible=o.userData.foliage_batch<Math.ceil(v.tree_density*o.userData.foliage_batch_count);});this.blenderConnections?.traverse(o=>{if(o.isMesh){o.material.transparent=true;o.material.opacity=v.connection_strength;}});}}
-  async loadBlender(){try{const{GLTFLoader}=await import('/vendor/three/addons/loaders/GLTFLoader.js');const gltf=await new GLTFLoader().loadAsync('/assets/school.glb');const ids=['memory','questions','experiments','futures','people','reflection'];gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}if(o.name==='island_library')o.userData.index=-1;const i=ids.findIndex(id=>o.name===`island_${id}`);if(i>=0)o.userData.index=i;});this.blenderFoliage=[];gltf.scene.traverse(o=>{if(/^foliage_/.test(o.name)&&Number.isInteger(o.userData.foliage_batch))this.blenderFoliage.push(o);});this.blenderConnections=gltf.scene.getObjectByName('connections');this.blenderConnections?.traverse(o=>{if(o.isMesh)o.material=o.material.clone();});this.blenderRoot=gltf.scene;this.scene.add(gltf.scene);this.root.visible=false;this.hitTargets=[gltf.scene,this.versionRoot];this.blender=true;if(this.visual)this.applyVisual(this.visual);return true;}catch(e){console.warn('Blender asset unavailable',e);return false;}}
+  async loadBlender(){try{const{GLTFLoader}=await import('/vendor/three/addons/loaders/GLTFLoader.js');const gltf=await new GLTFLoader().loadAsync('/assets/school.glb');const ids=['memory','questions','experiments','futures','people','reflection'];gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}if(o.name==='island_library')o.userData.index=-1;const i=ids.findIndex(id=>o.name===`island_${id}`);if(i>=0)o.userData.index=i;});this.blenderFoliage=[];gltf.scene.traverse(o=>{if(/^foliage_/.test(o.name)&&Number.isInteger(o.userData.foliage_batch))this.blenderFoliage.push(o);});this.blenderConnections=gltf.scene.getObjectByName('connections');this.blenderConnections?.traverse(o=>{if(o.isMesh)o.material=o.material.clone();});this.blenderRoot=gltf.scene;this.scene.add(gltf.scene);this.root.visible=false;this.hitTargets=[gltf.scene,this.versionRoot];this.blender=true;if(this.visual)this.applyVisual(this.visual);this.rebuildLearningMap();if(this.learningMap.activePathway){const path=this.learningMap.pathways.find(p=>p.id===this.learningMap.activePathway);if(path)this.focus(path.islandIndex);}return true;}catch(e){console.warn('Blender asset unavailable',e);return false;}}
   animate(){requestAnimationFrame(()=>this.animate());const t=this.clock.getElapsedTime();this.camera.position.lerp(this.targetPosition,.035);this.look.lerp(this.targetLook,.04);this.camera.lookAt(this.look);if(!this.paused){this.dust.rotation.y=t*.006;this.islands.forEach((g,i)=>{g.position.y=(i===0?.4:Math.sin((i-1)*2)*.25)+Math.sin(t*.45+i)*.07;});this.portalMeshes.forEach(o=>{if(o.userData.curve){o.position.copy(o.userData.curve.getPoint((o.userData.phase+t*.06)%1));}else{o.rotation.y=Math.sin(t*.5)*.1;}});}
-    const w=this.container.clientWidth,h=this.container.clientHeight;this.labels.forEach(({button,group,index})=>{const p=group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,index===-1?4.2:2.05,0)).project(this.camera);button.style.left=`${(p.x*.5+.5)*w}px`;button.style.top=`${(-p.y*.5+.5)*h}px`;button.style.visibility=p.z>1||p.x<-1.1||p.x>1.1?'hidden':'visible';});this.versionLabels.forEach(({button,group,index})=>{const p=group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.85,0)).project(this.camera);button.style.left=`${(p.x*.5+.5)*w}px`;button.style.top=`${(-p.y*.5+.5)*h}px`;button.hidden=this.selected!==index||p.z>1||Math.abs(p.x)>1;});this.renderer.render(this.scene,this.camera);}
+    const w=this.container.clientWidth,h=this.container.clientHeight;this.scene.updateMatrixWorld();this.camera.updateMatrixWorld();this.labels.forEach(({button,group,index})=>{const anchor=this.learningAnchor(index)||group;const p=anchor.localToWorld(new THREE.Vector3(0,index===-1?4.2:2.05,0)).project(this.camera);button.style.left=`${(p.x*.5+.5)*w}px`;button.style.top=`${(-p.y*.5+.5)*h}px`;button.style.visibility=p.z>1||p.x<-1.1||p.x>1.1?'hidden':'visible';});this.versionLabels.forEach(({button,group,index})=>{const p=group.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.85,0)).project(this.camera);button.style.left=`${(p.x*.5+.5)*w}px`;button.style.top=`${(-p.y*.5+.5)*h}px`;button.hidden=!!this.learningMap.activePathway||this.selected!==index||p.z>1||Math.abs(p.x)>1;});this.renderLearningLabels(w,h);this.renderer.render(this.scene,this.camera);}
 }

@@ -1,7 +1,9 @@
 """Real MLflow traces, stored separately from durable application records."""
+import json
+
 import mlflow
 from mlflow import MlflowClient
-from mlflow.entities import AssessmentSource, AssessmentSourceType
+from mlflow.entities import AssessmentSource, AssessmentSourceType, Span, TraceData
 
 APP_CAPTURE_SCOPE = (
     "One accepted app event or saved reflection and its submitted payload, server timestamp, "
@@ -12,6 +14,14 @@ ARTIFACT_CAPTURE_SCOPE = (
     "stage and declared actor kind, with an optional parent version. Actor kind is "
     "explicitly supplied, not inferred or verified identity. Scripted character actions, "
     "staged peer responses and agent reviews are not human learning evidence. No model call."
+)
+SIDECAR_CAPTURE_SCOPE = (
+    "Imported observable agent review, not a live model invocation or human judgment. "
+    "Only explicitly submitted input, output, events, decisions and checks are captured; "
+    "no hidden reasoning or automatic conversation capture. observed_at is the source timestamp; "
+    "imported_at is the server import timestamp; span duration covers envelope validation and "
+    "record preparation, not source execution, disk persistence, export or retry latency. "
+    "Model, usage and cost are unverified source reports, never inferred or estimated."
 )
 PROJECTION_CAPTURE_SCOPE = (
     "One Codex CLI subprocess: submitted project data, exact UTF-8 stdin prompt, CLI argv, "
@@ -43,6 +53,25 @@ class Tracing:
         existing = self.client.get_experiment_by_name(experiment)
         self.experiment_id = existing.experiment_id if existing else self.client.create_experiment(experiment, artifact_location=artifact_location)
         self.build_id = build_id
+
+    def import_sidecar(self, record):
+        """Replay a durable non-model span with stable IDs, including after process loss."""
+        attributes = {"mlflow.traceRequestId": record["trace_id"], "mlflow.spanType": "EVENT",
+                      "mlflow.spanInputs": record["envelope"], "mlflow.spanOutputs": {"record": record, "persisted": True},
+                      "astral.capture_scope": SIDECAR_CAPTURE_SCOPE, "astral.actor_kind": "agent_review",
+                      "astral.capture_method": "imported", "astral.actor_id": record["actor_id"],
+                      "astral.actor_role": record["actor_role"], "astral.reviewed_sha": record["reviewed_sha"],
+                      "astral.build_id": record["build_id"], "astral.cost_source": "source-reported only; no pricing estimate"}
+        span = Span.from_dict_v2({"name": "sidecar.imported_review",
+            "context": {"trace_id": "0x" + record["trace_id"][3:], "span_id": "0x" + record["span_id"]},
+            "parent_id": None, "start_time": record["import_start_ns"], "end_time": record["import_end_ns"],
+            "status_code": "OK", "status_message": "", "events": [],
+            "attributes": {k: json.dumps(v, ensure_ascii=False) for k, v in attributes.items()}})
+        # MLflow 3.4's span ingestion preserves caller IDs and upserts the same span;
+        # start_trace/end_trace cannot recover an unfinished in-memory root after restart.
+        self.client._tracing_client.log_spans(self.experiment_id, [span])
+        info = self.client._tracing_client.get_trace_info(record["trace_id"])
+        self.client._tracing_client._upload_trace_data(info, TraceData(spans=[span]))
 
     def start(self, name, inputs, start_time_ns=None):
         scope = PROJECTION_CAPTURE_SCOPE if name == "astra.projection" else APP_CAPTURE_SCOPE

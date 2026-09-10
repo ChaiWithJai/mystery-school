@@ -1,0 +1,35 @@
+.world-label[hidden] { display: none !important; }
+.world-label.learning-doorway {
+  width: max-content;
+  box-sizing: border-box;
+  max-width: 215px;
+  white-space: normal;
+  text-align: left;
+  border: 1px solid #ceb778;
+  border-radius: 5px;
+  padding: 10px 13px;
+  background: #f0ecd8;
+  color: #244936;
+  font: 500 15px/1.25 var(--serif, Georgia, serif);
+  letter-spacing: 0;
+  box-shadow: 0 4px 16px #102e2633;
+}
+.world-label.learning-doorway[aria-pressed=true] { background: #fff5d5; border-color: #f0d58c; }
+.world-label.learning-artifact {
+  max-width: 145px;
+  white-space: normal;
+  text-align: center;
+  border-radius: 3px;
+  border-color: #b9bb96;
+  background: #203e34ed;
+  color: #eee8cd;
+  padding: 6px 9px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.learning-doorway:focus-visible, .learning-artifact:focus-visible { outline: 3px solid #f2d48a; outline-offset: 4px; }
+.world-label.learning-artifact:hover { background: #f0ecd8; color: #244936; }
+@media (max-width: 700px) {
+  .world-label.learning-doorway { max-width: 145px; padding: 8px; font-size: 12px; }
+  .world-label.learning-artifact { max-width: 108px; padding: 5px; font-size: 9px; }
+}

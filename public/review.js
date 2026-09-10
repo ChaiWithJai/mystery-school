@@ -181,6 +181,20 @@
 
   function activeSample() { return state.samples.find(sample => sample.id === state.active); }
   function textContent(message) { return typeof message.content === 'string' ? message.content : message.content == null ? '' : JSON.stringify(message.content, null, 2); }
+  function importedJsonOffset(content) {
+    const prefix = 'Imported observable agent_review (not a live model call)';
+    if (!content.startsWith(prefix)) return 0;
+    const separator = content.slice(prefix.length).match(/^\s+/);
+    if (!separator) return 0;
+    const offset = prefix.length + separator[0].length;
+    try { JSON.parse(content.slice(offset)); return offset; }
+    catch { return 0; }
+  }
+  function segmentRanges(ranges, start, end) {
+    return ranges.filter(range => range.start < end && range.end > start).map(range => ({
+      ...range, start: Math.max(start, range.start) - start, end: Math.min(end, range.end) - start
+    }));
+  }
   function messages(sample) { return Array.isArray(sample?.messages) ? sample.messages : []; }
   function noteCount(sampleId) { return state.annotations.filter(note => note.sample_id === sampleId).length; }
   function actorKind(note) { return ['human', 'agent_review', 'unspecified'].includes(note.actor_kind) ? note.actor_kind : 'unspecified'; }
@@ -304,19 +318,30 @@
       const block = el('section', 'message'); block.dataset.role = kind;
       const heading = el('div', 'message-header'); heading.append(el('span', 'role-label', String(message.role || 'App event').replace(/_/g, ' ')), el('span', 'message-id', message.id || `Message ${index + 1}`)); block.append(heading);
       const content = textContent(message);
-      const isCode = typeof message.content === 'object' || /^[\s]*[\[{]/.test(content) || kind === 'tool';
+      const jsonOffset = importedJsonOffset(content);
+      const isCode = jsonOffset > 0 || typeof message.content === 'object' || /^[\s]*[\[{]/.test(content) || kind === 'tool';
       const body = el(isCode ? 'pre' : 'div', `message-content${isCode ? ' code' : ''}`);
+      body.dataset.contentOffset = jsonOffset;
       body.dataset.messageIndex = index;
       if (message.id != null) body.dataset.messageId = String(message.id);
       const ranges = items.filter(item => anchors.get(item.id)?.index === index).map(item => ({ ...anchors.get(item.id), id: item.id, kind: item.kind }));
       if (state.draft?.sample_id === sample.id && state.draft.message_id === message.id && ($('#note-editor').open || highlightDraft)) ranges.push({ start: state.draft.start, end: state.draft.end, id: 'draft', kind: 'pending' });
-      paintText(body, content, ranges);
-      if (kind === 'tool' || (isCode && content.length > 1800)) {
+      if (jsonOffset) {
+        const note = el('div', 'message-content fine-print');
+        note.dataset.messageIndex = index;
+        note.dataset.contentOffset = 0;
+        if (message.id != null) note.dataset.messageId = String(message.id);
+        paintText(note, content.slice(0, jsonOffset), segmentRanges(ranges, 0, jsonOffset));
+        block.append(note);
+      }
+      // Never pretty-print the suffix: selection offsets refer to the original message.
+      paintText(body, content.slice(jsonOffset), segmentRanges(ranges, jsonOffset, content.length));
+      if (jsonOffset || kind === 'tool' || (isCode && content.length > 1800)) {
         const details = el('details');
         const detailKey = `${sample.id}:${message.id || index}`;
-        details.open = expandedMessages.get(detailKey) ?? (kind !== 'tool' || content.length < 800);
+        details.open = expandedMessages.get(detailKey) ?? (!jsonOffset && (kind !== 'tool' || content.length < 800));
         let summary = `${kind === 'tool' ? 'Tool data' : 'Structured content'} / ${content.length.toLocaleString()} characters`;
-        try { const parsed = typeof message.content === 'object' ? message.content : JSON.parse(content); if (parsed?.name || parsed?.function?.name) summary = `${parsed.name || parsed.function.name} / ${summary}`; } catch { /* Non-JSON tool output remains plain text. */ }
+        try { const parsed = typeof message.content === 'object' ? message.content : JSON.parse(content.slice(jsonOffset)); if (parsed?.name || parsed?.function?.name) summary = `${parsed.name || parsed.function.name} / ${summary}`; } catch { /* Non-JSON tool output remains plain text. */ }
         details.append(el('summary', '', summary), body);
         details.addEventListener('toggle', () => { expandedMessages.set(detailKey, details.open); scheduleLayout(); });
         block.append(details);
@@ -499,7 +524,7 @@
     if (!startBody.dataset.messageId) { notice('selection', 'This message has no message ID. It cannot support a durable selection note.', true); return; }
     if (state.draft?.note.trim()) { notice('draft', 'You have an unfinished note. Resume it or discard its draft before starting another.'); updateSaveStatus(); return; }
     const preceding = range.cloneRange(); preceding.selectNodeContents(startBody); preceding.setEnd(range.startContainer, range.startOffset);
-    const start = preceding.toString().length;
+    const start = Number(startBody.dataset.contentOffset || 0) + preceding.toString().length;
     const quote = range.toString();
     const rect = range.getBoundingClientRect();
     state.draft = { id: id(), sample_id: state.active, message_id: startBody.dataset.messageId, quote, start, end: start + quote.length, note: '', actor_kind: 'unspecified', producer: 'unspecified', created_at: new Date().toISOString() };

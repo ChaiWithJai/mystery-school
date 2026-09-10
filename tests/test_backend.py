@@ -348,6 +348,122 @@ class BackendTests(unittest.TestCase):
         # JSON string quotes count toward the exact 30KB limit.
         self.assertEqual(self.request("/api/artifacts", dict(payload, state="x" * (30 * 1024 - 2)))[0], 201)
 
+    def sidecar_payload(self, source_event_id):
+        return {"source_system": "synthetic-unittest", "source_event_id": source_event_id,
+                "observed_at": "2026-09-01T12:00:00Z", "actor_kind": "agent_review",
+                "actor_id": "synthetic-reviewer", "actor_role": "evaluator_sidecar",
+                "reviewed_sha": "7ec7324", "session_id": "synthetic-session", "task_id": "SYNTH-FIND-001",
+                "capture_method": "imported", "events": [{"type": "tool.result", "input": "synthetic check",
+                "output": "synthetic result, not an executed tool"}], "input": {"question": "Synthetic review"},
+                "output": "Synthetic finding", "decision": "Check the source binding",
+                "checks": [{"name": "synthetic-only", "outcome": "proposed"}],
+                "source_refs": [{"url": "https://example.org/synthetic", "sample_id": "synthetic-source"}]}
+
+    def test_sidecar_roundtrip_idempotency_lineage_and_usage(self):
+        payload = self.sidecar_payload("roundtrip")
+        status, record = self.request("/api/sidecar-records", payload)
+        self.assertEqual(status, 201)
+        self.assertEqual(record["envelope"], payload)
+        self.assertNotEqual(record["observed_at"], record["imported_at"])
+        self.assertEqual(self.request("/api/sidecar-records/" + record["id"]), (200, record))
+        for key in ("model", "usage", "cost_usd"):
+            self.assertIsNone(record[key])
+        trace = self.app.tracing.client.get_trace(record["trace_id"])
+        self.assertEqual(len(trace.data.spans), 1)
+        root = trace.data.spans[0]
+        self.assertEqual(root.span_type, "EVENT")
+        self.assertEqual(root.inputs, payload)
+        self.assertEqual(root.outputs, {"record": record, "persisted": True})
+        self.assertEqual(root.attributes["astral.actor_kind"], "agent_review")
+        self.assertNotIn("mlflow.chat.tokenUsage", root.attributes)
+        with patch.object(self.app.tracing, "start", side_effect=AssertionError("Must not start another trace")):
+            self.assertEqual(self.request("/api/sidecar-records", payload), (200, record))
+            self.assertEqual(self.request("/api/sidecar-records", dict(payload, output="changed"))[0], 409)
+        self.assertEqual(self.app.tracing.client.get_trace(record["trace_id"]).to_dict(), trace.to_dict())
+        child_payload = dict(self.sidecar_payload("verification"), parent_finding_ids=[record["id"]],
+                             model="explicitly-source-reported-test-model", usage={"input_tokens": 17, "output_tokens": None},
+                             cost_usd=0.0123, invocation_id="synthetic-invocation", timing={"duration_ms": 123})
+        status, child = self.request("/api/sidecar-records", child_payload)
+        self.assertEqual(status, 201)
+        for key in ("model", "usage", "cost_usd", "parent_finding_ids", "timing"):
+            self.assertEqual(child[key], child_payload[key])
+        child_root = self.app.tracing.client.get_trace(child["trace_id"]).data.spans[0]
+        self.assertEqual(child_root.inputs, child_payload)
+        self.assertNotIn("mlflow.chat.tokenUsage", child_root.attributes)
+        samples = self.request("/api/samples")[1]
+        self.assertEqual(sum(s["id"] == record["id"] for s in samples), 1)
+        sample = next(s for s in samples if s["id"] == child["id"])
+        self.assertEqual(sample["metadata"]["parent_finding_ids"], [record["id"]])
+        self.assertEqual(sample["messages"][0]["metadata"]["actor_role"], "evaluator_sidecar")
+        self.assertEqual(sample["usage"], child_payload["usage"])
+        reopened = App(self.temp.name)
+        self.assertEqual(reopened.sidecar_record(record["id"]), record)
+        with patch.object(reopened.tracing, "start", side_effect=AssertionError("No duplicate after reopen")):
+            self.assertEqual(reopened.import_sidecar(payload), (record, False))
+        self.assertEqual(json.loads(self.app.sidecar_path.read_text()), self.request("/api/sidecar-records")[1])
+
+    def test_sidecar_validation_and_retryable_export(self):
+        payload = self.sidecar_payload("validation")
+        before = self.request("/api/sidecar-records")[1]
+        for missing in payload:
+            self.assertEqual(self.request("/api/sidecar-records", {k: v for k, v in payload.items() if k != missing})[0], 400)
+        for changes in ({"actor_kind": "human"}, {"capture_method": "live"}, {"reviewed_sha": "not-a-sha"},
+                        {"observed_at": "2026-09-01"}, {"actor_id": ""}, {"events": [{}]}, {"checks": ["bad"]},
+                        {"usage": {"input_tokens": -1}}, {"cost_usd": True}, {"parent_finding_ids": ["missing"]},
+                        {"source_refs": ["javascript:alert(1)"]}, {"source_refs": ["https://user:secret@example.org"]},
+                        {"events": [{"type": "test"}] * 101}, {"id": "overwrite"}):
+            self.assertEqual(self.request("/api/sidecar-records", dict(payload, **changes))[0], 400, changes)
+        self.assertEqual(self.request("/api/sidecar-records", dict(payload, input="x" * (60 * 1024)))[0], 413)
+        self.assertEqual(self.request("/api/sidecar-records")[1], before)
+        self.assertEqual(self.request("/api/sidecar-records/missing")[0], 404)
+        with patch.object(self.app.tracing, "import_sidecar", side_effect=RuntimeError("Synthetic export outage")):
+            status, error = self.request("/api/sidecar-records", payload)
+        self.assertEqual(status, 503)
+        record = self.request("/api/sidecar-records")[1][-1]
+        self.assertIn(record["id"], error["error"])
+        # Retry from a fresh App: there is no in-memory live span to depend on.
+        reopened = App(self.temp.name)
+        self.assertEqual(reopened.import_sidecar(payload), (record, False))
+        with patch.object(self.app.tracing, "start", side_effect=AssertionError("Retry must reuse trace")):
+            self.assertEqual(self.request("/api/sidecar-records", payload), (200, record))
+        self.assertEqual(self.app.tracing.client.get_trace(record["trace_id"]).data.spans[0].outputs["record"], record)
+        partial = self.sidecar_payload("partial-export")
+        with patch.object(self.app.tracing.client._tracing_client, "_upload_trace_data",
+                          side_effect=RuntimeError("Synthetic artifact upload outage")):
+            self.assertEqual(self.request("/api/sidecar-records", partial)[0], 503)
+        saved = self.request("/api/sidecar-records")[1][-1]
+        recovered = App(self.temp.name)
+        self.assertEqual(recovered.import_sidecar(partial), (saved, False))
+        trace = recovered.tracing.client.get_trace(saved["trace_id"])
+        self.assertEqual(len(trace.data.spans), 1)
+        self.assertEqual(trace.data.spans[0].outputs["record"], saved)
+        self.assertEqual(sum(r["source_event_id"] == "partial-export" for r in recovered.sidecar_records), 1)
+
+    def test_projection_learning_artifact_snapshot(self):
+        _, artifact = self.request("/api/artifacts", {"pathway": "music", "session_id": "synthetic-bridge",
+            "stage": "attempt", "actor_kind": "user_action", "goal": "Synthetic sound comparison", "state": {"hz": 220}})
+        payload = {"session_id": "synthetic-bridge", "question": "Synthetic bridge test", "premise": "Test only",
+                   "world": "music", "learning_artifact_id": artifact["id"]}
+        self.assertEqual(self.request("/api/project", dict(payload, learning_artifact_id="unknown"))[0], 400)
+        with patch.object(self.app, "run_job"):
+            status, queued = self.request("/api/project", payload)
+        self.assertEqual(status, 202)
+        job = self.app.job(queued["id"])
+        self.assertEqual(job["input"]["learning_artifact_context"], artifact)
+        original = next(a for a in self.app.artifacts if a["id"] == artifact["id"])
+        original["state"]["hz"] = 440
+        try:
+            self.assertEqual(job["input"]["learning_artifact_context"]["state"], {"hz": 220})
+        finally:
+            original["state"]["hz"] = 220
+        self.app.command_builder = lambda folder, images: [sys.executable, "-c", "import sys; sys.stdin.read(); sys.exit(2)"]
+        self.app.run_job(job["id"])
+        ended = self.wait_job(job["id"])
+        self.assertEqual(json.loads(ended["invocation"]["stdin"].split("\n", 1)[1])["learning_artifact_context"], artifact)
+        sample = next(s for s in self.request("/api/samples")[1] if s["id"] == job["id"])
+        self.assertEqual(sample["metadata"]["learning_artifact_id"], artifact["id"])
+        self.assertEqual(App(self.temp.name).job(job["id"])["input"]["learning_artifact_context"], artifact)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,6 +31,17 @@ next question. Saved versions reopen through `?path=PATH&artifact=ID` and link
 to Trajectory Studio. Browser drafts persist locally; saved versions use the
 local API and have immutable parent links and MLflow trace IDs.
 
+The forest now has labeled pathway entrances and saved artifact markers. Select
+a saved marker to reopen that version, rather than starting a model request.
+
+"Explore this question with Astra" first saves the experiment and opens a
+confirmation form. The request uses `learning_artifact_id`, and the backend
+copies the saved record into `learning_artifact_context`. Changes to the question,
+prediction, premise, correction, or notebook selection require confirmation again.
+Artifact requests exclude unrelated image uploads; notebook notes are optional.
+The returned projection offers a return to the same saved experiment. Generated
+scenarios do not overwrite its settings, words, or sources.
+
 The characters are fictional composites. Their dialogue and peer responses are
 authored, not live conversations. The experiments use deterministic code, not
 an ambient AI tutor. Music is synthesized sound, not a physical piano model.
@@ -96,6 +107,10 @@ not prove authentication or model access.
   each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
+- The latest verified suite checkpoint is 43 JavaScript tests and 14 backend
+  tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
+  Their jobs, traces, sources, and reported usage are listed in the verification doc.
+- The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.
 
 ```sh
 npm run check
@@ -104,12 +119,31 @@ npm test
 node scripts/verify_demo.mjs
 node scripts/verify_capture.mjs
 node scripts/verify_pathways.mjs
+node scripts/verify_learning_projection.mjs 14e0de07-b8ea-4083-a395-e89dd2741841
 ```
 
 The Node verification scripts inspect existing local jobs; they do not call a
 model. They require the corresponding completed walkthroughs in the local data
 directory and intentionally fail on a fresh clone. See
 [verification evidence](docs/verification.md) for their scope and remaining checks.
+The learning projection verifier uses GET requests only and exits with code 2
+when no linked live result exists. A passing integrity check is not evidence of
+learner understanding or model accuracy.
+
+## Imported review records
+
+`POST /api/sidecar-records` imports a declared `agent_review` envelope with
+`capture_method: "imported"`. Matching `source_system` and `source_event_id`
+return the same record for an identical envelope; changed content returns 409.
+`GET /api/sidecar-records` and `GET /api/sidecar-records/ID` expose the records.
+They also appear in Trajectory Studio with imported provenance.
+
+`node scripts/import_sidecar_probes.mjs` imports the pinned, published Git probe
+documents and checks identical retries. Unlike the verification scripts above,
+it writes local records, but does not call a model. The imported documents are
+proposed agent checks, not executed learner tests or raw Buzz telemetry. Source
+publication times are distinct from import times; unavailable model, usage,
+cost, and original invocation data remain null or explicitly unavailable.
 
 Tracing covers app events, submitted model inputs, observable CLI events,
 outputs, errors, reported usage, and review feedback. It does not expose hidden

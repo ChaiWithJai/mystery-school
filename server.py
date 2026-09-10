@@ -8,6 +8,7 @@ import io
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import signal
@@ -22,7 +23,7 @@ from urllib.parse import unquote, urlsplit
 
 import jsonschema
 from PIL import Image
-from tracing import APP_CAPTURE_SCOPE, ARTIFACT_CAPTURE_SCOPE, PROJECTION_CAPTURE_SCOPE, Tracing, normalize_usage
+from tracing import APP_CAPTURE_SCOPE, ARTIFACT_CAPTURE_SCOPE, PROJECTION_CAPTURE_SCOPE, SIDECAR_CAPTURE_SCOPE, Tracing, normalize_usage
 
 ROOT = Path(__file__).resolve().parent
 MODEL = "gpt-6-astra"
@@ -109,6 +110,8 @@ class App:
             "sessions": [], "events": [], "jobs": [], "reflections": [], "references": []}
         self.artifacts_path = self.data / "artifacts.json"
         self.artifacts = json.loads(self.artifacts_path.read_text()) if self.artifacts_path.exists() else []
+        self.sidecar_path = self.data / "sidecar-records.json"
+        self.sidecar_records = json.loads(self.sidecar_path.read_text()) if self.sidecar_path.exists() else []
         self.review_dir = self.data / "error_discovery_data"
         self.review = {}
         for name in ("annotations", "patterns", "suggestions", "samples"):
@@ -293,6 +296,118 @@ class App:
                 return dict(copy.deepcopy(record), tracing_error=str(exc))
             return copy.deepcopy(record)
 
+    def sidecar_record(self, record_id):
+        with self.lock:
+            record = next((r for r in self.sidecar_records if r["id"] == record_id), None)
+            if record is None:
+                raise APIError(404, "Sidecar record not found")
+            return copy.deepcopy(record)
+
+    def import_sidecar(self, body):
+        import_start_ns = time.time_ns()
+        required = {"source_system", "source_event_id", "observed_at", "actor_kind", "actor_id", "actor_role",
+                    "reviewed_sha", "session_id", "task_id", "capture_method", "events", "input", "output",
+                    "decision", "checks", "source_refs"}
+        optional = {"parent_finding_ids", "model", "usage", "cost_usd", "invocation_id", "timing",
+                    "source_channel_id", "source_url", "finding_id"}
+        if not required <= body.keys() or body.keys() - required - optional:
+            raise APIError(400, "Missing required or unknown sidecar envelope fields")
+        for key in ("source_system", "source_event_id", "actor_id", "actor_role", "session_id", "task_id"):
+            if not isinstance(body[key], str) or not body[key].strip() or len(body[key]) > 200:
+                raise APIError(400, key + " must be nonempty text of at most 200 characters")
+        if body["actor_kind"] != "agent_review" or body["capture_method"] != "imported":
+            raise APIError(400, "Sidecar requires actor_kind agent_review and capture_method imported")
+        if not isinstance(body["reviewed_sha"], str) or not re.fullmatch(r"[0-9a-fA-F]{7,64}", body["reviewed_sha"]):
+            raise APIError(400, "reviewed_sha must be a hexadecimal commit SHA (7-64 characters)")
+        try:
+            stamp = datetime.fromisoformat(body["observed_at"].replace("Z", "+00:00"))
+            if stamp.utcoffset() is None:
+                raise ValueError()
+        except (AttributeError, TypeError, ValueError):
+            raise APIError(400, "observed_at must be an ISO timestamp with timezone")
+        if not isinstance(body["decision"], str) or len(body["decision"]) > 8000:
+            raise APIError(400, "decision must be text of at most 8000 characters")
+        for key, limit in (("events", 100), ("checks", 50), ("source_refs", 20), ("parent_finding_ids", 20)):
+            value = body.get(key, [])
+            if not isinstance(value, list) or len(value) > limit:
+                raise APIError(400, key + " must be a bounded list")
+        if any(not isinstance(e, dict) or not isinstance(e.get("type"), str) or not e["type"].strip()
+               for e in body["events"]):
+            raise APIError(400, "Each observable event requires a type")
+        if any(not isinstance(c, dict) for c in body["checks"]):
+            raise APIError(400, "checks must contain objects")
+        for ref in body["source_refs"] + ([body["source_url"]] if body.get("source_url") is not None else []):
+            url = ref.get("url") if isinstance(ref, dict) else ref
+            if not isinstance(url, str) or len(url) > 2048:
+                raise APIError(400, "source_refs require URL strings or objects with url")
+            parsed = urlsplit(url)
+            if parsed.username or parsed.password or not ((parsed.scheme in ("https", "http") and parsed.netloc)
+                    or (url.startswith("/") and not url.startswith("//"))):
+                raise APIError(400, "Source links must be HTTP(S) or local absolute paths without credentials")
+        for key in ("model", "invocation_id", "source_channel_id", "finding_id"):
+            value = body.get(key)
+            if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > 200):
+                raise APIError(400, key + " must be null or bounded text")
+        usage = body.get("usage")
+        if usage is not None and (not isinstance(usage, dict) or len(usage) > 30 or
+                any(not isinstance(k, str) or len(k) > 100 or (v is not None and (type(v) is not int or v < 0))
+                    for k, v in usage.items())):
+            raise APIError(400, "usage must be null or reported nonnegative integer counts (or null)")
+        cost = body.get("cost_usd")
+        if cost is not None and (type(cost) not in (int, float) or not math.isfinite(cost) or cost < 0):
+            raise APIError(400, "cost_usd must be null or a reported finite nonnegative number")
+        if body.get("timing") is not None and not isinstance(body["timing"], dict):
+            raise APIError(400, "timing must be null or source-reported JSON object")
+        try:
+            canonical = json.dumps(body, sort_keys=True, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        except (TypeError, ValueError):
+            raise APIError(400, "Sidecar envelope must be finite JSON")
+        if len(canonical.encode("utf-8")) > 60 * 1024:
+            raise APIError(413, "Sidecar envelope exceeds 60KB")
+        with self.lock:
+            existing = next((r for r in self.sidecar_records if r["source_system"] == body["source_system"]
+                             and r["source_event_id"] == body["source_event_id"]), None)
+            if existing:
+                if canonical != json.dumps(existing["envelope"], sort_keys=True, ensure_ascii=False,
+                                           allow_nan=False, separators=(",", ":")):
+                    raise APIError(409, "Source event already imported with a different envelope")
+                self.confirm_sidecar_trace(existing)
+                return copy.deepcopy(existing), False
+            parents = body.get("parent_finding_ids", [])
+            if any(not isinstance(p, str) or not any(r["id"] == p for r in self.sidecar_records) for p in parents):
+                raise APIError(400, "parent_finding_ids must reference existing sidecar record IDs")
+            trace_id = "tr-" + uuid.uuid4().hex
+            imported_at = now()
+            record = dict(copy.deepcopy(body), id=uid(), trace_id=trace_id, imported_at=imported_at,
+                          created_at=imported_at, envelope=copy.deepcopy(body), build_id=self.build["id"],
+                          capture_scope=SIDECAR_CAPTURE_SCOPE, span_id=uuid.uuid4().hex[:16],
+                          import_start_ns=import_start_ns, import_end_ns=time.time_ns())
+            for key in ("model", "usage", "cost_usd", "invocation_id", "timing"):
+                record.setdefault(key, None)
+            record.setdefault("parent_finding_ids", [])
+            updated = self.sidecar_records + [record]
+            atomic_json(self.sidecar_path, updated)
+            self.sidecar_records = updated
+            self.confirm_sidecar_trace(record)
+            return copy.deepcopy(record), True
+
+    def confirm_sidecar_trace(self, record):
+        # Retry the same root export after an interrupted import; never create a second trace.
+        expected = {"record": record, "persisted": True}
+        try:
+            trace = self.tracing.client.get_trace(record["trace_id"])
+            if trace.data.spans[0].outputs == expected:
+                return
+        except Exception:
+            pass
+        try:
+            self.tracing.import_sidecar(record)
+            trace = self.tracing.client.get_trace(record["trace_id"])
+            if trace.data.spans[0].outputs != expected:
+                raise ValueError("Trace readback differs")
+        except Exception as exc:
+            raise APIError(503, "Record " + record["id"] + " persisted; retry the identical envelope to confirm trace export: " + str(exc))
+
     def project(self, body):
         with self.lock:
             if any(j["status"] in ACTIVE for j in self.state["jobs"]):
@@ -313,6 +428,12 @@ class App:
             notes = {r["id"]: r for r in self.state["reflections"]}
             if any(i not in notes for i in reflection_ids):
                 raise APIError(400, "Unknown reflection ID")
+            learning_context = None
+            if "learning_artifact_id" in body:
+                artifact_id = body["learning_artifact_id"]
+                if not isinstance(artifact_id, str) or not any(a["id"] == artifact_id for a in self.artifacts):
+                    raise APIError(400, "Unknown learning_artifact_id")
+                learning_context = self.learning_artifact(artifact_id)
             if body.get("parent_job_id"):
                 parent = self.job(body["parent_job_id"])
                 if parent["status"] in ACTIVE:
@@ -323,6 +444,9 @@ class App:
             inputs = {k: body[k] for k in ("session_id", "question", "premise", "world", "reference_ids", "reflection_ids", "parent_job_id", "correction") if k in body}
             if reflection_ids:
                 inputs["notebook_context"] = [copy.deepcopy(notes[i]) for i in reflection_ids]
+            if learning_context is not None:
+                inputs["learning_artifact_id"] = body["learning_artifact_id"]
+                inputs["learning_artifact_context"] = learning_context
             inputs = copy.deepcopy(inputs)
             job = {"id": uid(), "status": "queued", "created_at": now(), "model": MODEL,
                    "input": inputs, "world": body["world"], "result": None, "error": None,
@@ -536,7 +660,9 @@ class App:
                                 "model": MODEL, "world": job["world"], "status": job["status"], "trace_id": job["trace_id"],
                                 "created_at": job["created_at"], "messages": messages, "usage": normalize_usage(job.get("usage")),
                                 "cost_usd": job.get("cost_usd"), "capture_scope": job_view(job)["capture_scope"],
-                                "parent_job_id": job.get("parent_job_id")})
+                                "parent_job_id": job.get("parent_job_id"),
+                                "learning_artifact_id": job["input"].get("learning_artifact_id"),
+                                "metadata": {"learning_artifact_id": job["input"].get("learning_artifact_id")}})
             for artifact in self.artifacts:
                 metadata = {k: artifact[k] for k in ("pathway", "stage", "actor_kind")}
                 metadata["parent_id"] = artifact.get("parent_id")
@@ -548,6 +674,19 @@ class App:
                                 "messages": [{"id": artifact["id"] + ":artifact", "role": "user" if artifact["actor_kind"] == "user_action" else "system",
                                               "actor_kind": artifact["actor_kind"], "metadata": metadata,
                                               "content": artifact["actor_kind"] + "\n" + json.dumps(artifact, ensure_ascii=False)}]})
+            for record in self.sidecar_records:
+                metadata = {k: record.get(k) for k in ("actor_kind", "actor_id", "actor_role", "capture_method",
+                            "source_system", "source_event_id", "observed_at", "imported_at", "reviewed_sha",
+                            "session_id", "task_id", "parent_finding_ids")}
+                records.append({"id": record["id"], "title": "Imported agent review / " + record["task_id"],
+                                "model": record["model"], "world": "sidecar", "status": "imported",
+                                "trace_id": record["trace_id"], "created_at": record["imported_at"],
+                                "usage": record["usage"], "cost_usd": record["cost_usd"],
+                                "capture_scope": SIDECAR_CAPTURE_SCOPE, **metadata, "metadata": metadata,
+                                "messages": [{"id": record["id"] + ":import", "role": "system",
+                                              "actor_kind": "agent_review", "metadata": metadata,
+                                              "content": "Imported observable agent_review (not a live model call)\n" +
+                                                         json.dumps(record, ensure_ascii=False)}]})
             return copy.deepcopy(records)
 
     def artifact(self, job_id, filename):
@@ -680,6 +819,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.json_response(app.snapshot())
             if path == "/api/diagnostics":
                 return self.json_response(app.diagnostics())
+            if path == "/api/sidecar-records":
+                with app.lock:
+                    return self.json_response(copy.deepcopy(app.sidecar_records))
+            if path.startswith("/api/sidecar-records/"):
+                return self.json_response(app.sidecar_record(path.split("/")[-1]))
             if path == "/api/artifacts":
                 with app.lock:
                     return self.json_response(copy.deepcopy(app.artifacts))
@@ -757,6 +901,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.json_response(app.reference(body), 201)
             if path == "/api/artifacts":
                 return self.json_response(app.create_artifact(body), 201)
+            if path == "/api/sidecar-records":
+                record, created = app.import_sidecar(body)
+                return self.json_response(record, 201 if created else 200)
             if path == "/api/project":
                 return self.json_response(app.project(body), 202)
             if path.startswith("/api/jobs/") and path.endswith("/cancel"):
