@@ -392,7 +392,7 @@
       "learningCircle": {
         "care": "Choose what you want to notice.",
         "try": "Watch the source’s small parry and response. Rehearse a no-contact version while noticing your forearm position; an incoming strike or partner drill needs your coach.",
-        "neededConcept": "Guard awareness is a starting point; catching and responding require their own demonstration.",
+        "neededConcept": "The source shows a small deflection followed by a response; Jai’s shields metaphor helps choose what to notice.",
         "artifact": "Keep your observation and its source or video timestamp.",
         "share": "Choose whether to show a coach or peer; keep their response separate.",
         "newQuestion": "What would you like to notice next time?"
@@ -644,7 +644,7 @@
           "reviewSectionEndSeconds": 138,
           "localReviewSection": "/tmp/boxing-foundations-source/punch-coordination.mp4",
           "reviewStatus": "reviewed_video",
-          "curriculumSource": "https://boxing.dharmicdata.org/library/guides-and-tips"
+          "curriculumSource": "https://boxing.dharmicdata.org/library/guides-and-tips/4"
         }
       ],
       "practice": {
