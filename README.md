@@ -133,6 +133,35 @@ The learning projection verifier uses GET requests only and exits with code 2
 when no linked live result exists. A passing integrity check is not evidence of
 learner understanding or model accuracy.
 
+## Reproduce the agent review
+
+Use the Python environment and server command in **Run** above, then in another
+terminal at the same committed checkout:
+
+```sh
+npm ci
+npx playwright install chromium
+npm run skills:verify
+npm run check
+npm test
+npm run review:experience -- --require-clean
+```
+
+The review checks every tracked public file against the local server, opens
+isolated `agent_review` contexts for all three paths, and writes screenshots and
+a JSON report under ignored `output/playwright/experience-review/`. It blocks
+model projection requests. Set `ASTRAL_URL` for another local port. Modified or
+nonignored untracked files fail the clean check; visibility findings also exit
+nonzero. Public-file matching does not verify backend code or installed packages.
+
+Inspect the screenshots. Click-to-next-animation-frame samples are diagnostics,
+not input-to-visible-response or audio latency. This baseline does not establish
+fluid play, learning, or the new Astra preview/apply/undo and continuous-play
+gates. Those need the next committed editor checkpoint and direct observation.
+See [the current review contract](docs/instructional-review-contract.md) and
+[the four pinned project skills](.agents/README.md). Skills become discoverable
+on a new agent turn in this repository; no global setup or extra MCP is needed.
+
 ## Imported review records
 
 `POST /api/sidecar-records` imports a declared `agent_review` envelope with
