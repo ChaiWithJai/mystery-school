@@ -287,7 +287,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   helpSection.append(helpButton, helpContent);
 
 
-  const revised = draftField('revisedInterpretation', '04 / Say what you believe now', 'What would you say to your friend now?', 'Keep, change, or qualify your view. Your first reading stays above so you can compare.');
+  const revised = draftField('revisedInterpretation', '04 / Say what you believe now', 'What would you say to your friend now?', 'Keep, change, or qualify your view. Your first thought stays nearby so you can compare.');
   const unchangedLabel = node('label', 'ideas-lab__unchanged');
   const unchangedInput = node('input');
   unchangedInput.type = 'checkbox';
@@ -295,6 +295,11 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   unchangedLabel.append(unchangedInput, node('span', '', 'Nothing changed yet. I am keeping my view for now.'));
   listen(unchangedInput, 'change', () => update({ unchanged: unchangedInput.checked }));
   revised.section.append(unchangedLabel);
+  const firstMemory = node('aside', 'ideas-lab__first-memory');
+  firstMemory.setAttribute('aria-label', 'My first thought');
+  const firstMemoryQuote = node('blockquote');
+  firstMemory.append(node('small', '', 'My first thought'), firstMemoryQuote);
+  revised.section.append(firstMemory);
 
 
   const map = node('section', 'ideas-lab__map');
@@ -475,10 +480,10 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     if (notify) emit('focus', { node: ['source', 'interpretation', 'revision'][index] });
   }
   const begin = node('button', 'ideas-lab__button', 'What do I think? →');
-  listen(begin, 'click', () => { selectOrb(1); first.input.focus(); });
+  listen(begin, 'click', () => { selectOrb(state.interpretation.trim() ? 2 : 1); });
   source.append(begin);
-  const connect = node('button', 'ideas-lab__button', 'Try another angle →');
-  listen(connect, 'click', () => { selectOrb(2); update({helpOpen: true}); emit('help', {expanded:true}); revised.input.focus(); });
+  const connect = node('button', 'ideas-lab__button', 'Meet the source →');
+  listen(connect, 'click', () => selectOrb(0));
   first.section.append(connect);
   selectOrb(activeOrb, false);
   const status = node('p', 'ideas-lab__status');
@@ -487,6 +492,9 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   root.append(status);
 
   function render() {
+    firstMemory.hidden = !state.interpretation.trim();
+    firstMemoryQuote.textContent = state.interpretation;
+    begin.textContent = state.interpretation.trim() ? 'What do I think now? →' : 'What do I think? →';
     const scene = state.modelComparison?.decision_scene;
     const response = state.decisionResponses[ideasComparisonIdentity(state.modelComparison)];
     const selected = scene?.choices.find(choice => choice.id === response);
