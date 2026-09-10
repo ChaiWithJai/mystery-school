@@ -114,27 +114,42 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
 
   const root = el('section', 'movement-lab');
   root.setAttribute('aria-labelledby', `${id}-title`);
-  root.append(el('p', 'movement-lab__eyebrow', 'Labeled simulation / controlled non-contact reach'));
-  const title = el('h3', 'movement-lab__title', 'Make the reach smoother.');
+  root.append(el('p', 'movement-lab__eyebrow', 'ANDRE / THE MOVEMENT STUDIO'));
+  const title = el('h3', 'movement-lab__title', 'Find your flow.');
   title.id = `${id}-title`;
-  root.append(title, el('p', 'movement-lab__intro', 'Give the reach more time. Watch what changes.'));
+  root.append(title, el('p', 'movement-lab__intro', 'Drag the glowing glove. Feel time change the reach.'));
 
-  const diagram = svg('svg', { viewBox: '0 0 520 160', class: 'movement-lab__diagram', role: 'img', 'aria-labelledby': `${id}-diagram-title ${id}-diagram-desc` });
-  diagram.append(svg('title', { id: `${id}-diagram-title` }, 'A hand marker moves along a straight modeled reach'));
+  const stage = el('div', 'movement-lab__stage');
+  const diagram = svg('svg', { viewBox: '0 0 720 420', class: 'movement-lab__diagram', role: 'group', 'aria-labelledby': `${id}-diagram-title ${id}-diagram-desc` });
+  diagram.append(svg('title', { id: `${id}-diagram-title` }, 'Andre’s non-contact reach studio. Drag the glove to move through time.'));
   const diagramDesc = svg('desc', { id: `${id}-diagram-desc` });
-  diagram.append(diagramDesc, svg('rect', {x: 60, y: 58, width: 400, height: 44, rx: 22, class: 'movement-lab__lane'}), svg('path', { d: 'M 60 80 H 460', class: 'movement-lab__track' }));
-  const trail = svg('path', {d: 'M 60 80 H 60', class: 'movement-lab__trail'});
-  const target = svg('circle', {cx: 460, cy: 80, r: 28, class: 'movement-lab__target'});
-  diagram.append(trail, target);
-  for (const x of [60, 160, 260, 360, 460]) diagram.append(svg('path', { d: `M ${x} 72 V 88`, class: 'movement-lab__tick' }));
-  diagram.append(svg('text', { x: 60, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' }, '0 m'));
-  const endLabel = svg('text', { x: 460, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' });
+  diagram.append(diagramDesc);
+  const defs = svg('defs');
+  const halo = svg('radialGradient', { id: `${id}-halo` });
+  halo.append(svg('stop', { offset: '0%', 'stop-color': '#e6aa69', 'stop-opacity': '.22' }), svg('stop', { offset: '100%', 'stop-color': '#e6aa69', 'stop-opacity': '0' }));
+  defs.append(halo); diagram.append(defs);
+  diagram.append(svg('ellipse', { cx: 365, cy: 210, rx: 310, ry: 205, fill: `url(#${id}-halo)` }), svg('ellipse', { cx: 235, cy: 378, rx: 155, ry: 19, class: 'movement-lab__shadow' }));
+  for (const y of [295, 330, 375]) diagram.append(svg('path', { d: `M 25 ${y} L 690 ${y - 26}`, class: 'movement-lab__ring' }));
+  for (const x of [55, 665]) diagram.append(svg('path', { d: `M ${x} 220 V 390`, class: 'movement-lab__ring-post' }));
+  const silhouette = svg('g', { class: 'movement-lab__athlete' });
+  silhouette.append(svg('path', { d: 'M 226 241 L 192 305 L 169 368 M 245 242 L 270 300 L 297 367', class: 'movement-lab__legs' }), svg('path', { d: 'M 210 155 Q 239 145 257 173 L 254 242 Q 230 258 203 240 Z', class: 'movement-lab__torso' }), svg('path', { d: 'M 213 170 L 183 209 L 208 150', class: 'movement-lab__back-arm' }), svg('circle', { cx: 237, cy: 119, r: 28, class: 'movement-lab__head' }), svg('path', { d: 'M 210 112 Q 218 80 248 92 L 262 106 L 254 110 L 232 103 L 212 120', class: 'movement-lab__hair' }), svg('path', { d: 'M 227 143 L 227 157', class: 'movement-lab__neck' }), svg('path', { d: 'M 154 369 H 180 M 290 369 H 317', class: 'movement-lab__shoes' }), svg('circle', { cx: 207, cy: 147, r: 15, class: 'movement-lab__guard' }));
+  diagram.append(silhouette);
+  const trail = svg('path', { class: 'movement-lab__trail' });
+  const target = svg('circle', {cy: 165, r: 32, class: 'movement-lab__target'});
+  const referenceArm = svg('path', { class: 'movement-lab__reference-arm' });
+  const activeArm = svg('path', { class: 'movement-lab__active-arm' });
+  diagram.append(trail, target, referenceArm, activeArm);
+  for (const x of [310, 400, 490, 580, 670]) diagram.append(svg('path', { d: `M ${x} 209 V 216`, class: 'movement-lab__tick' }));
+  diagram.append(svg('text', { x: 310, y: 237, class: 'movement-lab__label', 'text-anchor': 'middle' }, '0'));
+  const endLabel = svg('text', { x: 670, y: 237, class: 'movement-lab__label', 'text-anchor': 'middle' });
   diagram.append(endLabel);
-  const hand = svg('g', { class: 'movement-lab__hand' });
-  const referenceHand = svg('circle', { r: 26, cy: 80, class: 'movement-lab__reference-marker' });
-  hand.append(svg('circle', { r: 21 }), svg('path', { d: 'M -10 7 V -3 Q -10 -6 -7 -4 L -5 -1 V -12 Q -3 -16 -1 -12 V -4 V -15 Q 2 -18 4 -14 V -4 V -12 Q 7 -15 9 -11 V -2 Q 14 -8 15 -3 L 12 7 Q 8 14 0 14 Q -6 14 -10 7', class: 'movement-lab__hand-line' }));
+  const hand = svg('g', { class: 'movement-lab__hand', tabindex: '0', role: 'slider', 'aria-label': 'Reach time', 'aria-valuemin': '0', 'aria-valuemax': '100' });
+  const referenceHand = svg('circle', { r: 23, cy: 165, class: 'movement-lab__reference-marker' });
+  hand.append(svg('circle', { r: 32, class: 'movement-lab__grab-zone' }), svg('path', { d: 'M -18 -12 Q -13 -26 5 -24 Q 27 -22 25 0 Q 26 17 7 19 L -15 16 L -23 5 Z', class: 'movement-lab__glove' }), svg('path', { d: 'M -19 -7 L -23 5 L -15 16 M 4 -16 Q 17 -14 17 -2', class: 'movement-lab__hand-line' }));
   diagram.append(referenceHand, hand);
-  root.append(diagram);
+  const stageCaption = el('span', 'movement-lab__stage-caption', 'NON-CONTACT SIMULATION');
+  const instant = el('output', 'movement-lab__instant');
+  stage.append(diagram, stageCaption, instant); root.append(stage);
 
   const controls = el('div', 'movement-lab__controls');
   function range(labelText, suffix, min, max, step) {
@@ -174,7 +189,13 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   const play = button('Play'); const replay = button('Replay'); const stop = button('Stop');
   controls.prepend(actions);
   const motionNote = el('p', 'movement-lab__note'); controls.append(motionNote);
-  root.append(controls);
+  const adjustments = el('details', 'movement-lab__adjustments');
+  adjustments.append(el('summary', '', 'Tune the experiment'), controls);
+  const transport = el('div', 'movement-lab__transport');
+  transport.append(actions, scrub.label, scrub.input);stage.append(transport);
+  const dials = el('div', 'movement-lab__dials');
+  for (const control of [durationControl, distanceControl]) { const dial = el('div', 'movement-lab__dial'); dial.append(control.label, control.input); dials.append(dial); }
+  root.append(dials, adjustments);
 
   const graph = svg('svg', { viewBox: '0 0 520 270', class: 'movement-lab__graph', role: 'img', 'aria-labelledby': `${id}-graph-title ${id}-graph-desc` });
   const graphTitle = svg('title', { id: `${id}-graph-title` });graph.append(graphTitle);
@@ -194,31 +215,44 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   const curve = svg('path', { class: 'movement-lab__curve' });
   const referenceCurve = svg('path', { class: 'movement-lab__reference-curve' });
   const cursor = svg('path', { class: 'movement-lab__cursor' });
-  const dot = svg('circle', { r: 5, class: 'movement-lab__dot' }); graph.append(referenceCurve, curve, cursor, dot); root.append(graph);
-  const reading = el('p', 'movement-lab__reading'); root.append(reading);
+  const dot = svg('circle', { r: 5, class: 'movement-lab__dot' }); graph.append(referenceCurve, curve, cursor, dot);
+  const tracePanel = el('div', 'movement-lab__trace-panel');
+  const traceTabs = el('div', 'movement-lab__trace-tabs');
+  const traceButtons = VIEWS.map(view => { const node = el('button', '', ({position:'Distance',velocity:'Speed',acceleration:'Acceleration'})[view]); node.type = 'button'; listen(node, 'click', () => edit({view}, 'movement.view')); traceTabs.append(node); return node; });
+  tracePanel.append(traceTabs, graph);stage.append(tracePanel);
+  const reading = el('p', 'movement-lab__reading');
   const status = el('p', 'movement-lab__status'); status.setAttribute('role', 'status'); root.append(status);
 
   const help = el('details', 'movement-lab__help');
-  help.append(el('summary', '', 'Help me understand the smoother reach'));
+  help.append(el('summary', '', 'Why does it feel different?'));
   help.append(el('p', '', 'The steepness of the position graph is velocity. A flatter start and finish means the marker starts and stops with zero velocity. Try giving Andre the same reach more time, then replay it. Notice how the graph becomes less steep.'));
   help.open = state.assistanceOpen;
   const assumptions = el('details', 'movement-lab__assumptions');
-  assumptions.append(el('summary', '', 'Model, units and limits'));
+  assumptions.append(el('summary', '', 'Model, units and limits'), reading);
   const formula = el('p', 'movement-lab__formula'); assumptions.append(formula);
   assumptions.append(el('p', '', 'D is reach distance in meters, T is duration in seconds, and u = t/T during 0 <= t <= T. Before t = 0 the marker rests at x = 0; after t = T it rests at x = D. Velocity and acceleration are zero strictly outside the interval.'));
   assumptions.append(el('p', '', 'The cubic has nonzero acceleration at the interval endpoints, which jumps to zero during rest. This is an idealization. The quintic joins rest with zero acceleration, but still simplifies human movement. Pausing playback freezes the display; the numbers describe the modeled instant.'));
   assumptions.append(el('p', '', 'Andre wants a smooth reach. This is an on-screen model; no physical movement is required.'));
+  assumptions.append(el('p', '', 'The body is an illustration, not a biomechanical reconstruction. Only the glove’s horizontal position follows the one-dimensional model; the ghost uses the reference curve.'));
   assumptions.append(el('p', 'movement-lab__scope', 'This simulation describes one-dimensional position, velocity and acceleration. It measures no person, analyzes no video, and cannot establish impact force, boxing skill or learning progress.'));
   root.append(help, assumptions);
   container.append(root);
 
   function paint() {
     const comparison = sampleMovementComparison(state.time, state), sample = comparison.candidate;
-    const x = 60 + 400 * sample.position;
-    referenceHand.setAttribute('cx', 60 + 400 * comparison.reference.position);
-    target.setAttribute('cx', 60 + 400 * state.distance);
-    hand.setAttribute('transform', `translate(${x} 80)`);
-    trail.setAttribute('d', `M 60 80 H ${x}`);
+    const x = 310 + 360 * sample.position;
+    const rx = 310 + 360 * comparison.reference.position;
+    referenceHand.setAttribute('cx', rx);
+    target.setAttribute('cx', 310 + 360 * state.distance);
+    hand.setAttribute('transform', `translate(${x} 165)`);
+    hand.setAttribute('aria-valuenow', String(Math.round(state.time / state.duration * 100)));
+    hand.setAttribute('aria-valuetext', `${format(state.time)} seconds, ${format(sample.position)} meters`);
+    // The arm is an illustrative linkage; only the glove's horizontal coordinate is modeled.
+    const armPath = hx => `M 250 172 Q ${270 + (hx - 310) * .35} ${215 - (hx - 310) * .09} ${hx - 20} 165`;
+    referenceArm.setAttribute('d', armPath(rx)); activeArm.setAttribute('d', armPath(x));
+    trail.setAttribute('d', `M 310 165 H ${x}`);
+    instant.textContent = `${format(sample.position)} m`;
+    traceButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(VIEWS[i] === state.view)));
     endLabel.textContent = '1 m';
     diagramDesc.textContent = `Modeled marker at ${format(sample.position)} meters after ${format(state.time)} seconds. Total reach ${format(state.distance)} meters.`;
     durationControl.input.value = String(state.duration);
@@ -286,6 +320,26 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   listen(scrub.input, 'input', () => edit({ time: Number(scrub.input.value) / 100 * state.duration }, 'movement.scrub'));
   listen(play, 'click', () => start(false)); listen(replay, 'click', () => start(true));
   listen(stop, 'click', () => edit({}, 'movement.stop'));
+  let dragging = false;
+  function scrubAt(event) {
+    const point = diagram.createSVGPoint(); point.x = event.clientX; point.y = event.clientY;
+    const transform = diagram.getScreenCTM(); if (!transform) return;
+    const desiredPosition = clamp((point.matrixTransform(transform.inverse()).x - 310) / 360, 0, state.distance);
+    // Invert the monotone position curve: dragging the glove follows the same trajectory.
+    let low = 0, high = state.duration;
+    for (let i = 0; i < 25; i++) { const mid = (low + high) / 2; if (sampleMovement(mid, state).position < desiredPosition) low = mid; else high = mid; }
+    edit({ time: (low + high) / 2 }, 'movement.scrub');
+  }
+  listen(hand, 'pointerdown', event => { dragging = true; hand.setPointerCapture?.(event.pointerId); event.preventDefault(); scrubAt(event); });
+  listen(hand, 'pointermove', event => { if (dragging) scrubAt(event); });
+  listen(hand, 'pointerup', () => { dragging = false; });
+  listen(hand, 'pointercancel', () => { dragging = false; });
+  listen(hand, 'keydown', event => {
+    const delta = { ArrowRight: .02, ArrowUp: .02, ArrowLeft: -.02, ArrowDown: -.02 }[event.key];
+    if (delta !== undefined || event.key === 'Home' || event.key === 'End') {
+      event.preventDefault(); edit({ time: event.key === 'Home' ? 0 : event.key === 'End' ? state.duration : clamp(state.time + delta * state.duration, 0, state.duration) }, 'movement.scrub');
+    }
+  });
   listen(help, 'toggle', () => {
     if (state.assistanceOpen !== help.open) { state.assistanceOpen = help.open; publish(help.open ? 'movement.assistance.request' : 'movement.assistance.close'); }
   });
