@@ -72,6 +72,14 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   let state = normalizePianoState(initialState);
   let disposed = false;
   let context;
+  let sampleBuffer = null;
+  let sampleDecode = null;
+  const sampleWaits = new Set();
+  const sampleAbort = new AbortController();
+  const sampleTimeout = setTimeout(() => sampleAbort.abort(), 3000);
+  const sampleBytes = Promise.resolve().then(() => fetch('/audio/piano/Ds6.mp3', { signal: sampleAbort.signal }))
+    .then(response => { if (!response.ok) throw new Error('Piano sample unavailable'); return response.arrayBuffer(); })
+    .catch(() => null).finally(() => clearTimeout(sampleTimeout));
   let recording = false;
   let started = 0;
   let replaying = false;
@@ -96,7 +104,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     <div class="piano-practice__take" data-take></div>
     <button type="button" data-reset>Reset take</button>
     <details><summary>Edit this performance</summary><p>Adjust your own note's pitch, entrance or release in seconds. These are recorded timings, not a score or an accuracy grade.</p><div data-editor></div></details>
-    <details><summary>What am I hearing?</summary><p>A quiet synthesized tone, not a recorded piano. Higher keys have higher frequencies. Holding a key sustains its tone; releasing it lets the volume fade. Black keys are the pitches between adjacent white keys, except E/F and B/C.</p></details></details>`;
+    <details><summary>What am I hearing?</summary><p data-timbre>Synthesized piano-like fallback while the local piano sample loads. E6 can use Alexander Holm's Salamander Yamaha C5 D-sharp-6 sample, shifted up one semitone. Other keys use synthesis. This is not audio from Runaway.</p><a href="/audio/piano/SOURCE-LICENSE.txt">Sample attribution and CC BY 3.0 license</a></details></details>`;
   container.append(root);
   mountedPianos.push(root);
   const find = selector => root.querySelector(selector);
@@ -153,26 +161,97 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     context ||= new Audio();
     if (context.state === 'suspended') await context.resume();
     if (context.state !== 'running') throw new Error('Audio did not start. Try another explicit key press.');
+    void prepareSample();
     error.hidden = true;
   }
+  function prepareSample() {
+    sampleDecode ||= (async () => {
+      const bytes = await sampleBytes;
+      try {
+        if (!bytes || disposed) throw new Error('Sample unavailable');
+        const buffer = await context.decodeAudioData(bytes);
+        if (disposed) return;
+        sampleBuffer = buffer;
+        root.dataset.timbre = 'sample-ready';
+        find('[data-timbre]').textContent = 'E6: recorded Salamander Yamaha C5 piano by Alexander Holm (CC BY 3.0), D-sharp-6 shifted up one semitone. Other keys: synthesized piano-like tones. This is not the Runaway recording.';
+      } catch {
+        if (!disposed) {
+          root.dataset.timbre = 'synthesized-fallback';
+          find('[data-timbre]').textContent = 'Local piano sample unavailable. Playing synthesized piano-like tones instead, not a sampled piano or the Runaway recording.';
+        }
+      }
+    })();
+    return sampleDecode;
+  }
+  function waitForSample(milliseconds) {
+    if (sampleBuffer || disposed) return Promise.resolve();
+    return new Promise(resolve => {
+      const finish = () => { clearTimeout(timer); sampleWaits.delete(finish); resolve(); };
+      const timer = setTimeout(finish, milliseconds);
+      sampleWaits.add(finish);
+      void prepareSample().then(finish);
+    });
+  }
   function voice(midi, start, attack = .012, peak = .04 / Math.max(1, voices.size + scheduled.length + 1)) {
-    const oscillator = context.createOscillator();
     const gain = context.createGain();
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(noteFrequency(midi), start);
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(peak, start + attack);
-    oscillator.connect(gain); gain.connect(context.destination);
-    const entry = { oscillator, gain, peak };
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); const index = scheduled.indexOf(entry); if (index !== -1) scheduled.splice(index, 1); };
-    oscillator.start(start);
+    gain.gain.linearRampToValueAtTime(peak, start + Math.min(attack, .004));
+    gain.connect(context.destination);
+    if (midi === 88 && sampleBuffer) {
+      const source = context.createBufferSource();
+      source.buffer = sampleBuffer;
+      source.playbackRate.setValueAtTime(Math.pow(2, 1 / 12), start);
+      source.connect(gain);
+      const entry = { gain, peak, stop(time) { source.stop(time); } };
+      source.onended = () => {
+        source.disconnect(); gain.disconnect();
+        const index = scheduled.indexOf(entry);
+        if (index !== -1) scheduled.splice(index, 1);
+        if (voices.get(midi) === entry) voices.delete(midi);
+      };
+      source.start(start);
+      emit('audio_voice', { midi, timbre: 'sampled_piano', sample: '/audio/piano/Ds6.mp3', source_midi: 87, playback_rate: Math.pow(2, 1 / 12), scheduled_start: start });
+      return entry;
+    }
+    // Authored additive piano-like timbre, not a sampled piano or song recording.
+    // The upper partials lose energy faster after the hammer strike.
+    const parts = [];
+    const entry = { gain, peak, stop(time) { for (const part of parts) part.oscillator.stop(time); } };
+    const decay = 2.8 * Math.pow(2, (60 - midi) / 36);
+    const weights = [.55, .22, .11, .06, .04, .02];
+    let ended = 0;
+    for (const [index, weight] of weights.entries()) {
+      const harmonic = index + 1;
+      const frequency = noteFrequency(midi) * harmonic * Math.sqrt(1 + .00012 * (harmonic * harmonic - 1));
+      if (frequency >= (context.sampleRate || 48000) * .45) continue;
+      const oscillator = context.createOscillator();
+      const partial = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      partial.gain.setValueAtTime(weight, start);
+      partial.gain.exponentialRampToValueAtTime(weight * .001, start + decay / Math.pow(harmonic, .65));
+      oscillator.connect(partial); partial.connect(gain);
+      parts.push({ oscillator, partial });
+      oscillator.onended = () => {
+        oscillator.disconnect(); partial.disconnect();
+        if (++ended === parts.length) {
+          gain.disconnect();
+          const index = scheduled.indexOf(entry);
+          if (index !== -1) scheduled.splice(index, 1);
+          if (voices.get(midi) === entry) voices.delete(midi);
+        }
+      };
+      oscillator.start(start);
+      oscillator.stop(start + decay + .065);
+    }
+    emit('audio_voice', { midi, timbre: 'synthesized', sample: null, source_midi: null, playback_rate: null, scheduled_start: start });
     return entry;
   }
   function releaseVoice(v, time) {
     if (v.gain.gain.cancelAndHoldAtTime) v.gain.gain.cancelAndHoldAtTime(time);
     else { v.gain.gain.cancelScheduledValues(time); v.gain.gain.setValueAtTime(v.peak, time); }
     v.gain.gain.linearRampToValueAtTime(0, time + .06);
-    v.oscillator.stop(time + .065);
+    v.stop(time + .065);
   }
   function recordEvent(type, midi) {
     if (!recording) return;
@@ -205,6 +284,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     const token = generation;
     try {
       await audioReady();
+      if (midi === 88) await waitForSample(150);
       if (disposed || generation !== token || voices.has(midi)) return;
       if (![...held.values()].includes(midi)) {
         // A real quick tap may end while the browser unlocks audio. Sound a short
@@ -230,9 +310,10 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   function stop() {
     playbackClock = null;
     generation++;
+    for (const finish of sampleWaits) finish();
     for (const source of [...held.keys()]) up(source);
     if (recording) { state.duration = autoCapture ? (state.events.at(-1)?.time || 0) : elapsed(); recording = false; publish(); }
-    for (const v of scheduled.splice(0)) { try { v.oscillator.stop(); } catch {} }
+    for (const v of scheduled.splice(0)) { try { v.stop(); } catch {} }
     clearTimeout(replayTimer); clearTimeout(limitTimer); clearInterval(replayVisual);
     replaying = false;
     for (const midi of keyElements.keys()) paintKey(midi, false);
@@ -294,6 +375,8 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     stop(); const token = generation;
     try {
       await audioReady();
+      // Demonstrations prefer the sample; live key input never waits for it.
+      await waitForSample(1500);
       if (disposed || generation !== token) return;
       const start = context.currentTime + .04;
       const notes = performanceNotes(snapshot);
@@ -302,7 +385,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
         const v = voice(note.midi, start + note.start, Math.min(.012, (note.end - note.start) / 2), .04 / overlap);
         v.gain.gain.setValueAtTime(v.peak, start + note.end);
         v.gain.gain.linearRampToValueAtTime(0, start + note.end + .06);
-        v.oscillator.stop(start + note.end + .065); scheduled.push(v);
+        v.stop(start + note.end + .065); scheduled.push(v);
       }
       playbackClock = source === 'notation_exercise' ? Object.freeze({ now: () => context.currentTime, startTime: start }) : null;
       replaying = true; render(); emit('play', { source, state: snapshot });
@@ -328,6 +411,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   function cleanup() {
     if (disposed) return;
     stop(); disposed = true; listeners.forEach(remove => remove()); root.remove();
+    sampleAbort.abort(); clearTimeout(sampleTimeout);
     const index = mountedPianos.indexOf(root); if (index !== -1) mountedPianos.splice(index, 1);
     if (context) void context.close().catch(() => {});
   }

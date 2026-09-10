@@ -4,6 +4,8 @@
 .piano-roll [data-play]{background:#d4e5b5;color:#163322}.piano-roll button:disabled{opacity:.45;cursor:not-allowed}
 .piano-roll [data-tempo]{font-size:11px;padding:0 8px}.piano-roll [data-feedback]{height:54px;margin:0;padding:10px 4px;font:italic 18px/1.4 var(--serif,Georgia,serif)}
 .piano-roll__track{display:block;width:100%;overflow:hidden;background:linear-gradient(0deg,#3e5b3028,transparent);color:#cdddac;pointer-events:none}
+.piano-roll [data-tempo]{display:none}
+.piano-roll button[hidden]{display:none}
 .piano-roll details{position:absolute;top:0;right:0;pointer-events:auto;max-width:280px;background:#0b211deb;border-radius:8px;font-size:11px;padding:8px}
 .piano-roll details p{padding:0 8px}.piano-roll summary{cursor:pointer;min-height:28px}.piano-roll a{color:#ead6a7}.piano-roll :is(button,summary,a):focus-visible{outline:3px solid #f3d698;outline-offset:3px}
 @media(max-width:640px){.piano-roll [data-tempo]{max-width:90px}.piano-roll details{top:-34px;font-size:10px}.piano-roll button{padding:6px 8px}}

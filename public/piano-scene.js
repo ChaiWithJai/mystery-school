@@ -7,6 +7,9 @@ export function mountPianoScene(container,adapter,track,onContinue){
   const scene=document.createElement('section');scene.className='piano-scene';
   scene.innerHTML=`<div class="piano-scene__light" aria-hidden="true"></div><div class="piano-scene__invitation"><span>RUNAWAY</span><p>Listen. Find the first sound.</p><button class="piano-scene__listen" aria-label="Listen to the Runaway reference">▷ Listen</button></div><svg viewBox="0 0 1100 330" class="piano-scene__notes" role="img" aria-label="Your played notes, shown as light"><g data-take-lines></g><g data-held-lights></g></svg><div class="piano-scene__reference" hidden><button data-close-reference aria-label="Close song reference">×</button><div data-player></div><a href="https://www.youtube.com/watch?v=Bm5iA4Zupek" target="_blank" rel="noopener">Open the official video ↗</a></div>`;
   piano.prepend(scene);
+  const title=document.createElement('header');title.className='piano-scene__title';
+  const song=document.createElement('h1');song.textContent='Runaway';
+  const artist=document.createElement('p');artist.textContent='Kanye West';title.append(song,artist);scene.append(title);
   const invitation=scene.querySelector('.piano-scene__invitation');
   const referenceButton=scene.querySelector('.piano-scene__listen');
   const feedback=invitation.querySelector('p');
@@ -16,10 +19,11 @@ export function mountPianoScene(container,adapter,track,onContinue){
   invitation.append(demonstration);
   const tempo=document.createElement('small');tempo.setAttribute('role','status');tempo.setAttribute('aria-live','polite');invitation.append(tempo);
   const sourceDetails=document.createElement('details');sourceDetails.className='piano-scene__source';
-  sourceDetails.innerHTML='<summary>Song & exercise source</summary><p>Two strikes from the published arrangement, played with synthesized tones. Not the original recording or a full-song lesson.</p>';
+  sourceDetails.innerHTML='<summary>Song & exercise source</summary><p>Two strikes from the published arrangement. The opening uses a locally bundled piano sample when ready, with synthesis as fallback. Not the original recording or a full-song lesson.</p>';
   sourceDetails.append(referenceButton);
   const sourceLink=document.createElement('a');sourceLink.href=RUNAWAY_OPENING_SOURCE.url;sourceLink.target='_blank';sourceLink.rel='noopener';sourceLink.textContent='Inspect the published opening';sourceDetails.append(sourceLink);
   const keyboardReference=document.createElement('a');keyboardReference.href='https://virtualpiano.net/music-sheet/runaway-kanye-west-2/';keyboardReference.target='_blank';keyboardReference.rel='noopener noreferrer';keyboardReference.textContent='Open the Virtual Piano arrangement';sourceDetails.append(keyboardReference);
+  const pianoCredit=document.createElement('a');pianoCredit.href='/audio/piano/ATTRIBUTION.md';pianoCredit.target='_blank';pianoCredit.rel='noopener noreferrer';pianoCredit.textContent='Piano sample: Alexander Holm / CC BY 3.0';sourceDetails.append(pianoCredit);
   piano.querySelector('.piano-practice__options').append(sourceDetails);
   const targetKey=piano.querySelector('[aria-label="E6, hold to play"]');targetKey?.classList.add('is-lesson-target');
   const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Into the ring →';next.hidden=true;piano.append(next);

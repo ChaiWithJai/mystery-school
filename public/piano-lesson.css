@@ -2,3 +2,7 @@
 .piano-scene__source p{font:14px/1.5 "Avenir Next",sans-serif;max-width:34ch}
 .piano-scene__source a{display:block;margin:12px 0;font-size:13px}
 .piano-scene__invitation p{max-width:38ch}
+.piano-scene__title{position:fixed;top:7vh;left:6.6vw;pointer-events:none;z-index:20}
+.piano-scene__title h1{margin:0;font:400 clamp(40px,4.5vw,72px)/1.08 Georgia,serif;letter-spacing:-.04em;color:#eee6cb}
+.piano-scene__title p{margin:10px 0 0;font:12px/1.4 var(--sans);letter-spacing:.16em;color:#b6bea6}
+.learning-drawer:has(.piano-practice) .universe-worlds{display:none}

@@ -92,3 +92,17 @@ test('missing rendered target disables guidance rather than inventing a lane',as
   await h.api.start('practice');assert.equal(h.api.getState().mode,'idle');
   assert.match(h.root.querySelector('[data-feedback]').textContent,/visible space/);h.api();
 });
+
+test('compact desktop lane clears the song title and idle Stop stays hidden',async()=>{
+  const h=harness();
+  h.container.querySelector('.piano-scene__title').rect={bottom:180};
+  h.keyboard.rect.top=420;
+  h.api.layout();
+  assert.equal(h.root.style.top,'204px');
+  assert.equal(h.root.querySelector('[data-stop]').hidden,true);
+  await h.api.start('practice');
+  assert.equal(h.root.querySelector('[data-stop]').hidden,false);
+  h.api.stop();
+  assert.equal(h.root.querySelector('[data-stop]').hidden,true);
+  h.api();
+});
