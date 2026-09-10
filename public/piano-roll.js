@@ -41,6 +41,8 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   root.innerHTML = `<div class="piano-roll__controls"><button type="button" data-hear>Hear</button><button type="button" data-play>Play</button><button type="button" data-stop>Stop</button><span data-tempo></span></div><p role="status" aria-live="polite" data-feedback>Play E6 when the bar reaches the keys.</p><svg class="piano-roll__track" role="img" aria-label="Two E6 notes fall toward the actual E6 key"><g data-lanes></g><g data-notes></g><line data-hit stroke="currentColor" stroke-width="2"/></svg><details><summary>Source & timing</summary><a target="_blank" rel="noopener noreferrer" data-source>Published two-strike opening</a><p>Synthesized exercise, not the original recording or a full-song score. Timing feedback uses a practice window of 0.2 seconds, not a mastery grade.</p><p data-clock></p></details>`;
   container.append(root);
   const q = selector => root.querySelector(selector);
+  q('[data-stop]').hidden=true;
+  q('details p').textContent='Piano exercise, not the original recording or a full-song score. Timing feedback uses a 0.2-second practice window, not a mastery grade.';
   q('[data-feedback]').textContent = 'Press L or tap the glowing key.';
   q('[data-source]').href = RUNAWAY_OPENING_SOURCE.url;
   const svg = q('svg');
@@ -96,6 +98,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   function stop(reason = 'requested') {
     token++; win.cancelAnimationFrame(frame); frame = null;
     const wasRunning = mode !== 'idle'; mode = 'idle'; started = false; held.clear();
+    q('[data-stop]').hidden=true;
     // Use the existing instrument's stop control, never setState or clear a take.
     if (wasRunning) container.querySelector('[data-stop]:not(.piano-roll [data-stop])')?.click();
     layout(); draw();
@@ -118,6 +121,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
     if (!['practice','hear'].includes(nextMode)) throw new TypeError('Choose practice or hear.');
     stop('replaced'); layout(); if (q('[data-play]').disabled) return;
     mode = nextMode; strikes = []; const id = token;
+    q('[data-stop]').hidden=false;
     now = () => win.performance.now()/1000; clockKind = 'performance_clock';
     try {
       if (mode === 'hear') {
