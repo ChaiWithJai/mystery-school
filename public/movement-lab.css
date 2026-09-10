@@ -1,0 +1,45 @@
+.movement-lab {
+  --move-paper: #f3f1e7;
+  --move-ink: #173c33;
+  --move-line: #cad1bd;
+  color: var(--move-ink);
+  background: var(--move-paper);
+  font: 13px/1.65 var(--sans, "Avenir Next", "Trebuchet MS", sans-serif);
+  max-width: 760px;
+  min-width: 0;
+}
+.movement-lab *, .movement-lab *::before, .movement-lab *::after { box-sizing: border-box; }
+.movement-lab .movement-lab__eyebrow { font-size: 10px; letter-spacing: 1px; color: #526154; text-transform: uppercase; }
+.movement-lab .movement-lab__title { font: 400 30px/1.15 var(--serif, Georgia, serif); margin: 8px 0 12px; }
+.movement-lab .movement-lab__intro { font-size: 13px; color: #425447; }
+.movement-lab__diagram, .movement-lab__graph { display: block; width: 100%; height: auto; border: 1px solid var(--move-line); border-radius: 5px; background: radial-gradient(ellipse at 50% 30%, #e5eada, #faf8ef 85%); }
+.movement-lab__graph { margin-top: 18px; }
+.movement-lab__track { stroke: #abb99b; stroke-width: 7; stroke-linecap: round; }
+.movement-lab__tick, .movement-lab__axis { stroke: #53644c; stroke-width: 1.5; fill: none; }
+.movement-lab__hand circle { fill: #294e3d; stroke: #e5d4a6; stroke-width: 3; }
+.movement-lab__hand-line { fill: none; stroke: #fff8dd; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.movement-lab__label { fill: #364c3d; font: 12px "Avenir Next", "Trebuchet MS", sans-serif; }
+.movement-lab__grid { stroke: #d9dfce; stroke-width: 1; }
+.movement-lab__curve { stroke: #315e47; stroke-width: 3; fill: none; }
+.movement-lab__cursor { stroke: #8d702e; stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; }
+.movement-lab__dot { fill: #876820; stroke: #fffbed; stroke-width: 2; }
+.movement-lab .movement-lab__control-label { display: block; font-size: 12px; font-weight: 600; margin: 17px 0 6px; }
+.movement-lab input[type=range] { display: block; width: 100%; min-height: 30px; accent-color: #315e47; cursor: pointer; }
+.movement-lab__shapes { border: 0; padding: 0; margin: 15px 0; min-width: 0; }
+.movement-lab__shapes legend { font-size: 12px; font-weight: 600; padding: 0; }
+.movement-lab .movement-lab__shapes label { display: flex; align-items: center; gap: 9px; min-height: 44px; font-size: 12px; font-weight: 400; margin: 0; cursor: pointer; }
+.movement-lab input[type=radio] { accent-color: #315e47; flex: 0 0 auto; }
+.movement-lab__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; }
+.movement-lab__actions button { padding: 9px 18px; min-height: 44px; border: 1px solid #6f8064; border-radius: 3px; color: #244431; background: #f9f5e6; font: inherit; cursor: pointer; }
+.movement-lab__actions button:first-child { background: #244d3a; color: #fff8e5; }
+.movement-lab__actions button:disabled { opacity: .45; cursor: default; }
+.movement-lab :is(button, input, summary):focus-visible { outline: 3px solid #9b7b30; outline-offset: 3px; }
+.movement-lab .movement-lab__reading { font-variant-numeric: tabular-nums; font-size: 12px; line-height: 1.8; }
+.movement-lab .movement-lab__status { min-height: 1.7em; font-size: 12px; color: #3d583f; }
+.movement-lab .movement-lab__note, .movement-lab .movement-lab__scope { font-size: 11px; color: #53604e; }
+.movement-lab details { border-top: 1px solid var(--move-line); padding: 12px 0; margin-top: 12px; }
+.movement-lab summary { cursor: pointer; font-size: 12px; min-height: 28px; }
+.movement-lab details p { font-size: 12px; }
+.movement-lab__formula { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+@media (max-width: 400px) { .movement-lab .movement-lab__title { font-size: 25px; } .movement-lab__actions button { flex: 1; padding-inline: 10px; } }
+@media (prefers-reduced-motion: reduce) { .movement-lab *, .movement-lab *::before, .movement-lab *::after { animation: none !important; transition: none !important; } }

@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": {"check": "node --check public/app.js && node --check public/world.js && node --check public/review.js"},
+  "scripts": {"check": "node --check public/app.js && node --check public/world.js && node --check public/review.js && node --check public/learning-paths.js && node --check public/music-lab.js && node --check public/movement-lab.js && node --check public/ideas-lab.js", "test": "node --test tests/*.test.mjs"},
   "dependencies": {"three": "0.180.0"}
 }

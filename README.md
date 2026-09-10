@@ -14,6 +14,32 @@ The product stance is simple: authored demo scenes and live model projections mu
 
 See [CONTRACT.md](./CONTRACT.md) for the implementation contract.
 
+## Three learning pathways
+
+[Issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2) defines delivery.
+All three pathways are required. The forest and gear experiment do not replace
+them. Open "Meet the learners" from the header to move between pathways.
+
+| Person | Working interaction | Route |
+| --- | --- | --- |
+| Maya | Change a synthesized phrase's attack, compare its envelope, and revise the sound for her grandmother. | `/?path=music` |
+| Andre | Compare a non-contact movement at different durations and inspect position, velocity and acceleration. | `/?path=movement` |
+| Leena | Interpret an inspected Epictetus passage, attach a lecture timestamp, compare an authored alternative, and revise a sourced account. | `/?path=ideas` |
+
+Each pathway saves versions, presents a labeled staged response, and keeps a
+next question. Saved versions reopen through `?path=PATH&artifact=ID` and link
+to Trajectory Studio. Browser drafts persist locally; saved versions use the
+local API and have immutable parent links and MLflow trace IDs.
+
+The characters are fictional composites. Their dialogue and peer responses are
+authored, not live conversations. The experiments use deterministic code, not
+an ambient AI tutor. Music is synthesized sound, not a physical piano model.
+Movement is a mathematical comparison, not measured athlete data or impact
+advice. Participant learning has not been evaluated.
+
+See [pathway verification](docs/pathway-verification.md) for the recorded tests,
+remaining gaps, and the contribution from the other machine.
+
 ## Desktop Prototype
 
 The first implementation includes a Blender-authored forest, six explorable
@@ -73,9 +99,11 @@ not prove authentication or model access.
 
 ```sh
 npm run check
+npm test
 .venv/bin/python -m unittest discover -s tests -v
 node scripts/verify_demo.mjs
 node scripts/verify_capture.mjs
+node scripts/verify_pathways.mjs
 ```
 
 The Node verification scripts inspect existing local jobs; they do not call a

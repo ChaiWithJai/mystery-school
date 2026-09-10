@@ -5,12 +5,17 @@
   <meta name="theme-color" content="#edece2"><title>Astral School · Imagine with Bonsai</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/refinements.css">
+  <link rel="stylesheet" href="/gear-lab.css">
+  <link rel="stylesheet" href="/learning-paths.css">
+  <link rel="stylesheet" href="/music-lab.css">
+  <link rel="stylesheet" href="/movement-lab.css">
+  <link rel="stylesheet" href="/ideas-lab.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/webgpu":"/vendor/three/three.webgpu.js"}}</script>
 </head>
 <body>
   <header class="masthead">
     <a href="/" class="brand" aria-label="Astral School home"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 34V15M20 23C5 23 6 9 8 7c11 0 12 10 12 16ZM20 19C20 8 28 4 32 5c2 11-4 14-12 14ZM10 35h20"/></svg><span>IMAGINE WITH BONSAI<span class="brand-sub">A school on your computer.</span></span></a>
-    <nav aria-label="Utilities"><button id="reference-open" class="nav-button">Bring a reference <span>↗</span></button><a href="/review.html" target="_blank" rel="noopener">Trajectory studio <span>↗</span></a><button id="journal-open" class="profile"><span class="avatar">J</span><span>Jai's notebook</span></button></nav>
+    <nav aria-label="Utilities"><button id="learners-open" class="nav-button">Meet the learners</button><button id="reference-open" class="nav-button">Bring a reference <span>↗</span></button><a href="/review.html" target="_blank" rel="noopener">Trajectory studio <span>↗</span></a><button id="journal-open" class="profile"><span class="avatar">J</span><span>Jai's notebook</span></button></nav>
   </header>
   <main id="school">
     <div id="world" role="img" aria-label="An interactive grove of six floating forest islands, each representing part of Jai's school"></div>
@@ -20,10 +25,13 @@
       <div class="eyebrow"><span class="small-star">✳</span> THE FIRST DAY OF A DIFFERENT SCHOOL</div>
       <h1>What comes<br><em>next for us?</em></h1>
       <p class="intro">My name is Jai. I want to run a whole school on my computer.</p>
+      <button id="pathways-open" class="primary">Meet Maya, Andre and Leena <span>↗</span></button>
+      <details class="starting-points"><summary>Or begin with my own question</summary>
       <label class="desire-label" for="learner-desire">What do you want to make, understand, or try?</label>
       <input id="learner-desire" class="desire-input" placeholder="A few words are enough. Any language." autocomplete="off">
       <details class="starting-points"><summary>Try a starting point</summary><div><button data-desire="I want to understand the gears on my bike. Can we start with the bike?">My bike's gears</button><button data-desire="Quiero hacer una cometa con mi prima. ¿Por dónde empezamos?">Una cometa</button><button data-desire="I want to understand my basketball bounce. Let me try something first.">A basketball bounce</button></div></details>
-      <button id="enter" class="primary">Enter the school <span>↗</span></button>
+      <button id="enter" class="text-button light">Or follow my own question <span>↗</span></button>
+      </details>
       <div class="welcome-foot"><span class="dot"></span> An explorable sketch of a possible future.</div>
     </section>
     <div id="world-labels" class="world-labels" aria-label="Explore the school"></div>
@@ -32,7 +40,7 @@
       <h2 id="lesson-title"></h2><div id="lesson-story" class="lesson-story"></div>
       <div class="question-card"><span class="eyebrow">A QUESTION TO CARRY</span><p id="lesson-question"></p></div>
       <div id="choices" class="choices"></div><p id="consequence" class="consequence hidden"></p>
-      <div class="lesson-actions"><button id="imagine-open" class="primary">Imagine another way <span>✳</span></button><button id="reflect-open" class="text-button">Keep a thought <span>+</span></button></div>
+      <div class="lesson-actions"><button id="gear-open" class="primary" hidden>Try the gears <span>↗</span></button><button id="imagine-open" class="primary">Imagine another way <span>✳</span></button><button id="reflect-open" class="text-button">Keep a thought <span>+</span></button></div>
       <button id="evidence-open" class="source-link">What is this based on? <span>↗</span></button>
     </aside>
     <div id="scene-caption" class="scene-caption"><span class="caption-rule"></span><span>Six small worlds. One growing school.</span></div>

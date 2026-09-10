@@ -7,6 +7,12 @@ APP_CAPTURE_SCOPE = (
     "One accepted app event or saved reflection and its submitted payload, server timestamp, "
     "and persistence outcome. This is not a model call or continuous browser recording."
 )
+ARTIFACT_CAPTURE_SCOPE = (
+    "One submitted learning artifact version: pathway, goal, state, note, source links, "
+    "stage and declared actor kind, with an optional parent version. Actor kind is "
+    "explicitly supplied, not inferred or verified identity. Scripted character actions, "
+    "staged peer responses and agent reviews are not human learning evidence. No model call."
+)
 PROJECTION_CAPTURE_SCOPE = (
     "One Codex CLI subprocess: submitted project data, exact UTF-8 stdin prompt, CLI argv, "
     "and reference manifest with filenames, SHA256 and MIME. Environment and credentials "
@@ -40,7 +46,12 @@ class Tracing:
 
     def start(self, name, inputs, start_time_ns=None):
         scope = PROJECTION_CAPTURE_SCOPE if name == "astra.projection" else APP_CAPTURE_SCOPE
+        if name == "learning.artifact":
+            scope = ARTIFACT_CAPTURE_SCOPE
         attributes = {"astral.capture_scope": scope, "astral.cost_source": "unreported; no pricing estimate"}
+        if name == "learning.artifact":
+            attributes.update({"astral.actor_kind": inputs["actor_kind"], "astral.pathway": inputs["pathway"],
+                               "astral.stage": inputs["stage"]})
         if self.build_id:
             attributes["astral.build_id"] = self.build_id
         span = self.client.start_trace(name=name, inputs=inputs, attributes=attributes,
@@ -66,10 +77,15 @@ class Tracing:
         self.client.end_trace(trace_id, outputs=outputs, attributes=attributes, status="ERROR" if error else "OK")
 
     def feedback(self, trace_id, annotation):
+        actor_kind = annotation.get("actor_kind", "unspecified")
+        producer = annotation.get("producer", "unspecified")
+        source_type = {"human": AssessmentSourceType.HUMAN, "agent_review": AssessmentSourceType.CODE}.get(
+            actor_kind, AssessmentSourceType.SOURCE_TYPE_UNSPECIFIED)
         assessment = mlflow.log_feedback(
             trace_id=trace_id, name="review_note", value=annotation["note"],
-            source=AssessmentSource(source_type=AssessmentSourceType.HUMAN, source_id="local-reviewer"),
+            source=AssessmentSource(source_type=source_type, source_id=producer),
             rationale=annotation.get("quote", ""),
-            metadata={"annotation_id": annotation["id"], "message_id": annotation.get("message_id", "")},
+            metadata={"annotation_id": annotation["id"], "message_id": annotation.get("message_id", ""),
+                      "actor_kind": actor_kind, "producer": producer},
         )
         return assessment.assessment_id

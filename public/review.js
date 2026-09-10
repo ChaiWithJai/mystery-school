@@ -183,6 +183,14 @@
   function textContent(message) { return typeof message.content === 'string' ? message.content : message.content == null ? '' : JSON.stringify(message.content, null, 2); }
   function messages(sample) { return Array.isArray(sample?.messages) ? sample.messages : []; }
   function noteCount(sampleId) { return state.annotations.filter(note => note.sample_id === sampleId).length; }
+  function actorKind(note) { return ['human', 'agent_review', 'unspecified'].includes(note.actor_kind) ? note.actor_kind : 'unspecified'; }
+  function provenanceBadges(note) {
+    const group = el('div', 'note-provenance');
+    const label = { human: 'Human (declared)', agent_review: 'Agent review', unspecified: 'Unspecified' }[actorKind(note)];
+    group.append(el('span', 'note-tag', `${label}${note.actor_kind == null ? ' / historical provenance absent' : ''}`),
+      el('span', 'note-tag', `Producer: ${note.producer || 'unspecified'}`));
+    return group;
+  }
   function pending() { return state.suggestions.filter(item => item.status === 'pending'); }
   function modelJob(sample) { return Array.isArray(state.app.jobs) && state.app.jobs.some(job => job.id === sample.id); }
   function orderedSamples() {
@@ -420,11 +428,11 @@
 
   function renderMarginNote(item, anchor) {
     const box = el('section', `margin-note${item.kind === 'suggestion' ? ' suggestion' : ''}`); box.dataset.noteId = item.id; box.tabIndex = -1;
-    box.append(el('span', 'note-tag', item.kind === 'suggestion' ? 'Agent suggestion / unconfirmed' : 'Your field note'));
+    box.append(el('span', 'note-tag', item.kind === 'suggestion' ? 'Suggestion / unconfirmed' : 'Saved field note'), provenanceBadges(item));
     if (item.quote) box.append(el('blockquote', '', item.quote));
     if (!anchor) box.append(el('span', 'anchor-warning', 'Exact passage could not be located. The original quote is preserved.'));
     const note = el('p', '', item.note || 'No note text provided.'); box.append(note);
-    const actions = el('div', `note-actions${item.kind === 'annotation' ? ' human' : ''}`);
+    const actions = el('div', `note-actions${item.kind === 'annotation' && actorKind(item) === 'human' ? ' human' : ''}`);
     if (item.kind === 'suggestion') actions.append(button('Accept', () => decideSuggestions([item.id], 'accepted')), button('Dismiss', () => decideSuggestions([item.id], 'dismissed')));
     else {
       actions.append(button('Edit', () => {
@@ -494,7 +502,7 @@
     const start = preceding.toString().length;
     const quote = range.toString();
     const rect = range.getBoundingClientRect();
-    state.draft = { id: id(), sample_id: state.active, message_id: startBody.dataset.messageId, quote, start, end: start + quote.length, note: '', created_at: new Date().toISOString() };
+    state.draft = { id: id(), sample_id: state.active, message_id: startBody.dataset.messageId, quote, start, end: start + quote.length, note: '', actor_kind: 'unspecified', producer: 'unspecified', created_at: new Date().toISOString() };
     persist(); showEditor(rect);
     track('passage_selected', { sample_id: state.active, message_id: state.draft.message_id, start, end: start + quote.length });
   }
@@ -503,6 +511,8 @@
     const dialog = $('#note-editor');
     $('#selected-quote').textContent = state.draft.quote;
     $('#note-text').value = state.draft.note;
+    $('#note-actor').value = actorKind(state.draft);
+    $('#note-producer').value = state.draft.producer || 'unspecified';
     // Repaint the selected range before moving focus so its anchor remains visible.
     renderReader(true);
     dialog.show();
@@ -524,7 +534,8 @@
   function saveDraft(event) {
     event.preventDefault();
     if (!state.draft || !$('#note-text').value.trim()) return;
-    const annotation = { ...state.draft, note: $('#note-text').value.trim() };
+    const annotation = { ...state.draft, note: $('#note-text').value.trim(), actor_kind: $('#note-actor').value,
+      producer: $('#note-producer').value.trim() || 'unspecified' };
     state.annotations.push(annotation); state.draft = null; $('#note-editor').close();
     enqueue({ type: 'annotation', annotation }); render(); track('annotation_added', { sample_id: annotation.sample_id, annotation_id: annotation.id, message_id: annotation.message_id });
   }
@@ -537,7 +548,8 @@
       if (status === 'accepted') {
         const sample = state.samples.find(item => item.id === suggestion.sample_id);
         const anchor = resolveAnchor(sample, suggestion);
-        const annotation = { id: `accepted-${suggestion.id}`, sample_id: suggestion.sample_id, quote: suggestion.quote || '', note: suggestion.note || '', created_at: new Date().toISOString() };
+        const annotation = { id: `accepted-${suggestion.id}`, sample_id: suggestion.sample_id, quote: suggestion.quote || '', note: suggestion.note || '',
+          actor_kind: actorKind(suggestion), producer: suggestion.producer || 'unspecified', created_at: new Date().toISOString() };
         if (anchor) Object.assign(annotation, { message_id: messages(sample)[anchor.index].id, start: anchor.start, end: anchor.end });
         else if (suggestion.message_id) annotation.message_id = suggestion.message_id;
         if (!state.annotations.some(item => item.id === annotation.id)) { state.annotations.push(annotation); enqueue({ type: 'annotation', annotation }); }
@@ -573,19 +585,19 @@
     }
     for (const node of nodes) {
       const available = node.sampled !== false && state.samples.some(sample => sample.id === node.id);
-      const group = svg('g', { transform: `translate(${x(node)},${y(node)})`, class: `map-node${available ? '' : ' unavailable'}`, tabindex: 0, role: available ? 'button' : 'img', 'aria-label': `${node.title || node.id}. ${node.model || 'Model unavailable'}. ${noteCount(node.id)} human notes.${available ? ' Open trajectory.' : ' Not in the review set.'}` });
+      const group = svg('g', { transform: `translate(${x(node)},${y(node)})`, class: `map-node${available ? '' : ' unavailable'}`, tabindex: 0, role: available ? 'button' : 'img', 'aria-label': `${node.title || node.id}. ${node.model || 'Model unavailable'}. ${noteCount(node.id)} saved notes.${available ? ' Open trajectory.' : ' Not in the review set.'}` });
       const radius = available ? 9 : 5;
       const color = palette[clusters.indexOf(node.cluster) % palette.length];
       if (noteCount(node.id) || node.annotated) group.append(svg('circle', { r: radius + 5, fill: 'none', stroke: '#a98232', 'stroke-width': 2 }));
       const attributes = { class: 'node-core', fill: color, stroke: available ? '#254735' : color, 'stroke-width': available ? 2 : 1 };
       if (/app|event|human/i.test(node.model || '')) group.append(svg('rect', { ...attributes, x: -radius, y: -radius, width: radius * 2, height: radius * 2, rx: 2 }));
       else group.append(svg('circle', { ...attributes, r: radius }));
-      const title = svg('title'); title.textContent = `${node.title || node.id}\n${node.model || 'No model'} / ${node.status || 'Status unavailable'}\n${noteCount(node.id)} human notes${available ? '' : '\nNot in the current review set'}`; group.append(title);
+      const title = svg('title'); title.textContent = `${node.title || node.id}\n${node.model || 'No model'} / ${node.status || 'Status unavailable'}\n${noteCount(node.id)} saved notes${available ? '' : '\nNot in the current review set'}`; group.append(title);
       if (available) { group.addEventListener('click', () => openSample(node.id)); group.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSample(node.id); } }); }
       plot.append(group);
     }
     container.append(plot);
-    $('#map-legend').append(el('span', 'legend-entry', 'Circle: model / other trajectory'), el('span', 'legend-entry', 'Square: app events / human'));
+    $('#map-legend').append(el('span', 'legend-entry', 'Circle: model / other trajectory'), el('span', 'legend-entry', 'Square: app/event records (not actor attribution)'));
   }
 
   function convexHull(points) {
@@ -601,7 +613,7 @@
   function renderProgress() {
     $('#progress-counts').replaceChildren();
     const annotatedSamples = new Set(state.annotations.map(note => note.sample_id));
-    for (const [value, label] of [[annotatedSamples.size, 'trajectories with notes'], [state.annotations.length, 'human notes'], [pending().length, 'pending suggestions']]) { const stat = el('div', 'progress-stat'); stat.append(el('strong', '', value), el('span', '', label)); $('#progress-counts').append(stat); }
+    for (const [value, label] of [[annotatedSamples.size, 'trajectories with notes'], [state.annotations.length, 'saved notes'], [pending().length, 'pending suggestions']]) { const stat = el('div', 'progress-stat'); stat.append(el('strong', '', value), el('span', '', label)); $('#progress-counts').append(stat); }
     const used = new Set();
     const groups = state.patterns.map(pattern => {
       const notes = state.annotations.filter(note => pattern.annotation_ids?.includes(note.id) || state.suggestions.some(suggestion => suggestion.pattern_id === pattern.id && suggestion.status === 'accepted' && note.id === `accepted-${suggestion.id}`));
@@ -618,7 +630,7 @@
         const block = el('section', 'mode-block'); Object.assign(block.style, { left: `${x}%`, top: `${y}%`, width: `${width}%`, height: `${height}%` });
         const title = el('h3', '', group.label); title.append(el('span', 'mode-count', `${group.notes.length} saved note${group.notes.length === 1 ? '' : 's'}`)); block.append(title);
         const list = el('ul');
-        for (const note of group.notes) { const li = el('li'); li.append(button(note.note || '(Empty note)', () => openSample(note.sample_id, note.id), '')); list.append(li); }
+        for (const note of group.notes) { const li = el('li'); li.append(button(note.note || '(Empty note)', () => openSample(note.sample_id, note.id), ''), provenanceBadges(note)); list.append(li); }
         block.append(list); modes.append(block);
       }
     }
@@ -667,6 +679,8 @@
   $('#messages').addEventListener('touchend', () => setTimeout(captureSelection, 100));
   $('#note-form').addEventListener('submit', saveDraft);
   $('#note-text').addEventListener('input', () => { if (state.draft) { state.draft.note = $('#note-text').value; persist(); } });
+  $('#note-actor').addEventListener('change', () => { if (state.draft) { state.draft.actor_kind = $('#note-actor').value; persist(); } });
+  $('#note-producer').addEventListener('input', () => { if (state.draft) { state.draft.producer = $('#note-producer').value; persist(); } });
   $('#note-text').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); saveDraft(event); } });
   $('#close-editor').addEventListener('click', () => closeEditor());
   $('#note-editor').addEventListener('cancel', event => { event.preventDefault(); closeEditor(); });

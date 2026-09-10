@@ -1,0 +1,66 @@
+.gear-lab {
+  --gear-paper: var(--paper, #f3f1e7);
+  --gear-ink: var(--ink, #173c33);
+  --gear-line: var(--line, #d6d9cc);
+  --gear-muted: #526154;
+  --gear-gold: #9b7c38;
+  color: var(--gear-ink);
+  background: var(--gear-paper);
+  font: 13px/1.6 var(--sans, "Avenir Next", "Trebuchet MS", sans-serif);
+  max-width: 760px;
+  min-width: 0;
+}
+.gear-lab *, .gear-lab *::before, .gear-lab *::after { box-sizing: border-box; }
+.gear-lab .gear-lab__eyebrow { margin: 0 0 8px; font-size: 9px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--gear-muted); }
+.gear-lab .gear-lab__title { margin: 0 0 14px; font: 400 clamp(25px, 3vw, 35px)/1.08 var(--serif, Georgia, serif); letter-spacing: -.6px; }
+.gear-lab .gear-lab__intro { margin: 0 0 17px; color: var(--gear-muted); font-size: 12px; line-height: 1.7; }
+.gear-lab__diagram { display: block; width: 100%; height: auto; border: 1px solid var(--gear-line); border-radius: 5px; background: radial-gradient(ellipse at 50% 45%, #e4e9d9 0%, #faf8ed 78%); }
+.gear-lab__svg-role { fill: #173c33; font: 600 11px "Avenir Next", "Trebuchet MS", sans-serif; letter-spacing: .8px; }
+.gear-lab__svg-label { fill: #526154; font: 12px "Avenir Next", "Trebuchet MS", sans-serif; }
+.gear-lab__svg-count { fill: #173c33; font: 19px Georgia, serif; }
+.gear-lab__sprocket { stroke: #173c33; stroke-width: 1.5; }
+.gear-lab__sprocket--driver { fill: #bfcdb0; }
+.gear-lab__sprocket--follower { fill: #ddd4b7; }
+.gear-lab__inner { fill: #f3f1e7; stroke: #84947a; stroke-width: 1; }
+.gear-lab__spoke { fill: none; stroke: #809176; stroke-width: 3; }
+.gear-lab__marker { fill: #173c33; stroke: #fffaf0; stroke-width: 2; }
+.gear-lab__hub, .gear-lab__pedal-shape { fill: #173c33; }
+.gear-lab__crank { fill: none; stroke: #173c33; stroke-width: 5; stroke-linecap: round; }
+.gear-lab__chain-track { stroke: #4c5948; stroke-width: 7; }
+.gear-lab__chain-links { stroke: #ede5cb; stroke-width: 3; stroke-linecap: round; }
+.gear-lab__direction { fill: #526154; font: 10px "Avenir Next", "Trebuchet MS", sans-serif; }
+.gear-lab__direction path { stroke: #526154; stroke-width: 1.5; }
+.gear-lab .gear-lab__direction-note { margin: 9px 0 22px; font-size: 11px; color: var(--gear-muted); line-height: 1.65; }
+.gear-lab__choices { padding: 0; margin: 0 0 20px; border: 0; min-width: 0; }
+.gear-lab__choices legend { padding: 0; margin: 0 0 9px; font-size: 11px; font-weight: 600; }
+.gear-lab__options { display: flex; gap: 7px; }
+.gear-lab .gear-lab__option { display: flex; flex: 1; align-items: center; justify-content: center; gap: 7px; margin: 0; padding: 10px 7px; border: 1px solid var(--gear-line); border-radius: 4px; font-size: 11px; cursor: pointer; min-height: 44px; }
+.gear-lab__option:has(input:checked) { border-color: #748a60; background: #e4e9d9; }
+.gear-lab__option input { margin: 0; accent-color: #244f3d; width: 15px; height: 15px; }
+.gear-lab__slider-label { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.gear-lab__slider-label label { margin: 0; font-size: 11px; font-weight: 600; }
+.gear-lab__slider-output { font: 21px var(--serif, Georgia, serif); }
+.gear-lab .gear-lab__slider { display: block; width: 100%; margin: 7px 0 0; min-height: 32px; padding: 0; accent-color: #244f3d; cursor: pointer; }
+.gear-lab .gear-lab__hint { margin: 4px 0 12px; font-size: 10px; color: var(--gear-muted); line-height: 1.65; }
+.gear-lab__actions { display: flex; gap: 9px; margin: 15px 0 9px; flex-wrap: wrap; }
+.gear-lab__actions button { font: 600 11px var(--sans, "Avenir Next", "Trebuchet MS", sans-serif); border: 1px solid var(--gear-ink); border-radius: 4px; padding: 12px 15px; min-height: 44px; cursor: pointer; }
+.gear-lab__pedal { color: #fff9e8; background: #244f3d; flex: 1; }
+.gear-lab__pedal:hover:not(:disabled) { background: #173c33; }
+.gear-lab__reset { color: var(--gear-ink); background: transparent; }
+.gear-lab__reset:hover:not(:disabled) { background: #e4e9d9; }
+.gear-lab button:disabled { opacity: .5; cursor: not-allowed; }
+.gear-lab :is(button, input, summary):focus-visible { outline: 3px solid var(--gear-gold); outline-offset: 4px; }
+.gear-lab__observation { margin: 22px 0 18px; border-left: 2px solid #7d9466; background: #e5eadb; padding: 14px 16px; }
+.gear-lab .gear-lab__observation-text { margin: 0; font-size: 13px; color: var(--gear-ink); line-height: 1.75; }
+.gear-lab .gear-lab__explanation { border-top: 1px solid var(--gear-line); padding-top: 14px; margin: 16px 0; font-size: 12px; }
+.gear-lab__explanation summary { cursor: pointer; font-size: 12px; min-height: 32px; }
+.gear-lab__explanation p { color: var(--gear-muted); font-size: 12px; line-height: 1.75; }
+.gear-lab .gear-lab__equation { color: var(--gear-ink); background: #fffaf0; padding: 10px 12px; border: 1px solid var(--gear-line); border-radius: 3px; }
+.gear-lab .gear-lab__scope { margin: 18px 0 0; font-size: 10px; color: var(--gear-muted); line-height: 1.75; }
+@media (max-width: 420px) {
+  .gear-lab .gear-lab__option { padding-inline: 5px; gap: 5px; }
+  .gear-lab__options { gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gear-lab *, .gear-lab *::before, .gear-lab *::after { animation: none !important; transition: none !important; }
+}

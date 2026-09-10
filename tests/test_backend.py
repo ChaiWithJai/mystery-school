@@ -86,6 +86,34 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(self.request("/api/graph")[0], 200)
         self.assertEqual(self.request("/api/annotations", {"delete_id": annotation["id"]})[1], [])
 
+    def test_annotation_actor_provenance(self):
+        _, event = self.request("/api/events", {"session_id": "actor-test", "type": "test.provenance", "payload": {}})
+        for declared, expected in (({"actor_kind": "agent_review", "producer": "backend-test-agent"}, "CODE"),
+                                   ({"actor_kind": "human", "producer": "test-human-declaration"}, "HUMAN"),
+                                   ({}, "SOURCE_TYPE_UNSPECIFIED")):
+            note = {"sample_id": event["id"], "quote": "", "note": "Test provenance routing", **declared}
+            status, annotations = self.request("/api/annotations", {"annotation": note})
+            self.assertEqual(status, 200)
+            annotation = annotations[-1]
+            self.assertEqual(annotation["actor_kind"], declared.get("actor_kind", "unspecified"))
+            self.assertEqual(annotation["producer"], declared.get("producer", "unspecified"))
+            self.assertNotIn("feedback_error", annotation)
+            trace = self.app.tracing.client.get_trace(event["trace_id"])
+            assessment = next(a for a in trace.info.assessments if a.assessment_id == annotation["assessment_id"])
+            self.assertEqual(str(assessment.source.source_type), expected)
+            self.assertEqual(assessment.source.source_id, annotation["producer"])
+            self.assertEqual(assessment.metadata["actor_kind"], annotation["actor_kind"])
+            # An older client editing note text cannot erase already-declared provenance.
+            _, edited = self.request("/api/annotations", {"annotation": {"id": annotation["id"], "sample_id": event["id"], "note": "Edited text"}})
+            self.assertEqual(edited[-1]["actor_kind"], annotation["actor_kind"])
+            self.assertEqual(edited[-1]["producer"], annotation["producer"])
+            self.request("/api/annotations", {"delete_id": annotation["id"]})
+        before = self.request("/api/annotations")[1]
+        for invalid in ({"actor_kind": "robot"}, {"actor_kind": None}, {"producer": 12}, {"producer": "x" * 201}):
+            status, _ = self.request("/api/annotations", {"annotation": {"sample_id": event["id"], "note": "Test invalid actor", **invalid}})
+            self.assertEqual(status, 400)
+        self.assertEqual(self.request("/api/annotations")[1], before)
+
     def test_upload_validation_and_traversal(self):
         image = io.BytesIO()
         Image.new("RGB", (2, 2), "green").save(image, format="PNG")
@@ -259,6 +287,66 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(reopened.job(ended["id"])["input"]["notebook_context"], [selected])
         saved = json.loads((self.app.data / "jobs" / ended["id"] / "input.json").read_text())
         self.assertEqual(saved["notebook_context"], [selected])
+
+    def test_learning_artifacts_roundtrip_and_parent_immutability(self):
+        created = []
+        for pathway, actor in (("music", "scripted_character_action"), ("movement", "user_action"), ("ideas", "agent_review")):
+            payload = {"pathway": pathway, "session_id": "artifact-test", "stage": "attempt", "actor_kind": actor,
+                       "goal": "Keep the original desire", "state": {"value": 2, "units": "test units"},
+                       "source_refs": [{"url": "https://example.org/source", "label": "Test source", "page": 2}],
+                       "note": "Synthetic persistence check"}
+            status, record = self.request("/api/artifacts", payload)
+            self.assertEqual(status, 201)
+            created.append(record)
+            self.assertEqual(self.request("/api/artifacts/" + record["id"])[1], record)
+            trace = self.app.tracing.client.get_trace(record["trace_id"])
+            self.assertEqual(trace.data.spans[0].name, "learning.artifact")
+            self.assertEqual(trace.data.spans[0].inputs, payload)
+            self.assertEqual(trace.data.spans[0].outputs["artifact"], record)
+            self.assertEqual(trace.data.spans[0].attributes["astral.actor_kind"], actor)
+            self.assertIsNone(record["usage"])
+            self.assertIsNone(record["cost_usd"])
+        parent = created[0]
+        payload = {k: parent[k] for k in ("pathway", "session_id", "stage", "actor_kind", "goal", "state", "source_refs", "note")}
+        parent_trace = self.app.tracing.client.get_trace(parent["trace_id"]).to_dict()
+        for stage, actor in (("revision", "user_action"), ("sharing_response", "staged_peer_response"), ("new_question", "scripted_character_action")):
+            status, child = self.request("/api/artifacts", dict(payload, stage=stage, actor_kind=actor, parent_id=parent["id"]))
+            self.assertEqual(status, 201)
+            self.assertNotEqual(child["id"], parent["id"])
+            self.assertNotEqual(child["trace_id"], parent["trace_id"])
+        self.assertEqual(self.request("/api/artifacts/" + parent["id"])[1], parent)
+        self.assertEqual(self.app.tracing.client.get_trace(parent["trace_id"]).to_dict(), parent_trace)
+        records = self.request("/api/artifacts")[1]
+        self.assertEqual(json.loads(self.app.artifacts_path.read_text()), records)
+        self.assertNotIn("artifacts", json.loads(self.app.path.read_text()))
+        self.assertEqual(self.request("/api/state")[1]["artifacts"], records)
+        reopened = App(self.temp.name)
+        self.assertEqual(reopened.artifacts, records)
+        samples = {s["id"]: s for s in self.request("/api/samples")[1]}
+        for record in records:
+            sample = samples[record["id"]]
+            self.assertEqual(sample["metadata"]["actor_kind"], record["actor_kind"])
+            self.assertEqual(sample["messages"][0]["metadata"]["actor_kind"], record["actor_kind"])
+            self.assertTrue(sample["messages"][0]["content"].startswith(record["actor_kind"] + "\n"))
+            if record["actor_kind"] != "user_action":
+                self.assertNotEqual(sample["messages"][0]["role"], "user")
+
+    def test_learning_artifact_validation_and_bounds(self):
+        payload = {"pathway": "music", "session_id": "artifact-test", "stage": "attempt", "actor_kind": "user_action",
+                   "goal": "A test goal", "state": {}, "source_refs": [], "note": ""}
+        _, parent = self.request("/api/artifacts", payload)
+        before = self.request("/api/artifacts")[1]
+        for changes in ({"pathway": "other"}, {"stage": "made_up"}, {"actor_kind": "human_judgment"},
+                        {"session_id": ""}, {"parent_id": "missing"}, {"parent_id": parent["id"], "pathway": "ideas"},
+                        {"goal": ""}, {"note": []}, {"id": parent["id"]}, {"source_refs": "not-a-list"},
+                        {"source_refs": [{"url": "javascript:alert(1)"}]}, {"source_refs": ["https://example.org"] * 21}):
+            self.assertEqual(self.request("/api/artifacts", dict(payload, **changes))[0], 400, changes)
+        self.assertEqual(self.request("/api/artifacts", dict(payload, state="x" * (30 * 1024)))[0], 413)
+        self.assertEqual(self.request("/api/artifacts", dict(payload, source_refs=[{"url": "https://example.org", "note": "x" * 8192}]))[0], 413)
+        self.assertEqual(self.request("/api/artifacts")[1], before)
+        self.assertEqual(self.request("/api/artifacts/missing")[0], 404)
+        # JSON string quotes count toward the exact 30KB limit.
+        self.assertEqual(self.request("/api/artifacts", dict(payload, state="x" * (30 * 1024 - 2)))[0], 201)
 
 
 if __name__ == "__main__":

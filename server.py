@@ -22,7 +22,7 @@ from urllib.parse import unquote, urlsplit
 
 import jsonschema
 from PIL import Image
-from tracing import APP_CAPTURE_SCOPE, PROJECTION_CAPTURE_SCOPE, Tracing, normalize_usage
+from tracing import APP_CAPTURE_SCOPE, ARTIFACT_CAPTURE_SCOPE, PROJECTION_CAPTURE_SCOPE, Tracing, normalize_usage
 
 ROOT = Path(__file__).resolve().parent
 MODEL = "gpt-6-astra"
@@ -107,6 +107,8 @@ class App:
         self.path = self.data / "state.json"
         self.state = json.loads(self.path.read_text()) if self.path.exists() else {
             "sessions": [], "events": [], "jobs": [], "reflections": [], "references": []}
+        self.artifacts_path = self.data / "artifacts.json"
+        self.artifacts = json.loads(self.artifacts_path.read_text()) if self.artifacts_path.exists() else []
         self.review_dir = self.data / "error_discovery_data"
         self.review = {}
         for name in ("annotations", "patterns", "suggestions", "samples"):
@@ -147,6 +149,7 @@ class App:
         with self.lock:
             state = copy.deepcopy(self.state)
             state["jobs"] = [job_view(j) for j in state["jobs"]]
+            state["artifacts"] = copy.deepcopy(self.artifacts)
             return dict(state, mlflow_url="http://127.0.0.1:5189", build=copy.deepcopy(self.build),
                         capture_scope={"app": APP_CAPTURE_SCOPE, "projection": PROJECTION_CAPTURE_SCOPE},
                         experiment_id=self.tracing.experiment_id, model=MODEL,
@@ -213,6 +216,82 @@ class App:
             self.state["references"].append(record)
             self.save()
         return record
+
+    def learning_artifact(self, artifact_id):
+        with self.lock:
+            record = next((a for a in self.artifacts if a["id"] == artifact_id), None)
+            if record is None:
+                raise APIError(404, "Learning artifact not found")
+            return copy.deepcopy(record)
+
+    def create_artifact(self, body):
+        allowed = {"pathway", "session_id", "stage", "actor_kind", "goal", "state", "parent_id", "source_refs", "note"}
+        if set(body) - allowed:
+            raise APIError(400, "Unknown artifact fields; existing versions cannot be updated")
+        if body.get("pathway") not in ("music", "movement", "ideas"):
+            raise APIError(400, "pathway must be music, movement, or ideas")
+        if body.get("stage") not in ("attempt", "revision", "sharing_response", "new_question"):
+            raise APIError(400, "Invalid artifact stage")
+        if body.get("actor_kind") not in ("user_action", "scripted_character_action", "staged_peer_response", "agent_review"):
+            raise APIError(400, "Invalid artifact actor_kind")
+        if not isinstance(body.get("goal"), str) or not body["goal"].strip() or len(body["goal"]) > 2000:
+            raise APIError(400, "goal must be a nonempty string of at most 2000 characters")
+        if "state" not in body:
+            raise APIError(400, "Artifact state is required")
+        try:
+            state_bytes = json.dumps(body["state"], ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
+        except (TypeError, ValueError):
+            raise APIError(400, "state must be finite JSON")
+        if len(state_bytes) > 30 * 1024:
+            raise APIError(413, "Artifact state exceeds 30KB")
+        refs = body.get("source_refs", [])
+        if not isinstance(refs, list) or len(refs) > 20:
+            raise APIError(400, "source_refs must be a list of at most 20 links")
+        for ref in refs:
+            url = ref.get("url") if isinstance(ref, dict) else ref
+            if not isinstance(url, str) or len(url) > 2048:
+                raise APIError(400, "Each source reference needs a URL string or an object with url")
+            parsed = urlsplit(url)
+            if not ((parsed.scheme in ("http", "https") and parsed.netloc) or (url.startswith("/") and not url.startswith("//"))):
+                raise APIError(400, "Source URLs must be HTTP(S) or local absolute paths")
+        try:
+            refs_size = len(json.dumps(refs, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8"))
+        except (TypeError, ValueError):
+            raise APIError(400, "source_refs must be finite JSON")
+        if refs_size > 8 * 1024:
+            raise APIError(413, "source_refs exceeds 8KB")
+        note = body.get("note", "")
+        if not isinstance(note, str) or len(note) > 8000:
+            raise APIError(400, "note must be a string of at most 8000 characters")
+        payload = copy.deepcopy(body)
+        payload.setdefault("source_refs", [])
+        payload.setdefault("note", "")
+        with self.lock:
+            if "parent_id" in payload:
+                if not isinstance(payload["parent_id"], str):
+                    raise APIError(400, "parent_id must identify an existing artifact")
+                parent = next((a for a in self.artifacts if a["id"] == payload["parent_id"]), None)
+                if parent is None or parent["pathway"] != payload["pathway"]:
+                    raise APIError(400, "parent_id must identify an existing artifact in the same pathway")
+            self.session(payload.get("session_id"))
+            trace_id, _ = self.tracing.start("learning.artifact", payload)
+            timestamp = now()
+            record = dict(payload, id=uid(), created_at=timestamp, timestamp=timestamp, trace_id=trace_id,
+                          build_id=self.build["id"], capture_scope=ARTIFACT_CAPTURE_SCOPE, usage=None, cost_usd=None)
+            updated = self.artifacts + [record]
+            try:
+                atomic_json(self.artifacts_path, updated)
+            except Exception as exc:
+                self.tracing.end(trace_id, {"error": str(exc), "persisted": False}, error=True)
+                raise
+            self.artifacts = updated
+            self.save()
+            try:
+                self.tracing.end(trace_id, {"artifact": record, "persisted": True})
+            except Exception as exc:
+                # Return the persisted ID even if export fails, without rewriting the version.
+                return dict(copy.deepcopy(record), tracing_error=str(exc))
+            return copy.deepcopy(record)
 
     def project(self, body):
         with self.lock:
@@ -458,6 +537,17 @@ class App:
                                 "created_at": job["created_at"], "messages": messages, "usage": normalize_usage(job.get("usage")),
                                 "cost_usd": job.get("cost_usd"), "capture_scope": job_view(job)["capture_scope"],
                                 "parent_job_id": job.get("parent_job_id")})
+            for artifact in self.artifacts:
+                metadata = {k: artifact[k] for k in ("pathway", "stage", "actor_kind")}
+                metadata["parent_id"] = artifact.get("parent_id")
+                records.append({"id": artifact["id"], "title": f"{artifact['pathway']} / {artifact['stage']} / {artifact['actor_kind']}: {artifact['goal']}",
+                                "model": "learning artifact", "world": artifact["pathway"], "status": "recorded",
+                                "trace_id": artifact["trace_id"], "created_at": artifact["created_at"],
+                                "usage": None, "cost_usd": None, "capture_scope": ARTIFACT_CAPTURE_SCOPE,
+                                **metadata, "metadata": metadata,
+                                "messages": [{"id": artifact["id"] + ":artifact", "role": "user" if artifact["actor_kind"] == "user_action" else "system",
+                                              "actor_kind": artifact["actor_kind"], "metadata": metadata,
+                                              "content": artifact["actor_kind"] + "\n" + json.dumps(artifact, ensure_ascii=False)}]})
             return copy.deepcopy(records)
 
     def artifact(self, job_id, filename):
@@ -486,7 +576,15 @@ class App:
                         raise APIError(400, "Annotation note required")
                     if not isinstance(annotation.get("quote", ""), str):
                         raise APIError(400, "quote must be text")
-                    annotation = {k: v for k, v in annotation.items() if k in ("id", "sample_id", "quote", "note", "start", "end", "message_id", "created_at")}
+                    previous = next((a for a in self.review[name] if a["id"] == annotation.get("id")), {})
+                    actor_kind = annotation.get("actor_kind", previous.get("actor_kind", "unspecified"))
+                    producer = annotation.get("producer", previous.get("producer", "unspecified"))
+                    if actor_kind not in ("human", "agent_review", "unspecified"):
+                        raise APIError(400, "Annotation actor_kind must be human, agent_review, or unspecified")
+                    if not isinstance(producer, str) or not producer.strip() or len(producer) > 200:
+                        raise APIError(400, "Annotation producer must be a nonempty string of at most 200 characters")
+                    annotation = {k: v for k, v in annotation.items() if k in ("id", "sample_id", "quote", "note", "start", "end", "message_id", "created_at", "actor_kind", "producer")}
+                    annotation.update(actor_kind=actor_kind, producer=producer)
                     annotation.setdefault("id", uid())
                     annotation.setdefault("quote", "")
                     annotation.setdefault("created_at", now())
@@ -582,6 +680,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.json_response(app.snapshot())
             if path == "/api/diagnostics":
                 return self.json_response(app.diagnostics())
+            if path == "/api/artifacts":
+                with app.lock:
+                    return self.json_response(copy.deepcopy(app.artifacts))
+            if path.startswith("/api/artifacts/"):
+                return self.json_response(app.learning_artifact(path.split("/")[-1]))
             if path.startswith("/api/jobs/") and "/artifacts/" in path:
                 parts = path.split("/")
                 if len(parts) != 6 or parts[4] != "artifacts":
@@ -652,6 +755,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.json_response(app.record(path.split("/")[-1], body), 201)
             if path == "/api/references":
                 return self.json_response(app.reference(body), 201)
+            if path == "/api/artifacts":
+                return self.json_response(app.create_artifact(body), 201)
             if path == "/api/project":
                 return self.json_response(app.project(body), 202)
             if path.startswith("/api/jobs/") and path.endswith("/cancel"):
