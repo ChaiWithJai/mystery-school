@@ -74,23 +74,25 @@
       "care": "Leena wants to turn saved reading and lectures into an account she can explain and question with another person.",
       "capability": "Distinguish source content from interpretation, compare a rival reading and revise or defend a personal account with identifiable support.",
       "source_binding": {
-        "status": "unresolved_requires_actual_selected_sources",
-        "book_title": null,
-        "edition_and_page": null,
+        "status": "book_section_verified_video_unresolved",
+        "book_title": "The Enchiridion by Epictetus",
+        "edition_and_page": "Elizabeth Carter translation, Internet Classics Archive, section 1 (section anchor; no print page asserted)",
+        "book_url": "https://classics.mit.edu/Epictetus/epicench.html",
+        "source_checked_on": "2026-09-10",
         "video_url": null,
         "video_time_range": null,
-        "selected_source_content": null,
-        "required_before_source_accuracy_verdict": "Bind and inspect actual selected passage and clip. Do not invent a quotation, author position, citation or transcript. An inaccessible source is a verification gap."
+        "selected_source_content": "Section 1 distinguishes our judgments, desires and actions from externals, then asks readers to examine impressions through that distinction. This is a paraphrase, not a quotation.",
+        "required_before_source_accuracy_verdict": "Section 1 and translator attribution were inspected at the book URL. Inspect any additional passage or clip before attributing claims to it. Video URL and time range remain unresolved; the book check does not verify a YouTube connection."
       },
       "baseline": "Preserve the learner's account and its actual source anchor before introducing another interpretation.",
-      "changed_case": "Present a plausible competing interpretation labeled as a proposal, tied to the same inspected source. Then offer a different everyday situation to examine the account's limits.",
-      "prompt": "Here is another possible reading. What in the source supports or weakens each reading, and what remains uncertain? Show what you would change or keep in your own account. Would it still help in this different situation?",
+      "changed_case": "Preserve the first interpretation. Offer this explicitly authored alternative: 'You can choose whether and how to challenge an unfair rule even when you cannot guarantee that others will change it.' This is a discussion proposal, not an Epictetus quotation or uniquely correct reading. Apply an unfair-rule counterexample: a club rule excludes a teammate; the learner may ask for a change but cannot control the committee's decision. Retain the learner's revision or reasoned disagreement.",
+      "prompt": "Compare your first reading with this authored alternative. What does section 1 support or leave unsettled? In the unfair-rule case, what would your account suggest doing, and why? Show what you would revise or keep; you can disagree with either reading.",
       "expected_checks": [
-        {"check": "source_identity", "expected": "Book edition/page and video URL/time range identify the material used, with source accuracy checked against inspected content."},
+        {"check": "source_identity", "expected": "The book anchor identifies Epictetus, Enchiridion section 1, Elizabeth Carter translation at the MIT Internet Classics Archive URL. A video contribution remains unverified until its URL, time range and actual content are supplied and inspected."},
         {"check": "attribution", "expected": "Source claim, commentator interpretation, personal inference and generated suggestion remain distinct."},
         {"check": "reasoned_revision", "expected": "The learner revises or retains an account with a reason tied to source evidence or an explicitly labeled inference; agreement with the model is not required."},
-        {"check": "fresh_case", "expected": "The learner tries applying or limiting the account in a new situation and identifies a question or possible reason to revise it."},
-        {"check": "uncertainty", "expected": "Missing or ambiguous support is acknowledged rather than replaced with invented certainty. No source-specific correct interpretation is asserted until sources are bound and inspected."}
+        {"check": "fresh_case", "expected": "The learner applies or limits their account in the unfair-rule case, distinguishes their proposed action from control over others' decision, and retains a revision or reasoned disagreement."},
+        {"check": "uncertainty", "expected": "Section 1 is not presented as uniquely settling activism versus passivity. Rival interpretations and the unfair-rule application are authored discussion material. No missing video, quotation or definitive philosophical answer is invented."}
       ],
       "artifact": "Versioned sourced map, short argument or narrated account retaining the original, rival interpretation and learner response.",
       "share_and_new_question": "A labeled discussion response asks about an assumption in the account; the learner revises, disagrees with a reason or carries a new question forward.",
