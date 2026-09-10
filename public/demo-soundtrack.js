@@ -14,15 +14,18 @@ export function mountDemoSoundtrack(track = () => {}) {
   root.innerHTML = `<style>
     .demo-soundtrack{position:fixed;right:24px;top:64px;z-index:100;max-width:356px;background:#12241ecc;color:#eee6cb;border:1px solid #c5ba8c55;border-radius:16px;font:12px/1.4 "Avenir Next",sans-serif}
     .demo-soundtrack [hidden]{display:none}
-    .demo-soundtrack>a{display:block;padding:12px 16px;color:inherit;text-decoration:none}
+    .demo-soundtrack [data-reference]{display:block;padding:12px 0;color:inherit;text-decoration:none}
+    .demo-soundtrack summary{cursor:pointer;padding:4px;list-style:none}
+    .demo-soundtrack summary::-webkit-details-marker{display:none}
+    .demo-soundtrack :focus-visible{outline:2px solid #ead6a7;outline-offset:4px}
     .demo-soundtrack footer{display:flex;align-items:center;gap:10px;padding:10px 12px}
     .demo-soundtrack button{background:none;color:inherit;border:1px solid #c5ba8c55;border-radius:18px;padding:6px 10px;font:inherit;cursor:pointer}
     .demo-soundtrack label{display:flex;align-items:center;gap:5px;flex:1}
     .demo-soundtrack p{margin:0;padding:8px 12px}
     .demo-soundtrack a{color:inherit}
-    .demo-soundtrack details{padding:8px 12px}
+    .demo-soundtrack details{padding:8px 12px;margin:0;border:0}
     .demo-soundtrack details[open]{width:330px}
-  </style><a data-reference target="_blank" rel="noopener noreferrer">Hear Runaway on Virtual Piano ↗</a><p role="status" hidden></p><footer hidden><button data-play>Replay opening</button><label><input type="checkbox" data-keep>Keep playing</label><button data-stop>Stop</button></footer><details><summary>Audio options</summary><p>The linked arrangement has Auto Play. It opens separately; this app does not control its playback.</p><p>For a seven-second opening inside this demo, choose an audio recording you have permission to use. It stays in this browser and is not uploaded.</p><input type="file" accept="audio/*" aria-label="Choose local soundtrack"></details>`;
+  </style><p role="status" hidden></p><footer hidden><button data-play>Replay opening</button><label><input type="checkbox" data-keep>Keep playing</label><button data-stop>Stop</button></footer><details><summary>Song reference + audio</summary><a data-reference target="_blank" rel="noopener noreferrer">Hear Runaway on Virtual Piano ↗</a><p>The linked arrangement has Auto Play. It opens separately; this app does not control its playback.</p><p>For a seven-second recording inside this demo, choose audio you have permission to use. It stays in this browser and is not uploaded.</p><input type="file" accept="audio/*" aria-label="Choose local soundtrack"></details>`;
   const drawer = document.querySelector('#drawer');
   (drawer || document.body).append(root);
   const q = selector => root.querySelector(selector);
