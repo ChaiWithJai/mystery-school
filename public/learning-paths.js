@@ -3,8 +3,7 @@ import { RUNAWAY_OPENING_SOURCE } from './runaway-opening.js';
 import { mountMusicScene } from './music-scene.js';
 import { mountPianoScene } from './piano-scene.js';
 import { mountBoxingGame } from './boxing-game.js';
-import { mountBoxingMirror } from './boxing-mirror.js';
-import { BOXING_LESSONS } from './boxing-curriculum.js';
+import { mountBoxingJourney, BOXING_JOURNEY_LESSONS as BOXING_LESSONS } from './boxing-journey.js';
 import { mountRealWorldReflection } from './real-world-reflection.js';
 import { mountStoryWorld } from './story-world.js';
 import {createBoxingMemory,appendMemory} from './learning-memory.js';
@@ -194,10 +193,11 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       ready=true;saveButtons.forEach(button=>{button.disabled=false;});
     }catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
     if(ready&&pathway==='movement'){
+      let next=null;
       const host=document.createElement('div'),physics=document.createElement('details'),summary=document.createElement('summary');physics.className='universe-physics';summary.textContent='∿ Look closer at the motion';physics.append(summary,q('.movement-lab'));const mirrorHost=document.createElement('div');q('[data-lab]').append(mirrorHost,physics);physics.append(host);
-      boxingMirror=mountBoxingMirror(mirrorHost,{initialState:draft.lab.boxing_mirror||{},lessons:BOXING_LESSONS,onChange:state=>{const lessonChanged=state.lessonId!==draft.lab.boxing_mirror?.lessonId;draft.lab.boxing_mirror=structuredClone(state);if(lessonChanged){draft.frozenMovementSources=null;experimentDispose?.contextChanged();}keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
+      boxingMirror=mountBoxingJourney(mirrorHost,{initialState:draft.lab.boxing_mirror||{},sessionId,actorKind,onChange:state=>{const lessonChanged=state.lessonId!==draft.lab.boxing_mirror?.lessonId||state.foundation?.foundationId!==draft.lab.boxing_mirror?.foundation?.foundationId;draft.lab.boxing_mirror=structuredClone(state);if(next)next.hidden=!state.reflection?.trim();if(lessonChanged){draft.frozenMovementSources=null;experimentDispose?.contextChanged();}keep();},onEvent:(type,payload)=>events.track('learning.movement.action',{pathway,actor_kind:actorKind,type,payload})});
       draft.lab.boxing_mirror=boxingMirror.getState();keep();
-      const next=document.createElement('button');next.className='universe-next';next.textContent='Keep my observation →';next.hidden=false;mirrorHost.after(next);
+      next=document.createElement('button');next.className='universe-next';next.textContent='Keep my observation →';next.hidden=!draft.lab.boxing_mirror?.reflection?.trim();mirrorHost.after(next);
       next.onclick=async()=>{
         next.disabled=true;
         try{

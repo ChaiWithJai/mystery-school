@@ -1,5 +1,33 @@
-// Reviewed against actual demonstration frames; see docs/reviews/boxing-day1-video-review.md.
+// Source-reviewed instructional cues. Repetition is learner-reported, never proof of technique.
 export const BOXING_LESSONS = [
+  {
+    "id": "ghDNbod8B3s",
+    "title": "Stick and move \u00b7 approach, touch, exit",
+    "evidenceTimestampSeconds": 8,
+    "source": "https://www.youtube.com/watch?v=ghDNbod8B3s&t=8s",
+    "embedUrl": "https://www.youtube.com/embed/ghDNbod8B3s?rel=0",
+    "evidenceType": "actual source video and burned-in instructions inspected",
+    "durationSeconds": 15,
+    "sha256": "d430c1ab7850c65d02188ff02f71770bc856270c4c2fc78da2aa0312b7028a22",
+    "cues": [
+      "Move before the punch. Move again after it."
+    ],
+    "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+  },
+  {
+    "id": "9gqxqT57qkA",
+    "title": "Two punches \u00b7 make the exit matter",
+    "evidenceTimestampSeconds": 10,
+    "source": "https://www.youtube.com/watch?v=9gqxqT57qkA&t=10s",
+    "embedUrl": "https://www.youtube.com/embed/9gqxqT57qkA?rel=0",
+    "evidenceType": "actual source video and burned-in instructions inspected",
+    "durationSeconds": 15,
+    "sha256": "ba05789cdf64ccc19df55e362db27138a5347ec0ec3d316222e5f7ec558d25e0",
+    "cues": [
+      "Pay more attention to your approach and exit than your punches."
+    ],
+    "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+  },
   {
     "id": "rV3m-gHRCXw",
     "title": "Frontal stance: hands up",
@@ -66,6 +94,20 @@ export const BOXING_LESSONS = [
     "durationSeconds": 20,
     "metadataPlayableInEmbed": true,
     "sha256": "a87b683b14b0c444a2dfdc4dec6e80e0cac0b1043356a1e6df8bd3170a21e6a0",
+    "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+  },
+  {
+    "id": "6XbTboFL0nY",
+    "title": "Move with the bag \u00b7 distance and angles",
+    "evidenceTimestampSeconds": 1,
+    "source": "https://www.youtube.com/watch?v=6XbTboFL0nY&t=1s",
+    "embedUrl": "https://www.youtube.com/embed/6XbTboFL0nY?rel=0",
+    "evidenceType": "actual source video and burned-in instructions inspected",
+    "durationSeconds": 13,
+    "sha256": "647c171a7fd4105cd8a3b2e08f907d2fb622de3939800370519c64791ff690dc",
+    "cues": [
+      "Keep your distance as you move with the swinging bag."
+    ],
     "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
   }
 ];

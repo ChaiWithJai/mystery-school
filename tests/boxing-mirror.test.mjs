@@ -8,6 +8,16 @@ import vm from 'node:vm';
 test('mirror artifacts retain observations and estimated events, never raw frames',()=>{const s=cleanMirrorState({reflection:'I noticed my return',frames:[{private:true}],attempts:[{t:200,type:'JAB',hand:'L',power:99,landmarks:[1]},{t:NaN,type:'HOOK'}]});assert.equal(s.reflection,'I noticed my return');assert.deepEqual(s.attempts,[{t:200,type:'JAB',hand:'L',estimated:true,captureId:null,lessonId:null,sourceMode:null,detectorTime:null,mediaTime:null,seekSegment:null}]);assert.equal('frames' in s,false);});
 test('mirror state bounds event history and excludes invalid modes',()=>{const s=cleanMirrorState({sourceMode:'remote-upload',attempts:Array.from({length:100},(_,i)=>({t:i,type:'CROSS',hand:'R'}))});assert.equal(s.sourceMode,null);assert.equal(s.attempts.length,60);assert.equal(s.attempts[0].t,40);});
 
+import {keepMirrorObservation} from '../public/boxing-mirror.js';
+const lesson={id:'guard',source:'https://example.com/guard',cues:['Hands up.']};
+function ready(){return {lessonId:'guard',sourceMode:'camera',lessonProgress:{guard:{reflection:'My left hand drops.',referenceOpenedAt:'2026-09-10T15:00:00Z',mirrorStartedAt:'2026-09-10T15:01:00Z',reportedTried:true,sessionId:'s1',sourceMode:'camera'}},attempts:[{t:100,type:'JAB',hand:'L',lessonId:'guard',sessionId:'s1'},{t:200,type:'CROSS',hand:'R',lessonId:'other',sessionId:'s2'}]};}
+test('opening camera or writing alone is never recorded as tried',()=>{for(const key of ['reportedTried','referenceOpenedAt','mirrorStartedAt','reflection']){const s=ready();s.lessonProgress.guard[key]=false;assert.equal(keepMirrorObservation(s,lesson).observations.length,0);}});
+test('kept reflection preserves its lesson, source and matching session estimates',()=>{const before=ready(),kept=keepMirrorObservation(before,lesson,{id:'o1',recordedAt:'now'});assert.equal(before.observations,undefined);assert.equal(kept.observations[0].attempts.length,1);assert.equal(kept.observations[0].source,lesson.source);assert.equal(kept.observations[0].sessionId,'s1');kept.lessonProgress.guard.reflection='A different thought';assert.equal(kept.observations[0].reflection,'My left hand drops.');const second=keepMirrorObservation(kept,lesson,{id:'o2'});second.observations[0].attempts[0].t=999;assert.equal(kept.observations[0].attempts[0].t,100);assert.equal(second.observations.length,2);});
+test('JSON restore preserves each lesson draft and immutable observation history',()=>{const s=keepMirrorObservation(ready(),lesson,{id:'o1'});s.lessonProgress.other={reflection:'My feet crossed',reportedTried:false};const restored=cleanMirrorState(JSON.parse(JSON.stringify(s)));assert.equal(restored.lessonProgress.guard.reflection,'My left hand drops.');assert.equal(restored.lessonProgress.other.reflection,'My feet crossed');assert.equal(restored.observations[0].reportedTried,true);assert.equal(restored.observations[0].attempts[0].estimated,true);});
+
+import {mirrorPosition} from '../public/boxing-mirror.js';
+test('body trail uses actual visible normalized hip/ankle positions and rejects missing hips',()=>{const p=[];p[23]={x:.2,y:.6,visibility:.9};p[24]={x:.4,y:.8,visibility:.9};p[27]={x:.1,y:.95,visibility:.8};p[28]={x:.5,y:1,visibility:.1};const sample=mirrorPosition(p,125);assert.ok(Math.abs(sample.x-.3)<1e-9);assert.equal(sample.y,.7);assert.deepEqual(sample.ankles,[{side:'L',x:.1,y:.95}]);p[23].visibility=.2;assert.equal(mirrorPosition(p,130),null);assert.equal(mirrorPosition(null,0),null);});
+test('practice duration and local image trace survive restore without implying mastery',()=>{const s=cleanMirrorState({practiceRounds:[{id:'r1',lessonId:'guard',status:'elapsed',durationMs:40020,points:[{t:100,x:.4,y:.5,ankles:[]}],mastered:true}]});assert.equal(s.practiceRounds[0].status,'elapsed');assert.equal(s.practiceRounds[0].durationMs,40020);assert.equal(s.practiceRounds[0].coordinateSpace,'normalized_image');assert.equal(s.practiceRounds[0].depthMeasured,false);assert.equal('mastered' in s.practiceRounds[0],false);});
 test('long reflection survives saved mirror and knowledge memory without truncation',()=>{
   const reflection='  My observation.\n'.repeat(200)+'Keep this ending.  ';
   const mirror=cleanMirrorState({reflection});
@@ -27,11 +37,11 @@ test('invalid reflection values never become invented observation text',()=>{
 const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 function harness({bitmapFailure=false,transferFailure=false}={}) {
   class Element {
-    constructor(){this.queries=new Map();this.children=[];this.classList={add(){},remove(){}};this.readyState=2;this.paused=true;this.currentTime=12;this.videoWidth=640;this.videoHeight=480;}
+    constructor(){this.queries=new Map();this.children=[];this.classList={add(){},remove(){},contains(){return true}};this.readyState=2;this.paused=true;this.currentTime=12;this.videoWidth=640;this.videoHeight=480;}
     querySelector(key){if(!this.queries.has(key))this.queries.set(key,new Element());return this.queries.get(key);}
     append(...nodes){this.children.push(...nodes);} replaceChildren(...nodes){this.children=nodes;}
-    pause(){this.paused=true;} async play(){this.paused=false;} removeAttribute(){} remove(){}
-    getContext(){return {clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};}
+    setAttribute(){} pause(){this.paused=true;} async play(){this.paused=false;} removeAttribute(){} remove(){}
+    getContext(){return {save(){},restore(){},arc(){},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};}
   }
   const workers=[],events=[],bitmaps=[],raf=new Map();let tick=100,serial=0,bitmapCalls=0;
   class Worker {
@@ -43,7 +53,7 @@ function harness({bitmapFailure=false,transferFailure=false}={}) {
     .replace(/^import .*\n/,'').replaceAll('export function','function').replaceAll('import.meta.url',JSON.stringify(import.meta.url));
   const mount=vm.runInNewContext(source+';mountBoxingMirror',{
     document:{createElement:()=>new Element()},Worker,URL:class extends URL {static createObjectURL(){return 'blob:test';}static revokeObjectURL(){}},
-    crypto:{randomUUID:()=>`capture-${++serial}`},performance:{now:()=>++tick},
+    Date,structuredClone,clearInterval,setInterval,crypto:{randomUUID:()=>`capture-${++serial}`},performance:{now:()=>++tick},
     requestAnimationFrame:fn=>{const id=++serial;raf.set(id,fn);return id;},cancelAnimationFrame:id=>raf.delete(id),
     createImageBitmap:async()=>{bitmapCalls++;if(bitmapFailure)throw Error('bitmap failed');const bitmap={closed:0,close(){this.closed++;}};bitmaps.push(bitmap);return bitmap;},
     L:{shoulder:11},BONES:[],makeSmoother:()=>({update:points=>new Map(points.map((p,i)=>[i,p]))}),HandTracker:class {update(){return {type:'JAB'};}}
@@ -51,7 +61,7 @@ function harness({bitmapFailure=false,transferFailure=false}={}) {
   const container=new Element();const view=mount(container,{lessons:[{id:'lesson-a'},{id:'lesson-b'}],onEvent:(type,payload)=>events.push({type,payload})});
   const root=container.children[0],video=root.querySelector('.boxing-mirror-self');
   return {view,root,video,workers,events,bitmaps,raf,get bitmapCalls(){return bitmapCalls;},
-    async begin(){const input=root.querySelector('input');input.files=[{}];input.onchange();await settle();},
+    async begin(){const input=root.querySelector('input[type=file]');input.files=[{}];input.onchange();await settle();},
     async ready(){workers.at(-1).onmessage({data:{type:'ready'}});await settle();},
     async frame(){const next=raf.entries().next().value;if(next){raf.delete(next[0]);await next[1]();}await settle();},
     result(worker=workers.at(-1)){const frame=worker.sent.findLast(m=>m.type==='frame');const points=Array.from({length:25},(_,i)=>({x:i/30,y:.5,visibility:1}));worker.onmessage({data:{type:'landmarks',landmarks:points,t:frame.t,provenance:frame.provenance}});return frame;}
@@ -111,4 +121,20 @@ test('worker echoes frame provenance and always closes bitmap on detector error'
     await self.onmessage({data:{type:'frame',t:100,provenance:origin,bitmap:{close(){closed++;}}}});
     assert.equal(closed,1);assert.equal(messages[0].type,throws?'error':'landmarks');if(!throws)assert.equal(messages[0].provenance,origin);
   }
+});
+
+test('kept lesson observation retains frame provenance and the practice session together',()=>{
+ const state=ready();Object.assign(state.attempts[0],{captureId:'capture1',sourceMode:'local-video',detectorTime:250,mediaTime:1.5,seekSegment:2});state.attempts.push(null);
+ const saved=keepMirrorObservation(state,lesson,{id:'proof'});const event=saved.observations[0].attempts[0];
+ assert.equal(event.sessionId,'s1');assert.equal(event.captureId,'capture1');assert.equal(event.lessonId,'guard');assert.equal(event.mediaTime,1.5);assert.equal(event.seekSegment,2);
+ assert.deepEqual(cleanMirrorState(JSON.parse(JSON.stringify(saved))).observations[0].attempts[0],event);
+});
+
+
+test('lesson drafts and kept observation history preserve full learner text including whitespace',()=>{
+ const s=ready(),reflection='  My extended observation.\n'.repeat(200)+'Keep this ending.  ';
+ s.lessonProgress.guard.reflection=reflection;s.reflection=reflection;
+ const kept=keepMirrorObservation(s,lesson,{id:'long-history'});
+ assert.equal(kept.reflection,reflection);assert.equal(kept.lessonProgress.guard.reflection,reflection);assert.equal(kept.observations[0].reflection,reflection);
+ const restored=cleanMirrorState(JSON.parse(JSON.stringify(kept)));assert.equal(restored.observations[0].reflection,reflection);
 });

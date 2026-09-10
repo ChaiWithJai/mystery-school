@@ -26,3 +26,9 @@
 .story-world__memories select{display:block;width:100%;min-height:44px;font:inherit;padding:8px;color:#273d31;background:#fffaf0;border:1px solid #9caa8b;border-radius:5px}.story-world__memories select:focus-visible{outline:3px solid #8b6428;outline-offset:3px}
 .story-world__memory-observation{white-space:pre-wrap;overflow-wrap:anywhere;margin:20px 0;font:21px/1.5 Georgia,serif}.story-world__memories a{display:block;margin:12px 0;color:#385937;text-decoration:underline}.story-world__memories button{color:#f4e7c7;margin-top:16px}.story-world__memories p{font-size:12px}.story-world__memory-trace{overflow-wrap:anywhere;color:#5b6454}
 @media(max-width:700px){.story-world__memories{right:12px;top:12px;bottom:12px;width:calc(100% - 24px);padding:22px}}
+/* The walk is a close view of the same teal, brass and parchment school. */
+.story-world{background:#173e35;border-color:#d7bc7033}
+.story-world__header{text-shadow:0 2px 18px #17362f99}.story-world__eyebrow{color:#d7bc70}
+.story-world__status{background:#173e35c9;border:1px solid #d7bc702b;backdrop-filter:blur(10px)}
+.story-world__tools button,.story-world__context,.story-world__controls{background:#173e35cf;backdrop-filter:blur(10px);border-color:#d7bc7044}
+.learning-drawer .story-world__memories p{color:#344737}.learning-drawer .story-world__memories .story-world__memory-observation{font:21px/1.5 Georgia,serif;color:#20372b}.learning-drawer .story-world__memories .story-world__memory-trace{color:#4b5d48}

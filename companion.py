@@ -1,5 +1,6 @@
 """Private presenter gateway. Keep server.py and model runtime on loopback."""
 import argparse
+from boxing_coach import load_foundations
 import hashlib
 import hmac
 import json
@@ -47,13 +48,33 @@ def allowed(method, path):
 
 def encoded(value): return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True).encode()
 
+def foundation_context(foundation_id):
+    data, digest = load_foundations()
+    lesson = next((item for item in data['foundations'] if item['id'] == foundation_id), None)
+    if lesson is None: raise Problem(400, 'Unknown boxing foundation')
+    practice = lesson['practice']
+    sources = [{key: source[key] for key in ('id','url','cue','evidenceTimestampSeconds','reviewStatus','sha256','curriculumSource') if key in source}
+               for source in lesson['sources'] if source['id'] in practice['sourceIds']]
+    # This exposes only the curated cue, never manufactures instructions from gaps.
+    if practice['sourceIds'] and (not sources or not any(source.get('cue') == practice['cue'] for source in sources)):
+        raise Problem(503, 'Foundation cue lacks a reviewed source binding')
+    return {'foundation_id': foundation_id, 'curriculum_sha256': digest,
+            'title': lesson['title'], 'practice': practice.copy(),
+            'source_refs': sources, 'reflection': lesson['assessments'][0]['prompt'],
+            'evidence_policy': lesson['evidencePolicy'], 'gaps': lesson['gaps'],
+            'one_cue_at_a_time': True}
+
+
 def validate_attempt(body):
     fields = {'session_id','attempt_id','state_version','pathway','actor_kind','observations','tracking_confidence'}
-    if not isinstance(body, dict) or set(body) != fields: raise Problem(400, 'Expected the versioned attempt contract')
+    if not isinstance(body, dict) or set(body) not in (fields, fields | {'foundation_id'}): raise Problem(400, 'Expected the versioned attempt contract')
     for key in ('session_id', 'attempt_id'):
         if not isinstance(body[key], str) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', body[key]): raise Problem(400, 'Invalid identity')
     if type(body['state_version']) is not int or body['state_version'] < 0: raise Problem(400, 'Invalid state version')
     if body['pathway'] not in CUES or body['actor_kind'] not in ('human','agent_review','scripted_demo'): raise Problem(400, 'Invalid pathway or actor')
+    if 'foundation_id' in body:
+        if body['pathway'] != 'movement' or not isinstance(body['foundation_id'], str): raise Problem(400, 'Foundation requires movement and a known ID')
+        foundation_context(body['foundation_id'])
     confidence = body['tracking_confidence']
     if type(confidence) not in (int,float) or not math.isfinite(confidence) or not 0 <= confidence <= 1: raise Problem(400,'Invalid confidence')
     observations=body['observations']
@@ -67,9 +88,9 @@ def validate_attempt(body):
         ids.add(item['id'])
     return body
 
-def validate_selection(value, attempt):
+def validate_selection(value, attempt, available_cues=None):
     if not isinstance(value,dict) or set(value) != {'cue_id','evidence_ids'}: raise Problem(502,'Bonsai returned an invalid cue')
-    if not isinstance(value['cue_id'],str) or value['cue_id'] not in CUES[attempt['pathway']]: raise Problem(502,'Bonsai chose an unknown cue')
+    if not isinstance(value['cue_id'],str) or value['cue_id'] not in (available_cues if available_cues is not None else CUES[attempt['pathway']]): raise Problem(502,'Bonsai chose an unknown cue')
     ids=value['evidence_ids']; supplied={item['id'] for item in attempt['observations']}
     if not isinstance(ids,list) or not ids or any(not isinstance(i,str) or i not in supplied for i in ids): raise Problem(502,'Bonsai cited missing evidence')
     return value
@@ -120,9 +141,11 @@ class Companion:
 
     def coach(self, body):
         attempt=validate_attempt(body)
+        foundation=foundation_context(attempt['foundation_id']) if 'foundation_id' in attempt else None
+        cues={'practice':foundation['practice']['cue'],'reflection':foundation['reflection']} if foundation else CUES[attempt['pathway']]
         if not self.gate.acquire(blocking=False): raise Problem(429,'Local coach is busy; keep playing and retry later')
         trace=None; start=time.monotonic(); result=None
-        request_id=hashlib.sha256(encoded({'attempt':attempt,'companion_source_sha256':self.build})).hexdigest()
+        request_id=hashlib.sha256(encoded({'attempt':attempt,'companion_source_sha256':self.build,'curriculum_sha256':foundation['curriculum_sha256'] if foundation else None})).hexdigest()
         identity={k:attempt[k] for k in ('session_id','attempt_id','state_version','actor_kind')}
         event=dict(identity, request_id=request_id,build_sha256=self.build,model=MODEL,prompt_version='bounded-cue-v1',capture_scope=CAPTURE_SCOPE)
         cache=self.data/(request_id+'.json')
@@ -133,7 +156,8 @@ class Companion:
             if attempt['tracking_confidence'] < 0.65 and any(o['source_kind']=='camera_estimate' for o in attempt['observations']):
                 result=dict(identity,request_id=request_id,status='insufficient_tracking',provider='deterministic',model=None,cue='Reposition until your movement is clearly visible, then try again.',evidence_ids=[],usage=None,cost_usd=None,trace_id=None)
             else:
-                prompt={'attempt':attempt,'available_cues':CUES[attempt['pathway']]}
+                prompt={'attempt':attempt,'available_cues':cues}
+                if foundation: prompt['curated_foundation']=foundation
                 request={'model':MODEL,'messages':[{'role':'system','content':SYSTEM},{'role':'user','content':json.dumps(prompt)}],'temperature':0.5,'max_tokens':128,'stream':False}
                 self.record(dict(event,event='model.request',timestamp=time.time(),request=request))
                 if self.tracing:
@@ -144,8 +168,9 @@ class Companion:
                 self.record(dict(event,event='model.response',timestamp=time.time(),content=content,usage=response.get('usage'),reported_model=response.get('model')))
                 # The runtime must be launched with --alias prism-ml/Bonsai-4B-gguf.
                 if response.get('model') != MODEL: raise Problem(502,'Local runtime returned a different model identity')
-                choice=validate_selection(json.loads(content),attempt)
-                result=dict(identity,request_id=request_id,status='completed',provider='local_bonsai',model=MODEL,cue_id=choice['cue_id'],cue=CUES[attempt['pathway']][choice['cue_id']],evidence_ids=choice['evidence_ids'],usage=model_usage(response.get('usage')),cost_usd=None,trace_id=trace)
+                choice=validate_selection(json.loads(content),attempt,cues)
+                result=dict(identity,request_id=request_id,status='completed',provider='local_bonsai',model=MODEL,cue_id=choice['cue_id'],cue=cues[choice['cue_id']],evidence_ids=choice['evidence_ids'],usage=model_usage(response.get('usage')),cost_usd=None,trace_id=trace)
+            if foundation: result.update(foundation_id=foundation['foundation_id'],curriculum_sha256=foundation['curriculum_sha256'],source_refs=foundation['source_refs'],cue_kind=foundation['practice']['mode'] if result.get('cue_id')=='practice' else 'reflection' if result.get('cue_id')=='reflection' else 'tracking_recovery')
             result['latency_ms']=round((time.monotonic()-start)*1000)
             self.record(dict(event,event='coach.completed',timestamp=time.time(),result=result))
             if trace: self.tracing.end(trace,{'result':result,'usage':result['usage']})
