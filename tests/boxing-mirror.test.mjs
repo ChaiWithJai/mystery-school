@@ -138,3 +138,15 @@ test('lesson drafts and kept observation history preserve full learner text incl
  assert.equal(kept.reflection,reflection);assert.equal(kept.lessonProgress.guard.reflection,reflection);assert.equal(kept.observations[0].reflection,reflection);
  const restored=cleanMirrorState(JSON.parse(JSON.stringify(kept)));assert.equal(restored.observations[0].reflection,reflection);
 });
+
+test('only approved authored attention can keep a reflection without a fabricated video opening',async()=>{
+const {keepMirrorObservation}=await import('../public/boxing-mirror.js');
+const lesson={id:'jai.attention',source:null,evidenceType:'jai_authored_reflection',cues:['Notice one body part.']};
+const state={lessonProgress:{'jai.attention':{referenceOpenedAt:'',mirrorStartedAt:'now',reportedTried:true,reflection:'I noticed my feet.'}}};
+const kept=keepMirrorObservation(state,lesson);assert.equal(kept.observations.length,1);assert.equal(kept.observations[0].referenceOpenedAt,'');
+assert.equal(keepMirrorObservation(state,{...lesson,evidenceType:undefined}).observations.length,0);
+assert.equal(keepMirrorObservation(state,{...lesson,source:undefined}).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reportedTried:false}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],mirrorStartedAt:''}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reflection:'   '}}},lesson).observations.length,0);
+});

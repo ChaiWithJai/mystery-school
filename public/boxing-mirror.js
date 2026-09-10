@@ -18,9 +18,10 @@ export function cleanMirrorState(value={}) {
   for(const [id,p]of Object.entries(value.lessonProgress||{})){if(!p||typeof p!=='object')continue;progress[id]={reflection:reflectionText(p.reflection),referenceOpenedAt:textValue(p.referenceOpenedAt),mirrorStartedAt:textValue(p.mirrorStartedAt),reportedTried:p.reportedTried===true,sessionId:textValue(p.sessionId),sourceMode:['camera','local-video'].includes(p.sourceMode)?p.sourceMode:null};}
   return {version:3,practiceRounds:(Array.isArray(value.practiceRounds)?value.practiceRounds:[]).filter(r=>r&&r.id).map(cleanRound),detector:VERSION,lessonId:textValue(value.lessonId),reflection:reflectionText(value.reflection),attempts:attempts(value.attempts).slice(-60),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null,lessonProgress:progress,observations:(Array.isArray(value.observations)?value.observations:[]).filter(o=>o&&o.id&&o.lessonId).map(o=>({id:textValue(o.id),lessonId:textValue(o.lessonId),reflection:reflectionText(o.reflection),recordedAt:textValue(o.recordedAt),referenceOpenedAt:textValue(o.referenceOpenedAt),mirrorStartedAt:textValue(o.mirrorStartedAt),reportedTried:o.reportedTried===true,source:textValue(o.source),cue:textValue(o.cue),sessionId:textValue(o.sessionId),sourceMode:['camera','local-video'].includes(o.sourceMode)?o.sourceMode:null,attempts:attempts(o.attempts)}))};
 }
+const referenceReady=(p,lesson)=>Boolean(p?.referenceOpenedAt||(lesson?.id==='jai.attention'&&lesson.evidenceType==='jai_authored_reflection'&&lesson.source===null));
 export function keepMirrorObservation(value,lesson,{id,recordedAt,sessionId}={}) {
   const next=cleanMirrorState(value),p=next.lessonProgress[lesson.id];
-  if(!p?.referenceOpenedAt||!p.mirrorStartedAt||!p.reportedTried||!p.reflection.trim())return next;
+  if(!referenceReady(p,lesson)||!p?.mirrorStartedAt||!p.reportedTried||!p.reflection.trim())return next;
   next.observations.push({id:id||crypto.randomUUID(),lessonId:lesson.id,reflection:p.reflection,recordedAt:recordedAt||new Date().toISOString(),referenceOpenedAt:p.referenceOpenedAt,mirrorStartedAt:p.mirrorStartedAt,reportedTried:true,source:lesson.source||'',cue:lesson.cues?.[0]||'',sessionId:p.sessionId||sessionId||'',sourceMode:p.sourceMode||next.sourceMode,attempts:next.attempts.filter(e=>e.lessonId===lesson.id&&e.sessionId===(p.sessionId||sessionId)).map(cleanAttempt)});
   return next;
 }
@@ -41,9 +42,9 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
     const p=currentProgress(),index=lessons.findIndex(l=>l.id===state.lessonId),kept=state.observations.filter(o=>o.lessonId===state.lessonId);
     q('[data-progress]').textContent=`Day one · ${index+1}/${lessons.length} · ${kept.length?'tried · learner reported':'not yet kept'}`;
     for(const [i,b]of [...q('.boxing-mirror-path').children].entries()){const saved=state.observations.some(o=>o.lessonId===lessons[i].id);b.textContent=saved?'◉':String(i+1);b.setAttribute('aria-current',i===index?'step':'false');b.setAttribute('aria-label',`${i+1}. ${lessons[i].title} · ${saved?'tried, learner reported':'untried'}`);}
-    q('[data-tried]').checked=p.reportedTried;q('[data-next]').disabled=!(p.referenceOpenedAt&&p.mirrorStartedAt&&p.reportedTried&&p.reflection.trim());
+    q('[data-tried]').checked=p.reportedTried;q('[data-next]').disabled=!(referenceReady(p,lessons[index])&&p.mirrorStartedAt&&p.reportedTried&&p.reflection.trim());
     q('[data-next]').textContent=index===lessons.length-1?'Keep my observation':'Keep observation → next';
-    q('[data-next-status]').textContent=!p.referenceOpenedAt?'1 · Open the demonstration':!p.mirrorStartedAt?'2 · Try with your mirror':!p.reflection.trim()?'3 · Keep one thing you noticed':!p.reportedTried?'Mark whether you tried it.':'Your observation, not a technique score.';
+    q('[data-next-status]').textContent=!referenceReady(p,lessons[index])?'1 · Open the demonstration':!p.mirrorStartedAt?'2 · Try with your mirror':!p.reflection.trim()?'3 · Keep one thing you noticed':!p.reportedTried?'Mark whether you tried it.':'Your observation, not a technique score.';
   }
   function openReference(){const l=lessons.find(x=>x.id===state.lessonId);if(!l)return;currentProgress().referenceOpenedAt=new Date().toISOString();renderProgress();changed();}
   source.onclick=openReference;lessonVideo.onplay=openReference;
