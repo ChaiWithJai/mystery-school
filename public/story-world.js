@@ -121,7 +121,7 @@ export function stepStoryCamera(camera, input, seconds, obstacles = []) {
 let instances = 0;
 
 /**
- * Host loads story-world.css. No fetches, assets, inference, or global key listeners.
+ * Host loads story-world.css. Reuses the homepage school.glb; no inference or global key listeners.
  * onChange receives detached full state; onEvent(type, payload) labels authored/model fiction.
  * Movement snapshots are emitted at most four times per second and once on key release.
  */
@@ -186,16 +186,17 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
   catch (error) { root.remove(); throw new Error(`This explorable world needs WebGL: ${error.message}`); }
   renderer.setPixelRatio(Math.min(win.devicePixelRatio || 1, 1.5));
-  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.25;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.domElement.setAttribute('aria-hidden', 'true'); viewport.append(renderer.domElement);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x182d2a); scene.fog = new THREE.FogExp2(0x182d2a, .025);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x173e35); scene.fog = new THREE.FogExp2(0x173e35, .012);
   const camera = new THREE.PerspectiveCamera(65, 1, .08, 110); camera.rotation.order = 'YXZ';
-  scene.add(new THREE.HemisphereLight(0xdce8d0, 0x18231e, 2));
-  const sun = new THREE.DirectionalLight(0xffdfa5, 3.2); sun.position.set(-9, 20, 7); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 60 }); sun.shadow.bias = -.0004; scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0xeaf4d5, 0x17362f, 2.4));
+  const sun = new THREE.DirectionalLight(0xffe2ab, 4); sun.position.set(-12, 22, 4); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 60 }); sun.shadow.bias = -.0004; scene.add(sun);
+  const rim = new THREE.DirectionalLight(0x9ddcda, 2); rim.position.set(15, 6, -12); scene.add(rim);
   const materials = {}, geometries = new Set(), textures = new Set();
-  for (const [name, color] of Object.entries({ ground: 0x425443, moss: 0x6a7950, pine: 0x244c38, bark: 0x564b37, rock: 0x364a43, paper: 0xe5d6ae, cover: 0x355348, brass: 0xb69b5b, blue: 0x536a75, cloth: 0xb3925a })) materials[name] = new THREE.MeshStandardMaterial({ color, roughness: .88 });
+  for (const [name, color] of Object.entries({ ground: 0x526c52, moss: 0x7c9470, pine: 0x2b654e, bark: 0x526c52, rock: 0x405a4e, paper: 0xe8dfb5, cover: 0x2b654e, brass: 0xd7bc70, blue: 0x536a75, cloth: 0xb3925a })) materials[name] = new THREE.MeshStandardMaterial({ color, roughness: .88 });
   const glow = new THREE.MeshStandardMaterial({ color: 0xfce1a2, emissive: 0xf5c16a, emissiveIntensity: 1.1 }); materials.glow = glow;
   const box = new THREE.BoxGeometry(1, 1, 1), cylinder = new THREE.CylinderGeometry(1, 1, 1, 10), cone = new THREE.ConeGeometry(1, 1, 8), sphere = new THREE.IcosahedronGeometry(1, 1);
   for (const geometry of [box, cylinder, cone, sphere]) geometries.add(geometry);
@@ -209,10 +210,15 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   const obstacles = [], targets = [];
   let seed = 3701;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-  for (let i = 0; i < 70; i++) {
-    const angle = random() * TAU, radius = 11 + random() * 16, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius, h = 4 + random() * 5;
-    mesh(cylinder, materials.bark, x, h / 2, z, .23, h, .23); obstacles.push({ x, z, radius: .35 });
-    for (let j = 0; j < 3; j++) mesh(cone, j === 2 ? materials.moss : materials.pine, x, h * .6 + j * 1.1, z, 2 - j * .38, 3.7, 2 - j * .38);
+  // Match the school’s mixed pine/canopy silhouette, leaving the home landmarks visible.
+  for (let i = 0; i < 30; i++) {
+    const angle = random() * TAU, radius = 13 + random() * 8, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+    if (z < -8 && Math.abs(x) < 12) continue;
+    const h = 1.8 + random() * 2.5;
+    mesh(cylinder, materials.bark, x, h / 2, z, .17, h, .17); obstacles.push({ x, z, radius: .3 });
+    if (i % 3 === 0) {
+      for (let j = 0; j < 3; j++) mesh(sphere, j === 2 ? materials.moss : materials.pine, x + (j - 1) * .5, h + j * .3, z, 1.2, .7, 1.1);
+    } else for (let j = 0; j < 3; j++) mesh(cone, j === 2 ? materials.moss : materials.pine, x, h * .6 + j * .7, z, 1.2 - j * .22, 2, 1.2 - j * .22);
   }
   // Giant bound volumes form an open colonnade, with walkable gaps between them.
   for (const side of [-1, 1]) for (let i = 0; i < 5; i++) {
@@ -267,6 +273,30 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
 
   const listeners = [], keys = new Set(); let disposed = false, frame, lastTime = 0, elapsed = 0, lastNotify = 0, dirty = false, nearest = null, drag = null;
   const motionQuery = win.matchMedia('(prefers-reduced-motion: reduce)'); let reduced = motionQuery.matches;
+  const schoolResources = { geometries: new Set(), materials: new Set(), textures: new Set() };
+  let schoolBackdrop = null;
+  const disposeSchoolResources = () => {
+    schoolResources.geometries.forEach(resource => resource.dispose());
+    schoolResources.materials.forEach(resource => resource.dispose());
+    schoolResources.textures.forEach(resource => resource.dispose());
+    Object.values(schoolResources).forEach(set => set.clear());
+  };
+  root.dataset.schoolAsset = 'loading';
+  import('/vendor/three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => new GLTFLoader().loadAsync('/assets/school.glb')).then(gltf => {
+    gltf.scene.traverse(object => {
+      if (!object.isMesh) return;
+      object.castShadow = object.receiveShadow = true;
+      schoolResources.geometries.add(object.geometry);
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        schoolResources.materials.add(material);
+        for (const value of Object.values(material)) if (value?.isTexture) schoolResources.textures.add(value);
+      }
+    });
+    if (disposed) { disposeSchoolResources(); return; }
+    schoolBackdrop = gltf.scene; schoolBackdrop.position.set(0, 1.5, -39); schoolBackdrop.scale.setScalar(2.3); scene.add(schoolBackdrop);
+    root.dataset.schoolAsset = 'ready'; renderScene();
+    emit('world.asset.ready', { asset: '/assets/school.glb', sharedWith: 'homepage', effect: 'visual continuity only' });
+  }).catch(() => { if (!disposed) { root.dataset.schoolAsset = 'unavailable'; emit('world.asset.unavailable', { asset: '/assets/school.glb' }); } });
   const snapshot = () => structuredClone(state);
   const notify = () => { if (!disposed) { dirty = false; onChange(snapshot()); } };
   const emit = (type, extra = {}) => { if (!disposed) onEvent(type, { lab: 'story-world', fiction_kind: state.modelComparison?.decision_scene ? 'model_imagined' : 'authored_setting', sourceId: IDEAS_SOURCE.id, ...extra, state: snapshot() }); };
@@ -389,7 +419,7 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     dispose() {
       if (disposed) return;
       disposed = true; keys.clear(); win.cancelAnimationFrame(frame); observer.disconnect(); listeners.forEach(remove => remove());
-      geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); Object.values(materials).forEach(m => m.dispose()); renderer.dispose(); renderer.forceContextLoss(); root.remove();
+      schoolBackdrop?.removeFromParent(); disposeSchoolResources(); geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); Object.values(materials).forEach(m => m.dispose()); renderer.dispose(); renderer.forceContextLoss(); root.remove();
     },
   };
 }
