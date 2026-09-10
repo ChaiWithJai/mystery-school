@@ -12,7 +12,9 @@ Open `http://127.0.0.1:5188/demo-60.html` and press Start. Keep the tab visible.
 | 38-50 | Book world | Explore an idea. Make something of your own. |
 | 50-60 | Architecture | Astra built and revised the experience. Buzz coordinated builders. Python keeps work; MLflow records traces. Bonsai can supply local cues when configured. |
 
-This is a live presenter cut, not an exported video or proof that a learner completed all three pathways in one minute. The piano uses a seven-second authored exercise with a local piano sample, not the original Runaway recording. Camera and model calls remain explicit. Preview activity is marked agent review.
+This is a live presenter cut, not an exported video or proof that a learner completed all three pathways in one minute. The opening plays the first seven seconds of Jai's supplied Runaway MP3 at `public/audio/local/runaway.mp3`. Select Keep playing to continue the same recording into boxing and the book world. Browser autoplay rules may require Play opening. Camera and model calls remain explicit. Preview activity is marked agent review.
+
+The recording is local and git-ignored. Do not publish it or include it in deployment bundles. Other machines need their own permitted recording through the audio file picker. The playable piano and its separate notation exercise remain available; they are not the recording.
 
 No Jai portrait was available at freeze. The name card is intentional. A supplied portrait can be selected with `?portrait=/assets/your-file.jpg`.
 
