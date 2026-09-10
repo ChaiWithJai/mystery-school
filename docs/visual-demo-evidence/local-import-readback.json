@@ -1,0 +1,38 @@
+[
+  {
+    "id": "bf34ea93-a674-4f89-8013-4c98a157ed37",
+    "trace_id": "tr-13760142a1cc482e8756770560b085a3",
+    "source_event_id": "acceptance-attribution-ed29f6c",
+    "actor_kind": "agent_review",
+    "parent_finding_ids": [],
+    "trace_status": "OK"
+  },
+  {
+    "id": "8826bbe1-363a-4a4b-b7c2-efc0508f488d",
+    "trace_id": "tr-1e1efa9d2c9d4ccdb0498492d802c5fc",
+    "source_event_id": "acceptance-attribution-verified-3a92273",
+    "actor_kind": "agent_review",
+    "parent_finding_ids": [
+      "bf34ea93-a674-4f89-8013-4c98a157ed37"
+    ],
+    "trace_status": "OK"
+  },
+  {
+    "id": "c4ec10df-87a6-435e-8cd8-4f59d34657a7",
+    "trace_id": "tr-173b752aba464889bc6fbb6ec86e01aa",
+    "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621752344:correction-draft-summary",
+    "actor_kind": "agent_review",
+    "parent_finding_ids": [],
+    "trace_status": "OK"
+  },
+  {
+    "id": "e06a9618-1589-45e5-a5a7-a8b297c0b8d7",
+    "trace_id": "tr-6b99b00db7af451aae009166e3546521",
+    "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621995482:correction-draft-summary",
+    "actor_kind": "agent_review",
+    "parent_finding_ids": [
+      "c4ec10df-87a6-435e-8cd8-4f59d34657a7"
+    ],
+    "trace_status": "OK"
+  }
+]

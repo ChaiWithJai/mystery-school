@@ -1,0 +1,36 @@
+{
+  "previous": 0.02,
+  "attack": 0.03,
+  "artifact_id": "daf0125e-46d6-4264-997f-fb5b3c9bd63c",
+  "trace_id": "tr-2db932f80895f1f1f082f22ca1cc72c9",
+  "event_ids": [
+    "e66166ba-b1df-4aa8-9582-e4803b5a04d3",
+    "f1281a69-3579-4257-a551-499b544aba43",
+    "4d9ca37d-bfc2-4ed7-aa61-c12dfc296281"
+  ],
+  "attack_event": {
+    "session_id": "c8ab5ca4-9587-4255-84e1-217ad5aa43b7",
+    "type": "learning.music.action",
+    "payload": {
+      "world": "memory",
+      "pathway": "music",
+      "character": "Maya",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "type": "attack.change",
+      "payload": {
+        "source_kind": "synthesized_phrase",
+        "previous_attack": 0.02,
+        "attack": 0.03
+      }
+    },
+    "id": "f1281a69-3579-4257-a551-499b544aba43",
+    "created_at": "2026-09-10T17:34:19.865827+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-64141320c961839489f85551318b5d78"
+  },
+  "mlflow_readback": "PASS"
+}

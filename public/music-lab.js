@@ -197,8 +197,10 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
 
   function changeAttack(attack) {
     if (disposed || validateAttack(attack) === state.attack) return;
+    const previousAttack = state.attack;
     if (playing || starting) stopPlayback('edited');
     state.attack = attack; render(); onChange({ attack: state.attack });
+    emit('attack.change', { previous_attack: previousAttack, attack: state.attack });
   }
 
   function releaseVoices() {

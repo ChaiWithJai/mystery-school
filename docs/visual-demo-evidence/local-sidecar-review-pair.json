@@ -1,0 +1,249 @@
+{
+  "finding": {
+    "source_system": "github",
+    "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621752344:correction-draft-summary",
+    "observed_at": "2026-09-10T16:09:32Z",
+    "actor_kind": "agent_review",
+    "actor_id": "sidecar-verifier",
+    "actor_role": "evaluator_sidecar",
+    "reviewed_sha": "c0446cc5019eeff687a0b94d48e808784e0046b3",
+    "session_id": "MS-FIND-001-correction-retest",
+    "task_id": "correction-draft-preservation",
+    "capture_method": "imported",
+    "input": {
+      "scope": "Selected published sidecar QA summary, not full source comment or model trace",
+      "route": "/?correct=synthetic-correction-parent",
+      "steps": "Edit four fields; close; Bring a reference; close; Imagine again. Synthetic failed parent only; no model calls."
+    },
+    "output": "Edited question and premise reverted to synthetic original values; correction note reverted to default; prediction survived.",
+    "decision": "Correction-route extension of MS-FIND-001: correction question, premise and note revert after close/reference/reopen; ordinary control passes.",
+    "checks": [
+      {
+        "name": "correction-draft-reference-detour",
+        "status": "observed_fail",
+        "basis": "Actual sidecar browser QA summarized in linked published comment"
+      },
+      {
+        "name": "ordinary-draft-control",
+        "status": "observed_pass"
+      }
+    ],
+    "events": [
+      {
+        "type": "published_review_summary",
+        "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+        "content": "Correction-route extension of MS-FIND-001: correction question, premise and note revert after close/reference/reopen; ordinary control passes."
+      }
+    ],
+    "source_refs": [
+      {
+        "url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+        "label": "Published sidecar finding / verification summary"
+      }
+    ],
+    "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+    "finding_id": "MS-FIND-001-correction",
+    "model": null,
+    "usage": null,
+    "cost_usd": null,
+    "invocation_id": null,
+    "timing": {
+      "source_time_kind": "github_comment_publication",
+      "original_activity_times": "not recorded here"
+    },
+    "parent_finding_ids": [],
+    "id": "c4ec10df-87a6-435e-8cd8-4f59d34657a7",
+    "trace_id": "tr-173b752aba464889bc6fbb6ec86e01aa",
+    "imported_at": "2026-09-10T17:32:28.253481+00:00",
+    "created_at": "2026-09-10T17:32:28.253481+00:00",
+    "envelope": {
+      "source_system": "github",
+      "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621752344:correction-draft-summary",
+      "observed_at": "2026-09-10T16:09:32Z",
+      "actor_kind": "agent_review",
+      "actor_id": "sidecar-verifier",
+      "actor_role": "evaluator_sidecar",
+      "reviewed_sha": "c0446cc5019eeff687a0b94d48e808784e0046b3",
+      "session_id": "MS-FIND-001-correction-retest",
+      "task_id": "correction-draft-preservation",
+      "capture_method": "imported",
+      "input": {
+        "scope": "Selected published sidecar QA summary, not full source comment or model trace",
+        "route": "/?correct=synthetic-correction-parent",
+        "steps": "Edit four fields; close; Bring a reference; close; Imagine again. Synthetic failed parent only; no model calls."
+      },
+      "output": "Edited question and premise reverted to synthetic original values; correction note reverted to default; prediction survived.",
+      "decision": "Correction-route extension of MS-FIND-001: correction question, premise and note revert after close/reference/reopen; ordinary control passes.",
+      "checks": [
+        {
+          "name": "correction-draft-reference-detour",
+          "status": "observed_fail",
+          "basis": "Actual sidecar browser QA summarized in linked published comment"
+        },
+        {
+          "name": "ordinary-draft-control",
+          "status": "observed_pass"
+        }
+      ],
+      "events": [
+        {
+          "type": "published_review_summary",
+          "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+          "content": "Correction-route extension of MS-FIND-001: correction question, premise and note revert after close/reference/reopen; ordinary control passes."
+        }
+      ],
+      "source_refs": [
+        {
+          "url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+          "label": "Published sidecar finding / verification summary"
+        }
+      ],
+      "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621752344",
+      "finding_id": "MS-FIND-001-correction",
+      "model": null,
+      "usage": null,
+      "cost_usd": null,
+      "invocation_id": null,
+      "timing": {
+        "source_time_kind": "github_comment_publication",
+        "original_activity_times": "not recorded here"
+      },
+      "parent_finding_ids": []
+    },
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "Imported observable agent review, not a live model invocation or human judgment. Only explicitly submitted input, output, events, decisions and checks are captured; no hidden reasoning or automatic conversation capture. observed_at is the source timestamp; imported_at is the server import timestamp; span duration covers envelope validation and record preparation, not source execution, disk persistence, export or retry latency. Model, usage and cost are unverified source reports, never inferred or estimated.",
+    "span_id": "313898cdccbd451c",
+    "import_start_ns": 1789061548253389000,
+    "import_end_ns": 1789061548253548000
+  },
+  "verification": {
+    "source_system": "github",
+    "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621995482:correction-draft-summary",
+    "observed_at": "2026-09-10T16:27:41Z",
+    "actor_kind": "agent_review",
+    "actor_id": "sidecar-verifier",
+    "actor_role": "evaluator_sidecar",
+    "reviewed_sha": "7ec7324e1f81efc0ae453467fecea95732eeb611",
+    "session_id": "MS-FIND-001-correction-retest",
+    "task_id": "correction-draft-preservation",
+    "capture_method": "imported",
+    "input": {
+      "scope": "Selected published sidecar QA summary, not full source comment or model trace",
+      "route": "/?correct=synthetic-correction-parent",
+      "steps": "Edit four fields; close; Bring a reference; close; Imagine again. Synthetic failed parent only; no model calls."
+    },
+    "output": "Question SYNTHETIC edited question, premise SYNTHETIC edited premise, prediction SYNTHETIC edited prediction, note SYNTHETIC edited correction note survived exactly; ordinary three-field control passed.",
+    "decision": "Verify correction-route draft fix; all four fields survive the same reference detour.",
+    "checks": [
+      {
+        "name": "correction-draft-reference-detour",
+        "status": "observed_pass",
+        "basis": "Actual sidecar browser QA summarized in linked published comment"
+      },
+      {
+        "name": "ordinary-draft-control",
+        "status": "observed_pass"
+      }
+    ],
+    "events": [
+      {
+        "type": "published_review_summary",
+        "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+        "content": "Verify correction-route draft fix; all four fields survive the same reference detour."
+      }
+    ],
+    "source_refs": [
+      {
+        "url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+        "label": "Published sidecar finding / verification summary"
+      }
+    ],
+    "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+    "finding_id": "MS-FIND-001-correction",
+    "model": null,
+    "usage": null,
+    "cost_usd": null,
+    "invocation_id": null,
+    "timing": {
+      "source_time_kind": "github_comment_publication",
+      "original_activity_times": "not recorded here"
+    },
+    "parent_finding_ids": [
+      "c4ec10df-87a6-435e-8cd8-4f59d34657a7"
+    ],
+    "id": "e06a9618-1589-45e5-a5a7-a8b297c0b8d7",
+    "trace_id": "tr-6b99b00db7af451aae009166e3546521",
+    "imported_at": "2026-09-10T17:32:28.269611+00:00",
+    "created_at": "2026-09-10T17:32:28.269611+00:00",
+    "envelope": {
+      "source_system": "github",
+      "source_event_id": "ChaiWithJai/mystery-school:issuecomment:5621995482:correction-draft-summary",
+      "observed_at": "2026-09-10T16:27:41Z",
+      "actor_kind": "agent_review",
+      "actor_id": "sidecar-verifier",
+      "actor_role": "evaluator_sidecar",
+      "reviewed_sha": "7ec7324e1f81efc0ae453467fecea95732eeb611",
+      "session_id": "MS-FIND-001-correction-retest",
+      "task_id": "correction-draft-preservation",
+      "capture_method": "imported",
+      "input": {
+        "scope": "Selected published sidecar QA summary, not full source comment or model trace",
+        "route": "/?correct=synthetic-correction-parent",
+        "steps": "Edit four fields; close; Bring a reference; close; Imagine again. Synthetic failed parent only; no model calls."
+      },
+      "output": "Question SYNTHETIC edited question, premise SYNTHETIC edited premise, prediction SYNTHETIC edited prediction, note SYNTHETIC edited correction note survived exactly; ordinary three-field control passed.",
+      "decision": "Verify correction-route draft fix; all four fields survive the same reference detour.",
+      "checks": [
+        {
+          "name": "correction-draft-reference-detour",
+          "status": "observed_pass",
+          "basis": "Actual sidecar browser QA summarized in linked published comment"
+        },
+        {
+          "name": "ordinary-draft-control",
+          "status": "observed_pass"
+        }
+      ],
+      "events": [
+        {
+          "type": "published_review_summary",
+          "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+          "content": "Verify correction-route draft fix; all four fields survive the same reference detour."
+        }
+      ],
+      "source_refs": [
+        {
+          "url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+          "label": "Published sidecar finding / verification summary"
+        }
+      ],
+      "source_url": "https://github.com/ChaiWithJai/mystery-school/issues/2#issuecomment-5621995482",
+      "finding_id": "MS-FIND-001-correction",
+      "model": null,
+      "usage": null,
+      "cost_usd": null,
+      "invocation_id": null,
+      "timing": {
+        "source_time_kind": "github_comment_publication",
+        "original_activity_times": "not recorded here"
+      },
+      "parent_finding_ids": [
+        "c4ec10df-87a6-435e-8cd8-4f59d34657a7"
+      ]
+    },
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "Imported observable agent review, not a live model invocation or human judgment. Only explicitly submitted input, output, events, decisions and checks are captured; no hidden reasoning or automatic conversation capture. observed_at is the source timestamp; imported_at is the server import timestamp; span duration covers envelope validation and record preparation, not source execution, disk persistence, export or retry latency. Model, usage and cost are unverified source reports, never inferred or estimated.",
+    "span_id": "f2ead940aa5642f6",
+    "import_start_ns": 1789061548269524000,
+    "import_end_ns": 1789061548269669000
+  },
+  "mapping": {
+    "original_parent_ids": [
+      "c3e28fb0-ef58-4529-986b-104ed1dd7653"
+    ],
+    "local_parent_ids": [
+      "c4ec10df-87a6-435e-8cd8-4f59d34657a7"
+    ]
+  },
+  "identical_retry_http_status": 200
+}

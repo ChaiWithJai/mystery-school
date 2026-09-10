@@ -161,3 +161,15 @@ test('a piano key plays one note with the current envelope and records that note
   cleanup();
   assert.equal(audio.contexts[0].state, 'closed');
 });
+
+test('attack edits emit the old and new values once so saved trajectories explain the change', async () => {
+  const { host, find } = harness();
+  const events = [];
+  const cleanup = mountMusicLab(host, { initialState: { attack: .2 }, onEvent: (type, metadata) => events.push({type, metadata}) });
+  const slider = find('music-lab__slider');
+  slider.value = '.4';
+  await slider.fire('input');
+  await slider.fire('input');
+  assert.deepEqual(events, [{type:'attack.change', metadata:{previous_attack:.2, attack:.4, source_kind:'synthesized_phrase'}}]);
+  cleanup();
+});
