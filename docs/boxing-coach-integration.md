@@ -1,0 +1,9 @@
+# Five foundations beneath the 40-second demo
+
+The live demo stays one stick-and-move cue. The canonical curriculum in `public/data/boxing-foundations.json` supplies five deeper foundations: attention, feet, shields, eyes_head, coordination. Each has one active cue, prerequisites, source evidence, an aligned assessment and transfer/reflection prompt. Jai's swords/shields/wheels/helmet metaphors are authored teaching language. The source videos do not establish Derek James attribution. A/B head-slot definitions remain unresolved.
+
+The browser uses `getBoxingFoundationCoachContext(id)` from `public/boxing-foundations.js`. The backend uses `build_boxing_coach_context(frozen_artifact, foundation_id)` from `boxing_coach.py`. Both read the same JSON. The Python context includes the exact curriculum SHA-256 and saved artifact ID for existing trace records, preserves learner words, omits video frames and point arrays, and explicitly prevents pose-based breathing, panic, gaze, torque, force or mastery judgments.
+
+M5 owns the host integration: select a foundation explicitly, freeze the movement artifact using the existing save/consent path, attach the returned context to the existing coach request and trace, and present one cue at a time. This change does not itself modify the server request path or claim a live voice-coaching run. Source data is treated as data; learner reflection is not an instruction to the model. Do not apply old simulated boxing parameters to the mirror.
+
+Validation covers source/cue links, prerequisite order/cycles, assessment coverage, source gaps and evidence boundaries. It does not establish learner efficacy. Remaining instructional gap: Jai's A/B definitions and exact preferred coordination sequence. Reviewed curriculum supplies a general coordination exercise without claiming it is his exact progression.
