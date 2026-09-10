@@ -1,5 +1,6 @@
 .piano-practice{color:#edf2dc;background:radial-gradient(ellipse at 80% 0,#31574280,transparent 65%),#0b211d;border:1px solid #47634e;border-radius:22px;padding:clamp(18px,3vw,36px);font:14px/1.6 var(--sans,"Avenir Next","Trebuchet MS",sans-serif);min-width:0}
 .piano-practice *{box-sizing:border-box}
+.piano-practice .piano-practice__shortcut{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:block;padding:3px 6px;border:1px solid #49663d;border-radius:4px;background:#254c32;color:#f2f6df;font:700 12px var(--sans,"Avenir Next",sans-serif);pointer-events:none}
 .piano-practice h2{font:400 clamp(28px,3vw,44px)/1.15 var(--serif,Georgia,serif);margin:8px 0 14px;color:#edf2dc}
 .piano-practice__header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 24px}
 .piano-practice .piano-practice__header h2{font-size:24px;margin:0}

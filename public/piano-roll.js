@@ -41,6 +41,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   root.innerHTML = `<div class="piano-roll__controls"><button type="button" data-hear>Hear</button><button type="button" data-play>Play</button><button type="button" data-stop>Stop</button><span data-tempo></span></div><p role="status" aria-live="polite" data-feedback>Play E6 when the bar reaches the keys.</p><svg class="piano-roll__track" role="img" aria-label="Two E6 notes fall toward the actual E6 key"><g data-lanes></g><g data-notes></g><line data-hit stroke="currentColor" stroke-width="2"/></svg><details><summary>Source & timing</summary><a target="_blank" rel="noopener noreferrer" data-source>Published two-strike opening</a><p>Synthesized exercise, not the original recording or a full-song score. Timing feedback uses a practice window of 0.2 seconds, not a mastery grade.</p><p data-clock></p></details>`;
   container.append(root);
   const q = selector => root.querySelector(selector);
+  q('[data-feedback]').textContent = 'Press L or tap the glowing key.';
   q('[data-source]').href = RUNAWAY_OPENING_SOURCE.url;
   const svg = q('svg');
   const ns = 'http://www.w3.org/2000/svg';
@@ -104,7 +105,7 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
     if (disposed || mode === 'idle') return;
     const time = now() - origin; draw(time);
     if (mode === 'practice' && time < 0) q('[data-feedback]').textContent = `Ready ${Math.max(1,Math.ceil(-time/(60/(currentTarget?.quarter_bpm??80))))}`;
-    else if (mode === 'practice' && !started) { started = true; q('[data-feedback]').textContent = 'E6 at the line. Release, then strike again.'; }
+    else if (mode === 'practice' && !started) { started = true; q('[data-feedback]').textContent = 'Press L at the line. Release, then press again.'; }
     if (time > createOpeningDemoTake(currentTarget).duration + .5) {
       const count = strikes.length; stop('finished');
       q('[data-feedback]').textContent = count < 2 && count > 0 ? 'One strike captured. Try both next time.' : count === 0 ? 'Your turn. Press Play to follow the two strikes.' : 'Take finished. Listen back on your piano.';
