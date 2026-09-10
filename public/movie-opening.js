@@ -13,6 +13,6 @@ export function showMovieOpening(onSelect) {
   const close=()=>{background.forEach(({child,inert})=>child.inert=inert);opening.remove();};opening.addEventListener('movie:dismiss',close,{once:true});
   const choices=[...opening.querySelectorAll('[data-world]')];
   opening.addEventListener('keydown',event=>{if(event.key!=='Tab')return;event.preventDefault();const index=choices.indexOf(document.activeElement);choices[(index+(event.shiftKey?-1:1)+choices.length)%choices.length].focus();});
-  choices.forEach(button=>button.onclick=()=>{sessionStorage.setItem('mystery.opening-seen','1');close();onSelect(button.dataset.world);});
+  choices.forEach(button=>button.onclick=()=>{try{sessionStorage.setItem('mystery.opening-seen','1');}catch{}close();onSelect(button.dataset.world);});
   opening.querySelector('button').focus({preventScroll:true});
 }

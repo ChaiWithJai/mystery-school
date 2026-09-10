@@ -1,7 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RUNAWAY_OPENING_SOURCE, createOpeningDemoTake, analyzeOpening } from '../public/runaway-opening.js';
+import { RUNAWAY_OPENING_SOURCE, createOpeningDemoTake, analyzeOpening, normalizeOpeningTarget, openingTempoLabel } from '../public/runaway-opening.js';
 import { normalizePianoState } from '../public/piano-practice.js';
+
+test('target normalization is exact, bounded and detached with null legacy default', () => {
+  assert.equal(normalizeOpeningTarget(),null);
+  assert.equal(normalizeOpeningTarget(null),null);
+  const target={exercise_id:RUNAWAY_OPENING_SOURCE.id,quarter_bpm:60};
+  assert.deepEqual(normalizeOpeningTarget(target),target);
+  assert.notEqual(normalizeOpeningTarget(target),target);
+  for(const bpm of [40,80]) assert.equal(normalizeOpeningTarget({...target,quarter_bpm:bpm}).quarter_bpm,bpm);
+  for(const value of [{},[],false,{...target,extra:1},{...target,exercise_id:'other'},...[39,81,60.5,'60',NaN,Infinity,null].map(quarter_bpm=>({...target,quarter_bpm}))]) {
+    assert.throws(()=>normalizeOpeningTarget(value));
+    assert.throws(()=>createOpeningDemoTake(value));
+    assert.throws(()=>analyzeOpening({},value));
+  }
+});
+
+test('60 BPM adapts only time; demo and comparison share the two-second interval', () => {
+  const target={exercise_id:RUNAWAY_OPENING_SOURCE.id,quarter_bpm:60};
+  const demo=createOpeningDemoTake(target);
+  assert.deepEqual(demo.events.map(e=>e.time),[1,3,3,5]);
+  assert.ok(demo.events.every(e=>e.midi===88));assert.equal(demo.duration,5);
+  assert.equal(analyzeOpening(demo,target).interval_difference_seconds,0);
+  assert.equal(analyzeOpening(demo,target).target_interval_seconds,2);
+  assert.equal(analyzeOpening(demo,target).practice_adaptation,true);
+  assert.equal(analyzeOpening(demo).interval_difference_seconds,.5);
+  assert.equal(openingTempoLabel(target),'60 BPM / slower practice adaptation');
+  assert.equal(openingTempoLabel(),'80 BPM / published notation');
+  assert.equal(RUNAWAY_OPENING_SOURCE.quarter_bpm,80);
+});
 
 test('frozen metadata identifies the arrangement and limits, not learner authorship', () => {
   assert.ok(Object.isFrozen(RUNAWAY_OPENING_SOURCE));

@@ -55,9 +55,47 @@ export function validateYouTubeReference(urlText = '', timestamp = '', note = ''
   return { valid, errors, seconds: valid ? seconds : null, url: valid ? `https://www.youtube.com/watch?v=${videoId}&t=${seconds}s` : null };
 }
 
+export function validateDecisionScene(value) {
+  if (value == null) return null;
+  if (value.kind !== 'shared_shelter' || !Array.isArray(value.choices) || value.choices.length !== 2 ||
+    value.choices.some((choice, index) => !choice || choice.id !== ['a', 'b'][index] ||
+      typeof choice.label !== 'string' || !choice.label.trim() || choice.label.length > 80 ||
+      typeof choice.consequence !== 'string' || !choice.consequence.trim() || choice.consequence.length > 240 ||
+      !['shared', 'self'].includes(choice.shelter)) ||
+    new Set(value.choices.map(choice => choice.shelter)).size !== 2) {
+    throw new TypeError('A decision scene needs choices a and b, bounded text, and both shelter states.');
+  }
+  return { kind: 'shared_shelter', choices: value.choices.map(({ id, label, consequence, shelter }) => ({ id, label, consequence, shelter })) };
+}
+
+function normalizeComparison(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const scene = validateDecisionScene(value.decision_scene);
+  return { scenario: String(value.scenario || ''), question: String(value.question || ''),
+    source_quote: String(value.source_quote || ''), source_ref_index: value.source_ref_index ?? null,
+    ...(scene ? { decision_scene: scene } : {}) };
+}
+
+// Canonical full content, not a lossy hash: a selection cannot leak to a changed comparison.
+export function ideasComparisonIdentity(value) {
+  const comparison = normalizeComparison(value);
+  return comparison?.decision_scene ? JSON.stringify(comparison) : null;
+}
+
 /** Normalize known fields without trimming, replacing, or grading learner drafts. */
 export function validateIdeasState(input = {}) {
   const value = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const modelComparison = normalizeComparison(value.modelComparison);
+  const decisionResponses = {};
+  if (value.decisionResponses && typeof value.decisionResponses === 'object' && !Array.isArray(value.decisionResponses)) {
+    for (const [identity, choice] of Object.entries(value.decisionResponses).slice(-12)) {
+      try {
+        if (identity.length <= 16000 && ['a', 'b', 'neither'].includes(choice) && ideasComparisonIdentity(JSON.parse(identity)) === identity) {
+          decisionResponses[identity] = choice;
+        }
+      } catch { /* A malformed historical response cannot select a current scene. */ }
+    }
+  }
   return {
     version: 1,
     sourceId: IDEAS_SOURCE.id,
@@ -72,9 +110,8 @@ export function validateIdeasState(input = {}) {
     youtubeUrl: typeof value.youtubeUrl === 'string' ? value.youtubeUrl.slice(0, 2048) : '',
     youtubeTimestamp: typeof value.youtubeTimestamp === 'string' ? value.youtubeTimestamp.slice(0, 16) : '',
     youtubeNote: typeof value.youtubeNote === 'string' ? value.youtubeNote.slice(0, 4000) : '',
-    modelComparison: value.modelComparison && typeof value.modelComparison === 'object'
-      ? { scenario: String(value.modelComparison.scenario || ''), question: String(value.modelComparison.question || ''),
-        source_quote: String(value.modelComparison.source_quote || ''), source_ref_index: value.modelComparison.source_ref_index } : null,
+    modelComparison,
+    decisionResponses,
   };
 }
 
@@ -140,7 +177,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     listeners.push(() => element.removeEventListener(type, handler));
   }
   function emit(type, detail = {}) {
-    if (!disposed) onEvent(type, { lab: 'ideas', sourceId: IDEAS_SOURCE.id, guidanceId: IDEAS_GUIDANCE.id, ...detail, state: { ...state } });
+    if (!disposed) onEvent(type, structuredClone({ lab: 'ideas', sourceId: IDEAS_SOURCE.id, guidanceId: IDEAS_GUIDANCE.id, ...detail, state }));
   }
   function update(patch) {
     if (disposed) return;
@@ -320,7 +357,8 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   map.append(chain);
   const story = node('section', 'ideas-lab__story');
   story.setAttribute('aria-label', 'Authored story: two strangers in the rain');
-  story.append(node('small', 'ideas-lab__story-origin', 'An imagined moment'));
+  const storyOrigin = node('small', 'ideas-lab__story-origin', 'An imagined moment');
+  story.append(storyOrigin);
   const storyCaption = node('p', 'ideas-lab__story-caption', 'Two strangers. One umbrella.');
   storyCaption.setAttribute('role', 'status');
   const rain = node('div', 'ideas-lab__rain'); rain.setAttribute('aria-hidden', 'true');
@@ -341,6 +379,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const enterMap = node('button', 'ideas-lab__story-next', '✧'); enterMap.type = 'button';
   enterMap.setAttribute('aria-label', 'Make your own thought from this story'); enterMap.hidden = true;
   listen(umbrella, 'click', () => {
+    if (state.modelComparison?.decision_scene) return;
     const shared = state.storyChoice !== 'offer_shelter';
     update({ storyChoice: shared ? 'offer_shelter' : 'return_umbrella' });
     emit('story.choice', { storyId: 'authored-rain-and-care', authored: true, action: shared ? 'offer_shelter' : 'return_umbrella', outcome: 'Authored illustration; not a prediction of another person’s response.' });
@@ -349,10 +388,36 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   listen(bookDoor, 'click', () => leaveStory(0));
   listen(enterMap, 'click', () => leaveStory(1));
   story.append(rain, street, storyCaption, umbrella, bookDoor, enterMap);
+  const decisionPanel = node('div', 'ideas-lab__decision');
+  const decisionQuestion = node('p', 'ideas-lab__probe');
+  const decisionContext = node('details', 'ideas-lab__decision-context');
+  const decisionScenario = node('p', 'ideas-lab__probe');
+  decisionContext.append(node('summary', '', 'The situation'), decisionScenario, decisionQuestion,
+    node('small', 'ideas-lab__note', 'Model-imagined choices and consequences, not predictions of people or facts from the source. Your interpretation remains yours to write.'));
+  const decisionChoices = node('div', 'ideas-lab__decision-choices');
+  const decisionConsequence = node('p', 'ideas-lab__decision-consequence');
+  decisionConsequence.setAttribute('role', 'status');
+  function chooseDecision(choice) {
+    if (!state.modelComparison?.decision_scene) return;
+    const comparisonIdentity = ideasComparisonIdentity(state.modelComparison);
+    const responses = { ...state.decisionResponses };
+    delete responses[comparisonIdentity];
+    update({ decisionResponses: { ...responses, [comparisonIdentity]: choice } });
+    emit('model-comparison.decision', { choice, imagined: true, comparisonIdentity });
+  }
+  const decisionButtons = ['a', 'b'].map(id => {
+    const button = node('button', 'ideas-lab__button'); button.type = 'button';
+    listen(button, 'click', () => chooseDecision(id)); decisionChoices.append(button); return button;
+  });
+  const neither = node('button', 'ideas-lab__button', 'Neither fits'); neither.type = 'button';
+  listen(neither, 'click', () => chooseDecision('neither'));
+  decisionPanel.append(decisionChoices, neither, decisionConsequence, decisionContext);
+  story.append(decisionPanel);
+  let storyVoice;
   if (speech && Utterance) {
-    const storyVoice = node('button', 'ideas-lab__voice', '◖))'); storyVoice.type = 'button';
+    storyVoice = node('button', 'ideas-lab__voice', '◖))'); storyVoice.type = 'button';
     storyVoice.setAttribute('aria-label', 'Hear this authored story');
-    listen(storyVoice, 'click', () => speak(`An imagined moment. ${storyCaption.textContent}`));
+    listen(storyVoice, 'click', () => speak(state.modelComparison?.decision_scene ? `Model-imagined situation. ${state.modelComparison.scenario} ${state.modelComparison.question}` : `An imagined moment. ${storyCaption.textContent}`));
     story.append(storyVoice);
   }
   if (!state.interpretation && !state.revisedInterpretation) chain.hidden = true;
@@ -379,9 +444,18 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   listen(comparisonTry, 'click', () => { stopSpeech(); comparison.open = false; story.hidden = true; chain.hidden = false; update({ comparisonChoice: 'reconsider', unchanged: false }); selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison, choice: 'reconsider' }); });
   const comparisonKeep = node('button', 'ideas-lab__button', 'Keep my view — explain why'); comparisonKeep.type = 'button';
   listen(comparisonKeep, 'click', () => { stopSpeech(); comparison.open = false; story.hidden = true; chain.hidden = false; update({ comparisonChoice: 'keep', unchanged: true }); selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison, choice: 'keep' }); });
-  comparison.append(comparisonTitle, node('small', '', 'Astra’s thought experiment · the rain scene is authored separately'),
+  const comparisonOrigin = node('small');
+  const comparisonPlay = node('button', 'ideas-lab__button', 'Open the imagined choices'); comparisonPlay.type = 'button';
+  function openDecisionStory(focus = false) {
+    if (!state.modelComparison?.decision_scene) return;
+    stopSpeech(); story.hidden = false; chain.hidden = true; editor.hidden = true; comparison.open = false;
+    if (focus) storyCaption.focus({ preventScroll: true });
+  }
+  storyCaption.tabIndex = -1;
+  listen(comparisonPlay, 'click', () => openDecisionStory(true));
+  comparison.append(comparisonTitle, comparisonOrigin,
     comparisonSource, comparisonScenario, comparisonQuestion, comparisonTry);
-  comparison.append(comparisonKeep);
+  comparison.append(comparisonKeep, comparisonPlay);
   if (speech && Utterance) {
     const comparisonVoice = node('button', 'ideas-lab__button', 'Hear the situation'); comparisonVoice.type = 'button';
     listen(comparisonVoice, 'click', () => speak(`Astra's thought experiment. ${state.modelComparison?.scenario || ''} ${state.modelComparison?.question || ''} Source excerpt: ${state.modelComparison?.source_quote || ''}`));
@@ -421,11 +495,31 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     firstMemory.hidden = !state.interpretation.trim();
     firstMemoryQuote.textContent = state.interpretation;
     begin.textContent = state.interpretation.trim() ? 'What do I think now? →' : 'What do I think? →';
-    const shared = state.storyChoice === 'offer_shelter';
+    const scene = state.modelComparison?.decision_scene;
+    const response = state.decisionResponses[ideasComparisonIdentity(state.modelComparison)];
+    const selected = scene?.choices.find(choice => choice.id === response);
+    const shared = scene ? selected?.shelter === 'shared' : state.storyChoice === 'offer_shelter';
+    story.setAttribute('data-model-scene', String(Boolean(scene)));
+    story.setAttribute('aria-label', scene ? 'Model-imagined shared shelter decision' : 'Authored story: two strangers in the rain');
+    storyOrigin.textContent = scene ? 'Model-imagined situation' : 'An imagined moment';
+    storyVoice?.setAttribute('aria-label', scene ? 'Hear this model-imagined situation' : 'Hear this authored story');
     story.setAttribute('data-shared', String(shared));
-    umbrella.setAttribute('aria-label', shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
-    storyCaption.textContent = shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
-    bookDoor.hidden = enterMap.hidden = !shared;
+    umbrella.disabled = Boolean(scene);
+    umbrella.setAttribute('aria-label', scene ? (shared ? 'Imagined umbrella shared' : 'Imagined umbrella held by one person') : shared ? 'Bring the umbrella back' : 'Offer your umbrella to the stranger');
+    storyCaption.textContent = scene ? 'Where will you put the shelter?' : shared ? 'The rain stays. You make room.' : 'Two strangers. One umbrella.';
+    bookDoor.hidden = enterMap.hidden = scene ? !response : !shared;
+    decisionPanel.hidden = !scene;
+    decisionQuestion.textContent = scene ? state.modelComparison.question : '';
+    decisionScenario.textContent = scene ? state.modelComparison.scenario : '';
+    decisionButtons.forEach((button, index) => {
+      button.textContent = scene?.choices[index].label || '';
+      button.setAttribute('aria-pressed', String(Boolean(scene) && response === scene.choices[index].id));
+    });
+    neither.setAttribute('aria-pressed', String(response === 'neither'));
+    decisionConsequence.textContent = selected ? `Imagined consequence: ${selected.consequence}` : response === 'neither'
+      ? 'Neither selected.' : '';
+    comparisonPlay.hidden = !scene;
+    comparisonOrigin.textContent = scene ? 'Model-imagined situation. The source quotation is separate.' : 'Historical text-only comparison. No playable model scene is attached; the rain story is authored separately.';
     comparison.hidden = !state.modelComparison;
     comparisonSource.textContent = state.modelComparison?.source_quote || '';
     comparisonScenario.textContent = state.modelComparison?.scenario || '';
@@ -456,6 +550,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   }
 
   render();
+  openDecisionStory();
   container.append(root);
   onChange(structuredClone(state));
   emit('open');
@@ -472,12 +567,15 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     const next = validateIdeasState(value);
     if (next.modelComparison && (!next.modelComparison.source_quote ||
       !IDEAS_SOURCE.excerpt.includes(next.modelComparison.source_quote))) throw Error('Comparison must quote the available source excerpt.');
-    state = next;
+    stopSpeech(); state = next;
     first.input.value = state.interpretation;
     revised.input.value = state.revisedInterpretation;
     unchangedInput.checked = state.unchanged;
     for (const key of Object.keys(videoFields)) videoFields[key].value = state[key];
-    render(); onChange(structuredClone(state)); emit('model-comparison.change');
+    render();
+    if (state.modelComparison?.decision_scene) openDecisionStory(true);
+    else { story.hidden = Boolean(state.interpretation || state.revisedInterpretation); chain.hidden = !story.hidden; editor.hidden = true; }
+    onChange(structuredClone(state)); emit('model-comparison.change');
   };
   return cleanup;
 }

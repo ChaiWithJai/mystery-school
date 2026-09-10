@@ -1,4 +1,7 @@
 import {showMovieOpening} from './movie-opening.js';
-if(!sessionStorage.getItem('mystery.opening-seen')&&!new URLSearchParams(location.search).has('artifact')){
+import {shouldShowOpening} from './opening-route.js';
+let seen=false;
+try{seen=!!sessionStorage.getItem('mystery.opening-seen');}catch{}
+if(shouldShowOpening(location.search,seen)){
   showMovieOpening(pathway=>{const url=new URL(location.href);url.searchParams.set('path',pathway);location.assign(url);});
 }

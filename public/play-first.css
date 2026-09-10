@@ -16,3 +16,12 @@
 .learning-drawer .bg-prediction text{opacity:0}
 .learning-drawer .bg-prediction:is(:hover,:focus) text{opacity:1}
 .learning-drawer .universe-next{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);z-index:22}
+.learning-drawer:has(.piano-practice) .learning-work>.learning-next{top:80px;bottom:auto;max-height:calc(46dvh - 90px)}
+.ideas-lab__map:has(.ideas-lab__model-comparison:not([hidden])) .ideas-lab__story-book{right:18%}
+.ideas-lab__decision-context{margin-top:18px;max-width:680px}
+.ideas-lab__decision-context>summary{cursor:pointer;color:#e9dfc5;min-height:32px}
+.ideas-lab__decision-context[open]{padding:18px;background:#142820;border:1px solid #b4c09b55;border-radius:14px}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__story-caption{margin-bottom:24px}
+.ideas-lab__story[data-shared=true] .ideas-lab__person--stranger{left:calc(39% + 64px)}
+.ideas-lab__story[data-shared=true] .ideas-lab__umbrella{left:calc(39% - 12px)}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__umbrella{top:35px}

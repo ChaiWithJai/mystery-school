@@ -18,13 +18,14 @@ See [CONTRACT.md](./CONTRACT.md) for the implementation contract.
 
 [Issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2) defines delivery.
 All three pathways are required. The forest and gear experiment do not replace
-them. Open "Meet the learners" from the header to move between pathways.
+them. The opening screen offers all three worlds. Direct pathway links skip
+that screen. Use the world chooser inside a pathway to switch worlds.
 
 | Person | Working interaction | Route |
 | --- | --- | --- |
-| Maya | Change a synthesized phrase's attack, compare its envelope, and revise the sound for her grandmother. | `/?path=music` |
-| Andre | Compare a non-contact movement at different durations and inspect position, velocity and acceleration. | `/?path=movement` |
-| Leena | Interpret an inspected Epictetus passage, attach a lecture timestamp, compare an authored alternative, and revise a sourced account. | `/?path=ideas` |
+| Maya | Play and record piano notes, compare the opening two strikes of a notation exercise, and try a proposed practice tempo. Phrase variations remain separate from recorded attempts. | `/?path=music` |
+| Andre | Play a boxing timing game, try proposed cue timing and gap settings, and inspect a mathematical movement comparison. | `/?path=movement` |
+| Leena | Try a shared-shelter decision scene, interpret the Epictetus passage, and revise her own account. A lecture URL, timestamp and note remain unverified user references. | `/?path=ideas` |
 
 Each pathway saves versions, presents a labeled staged response, and keeps a
 next question. Saved versions reopen through `?path=PATH&artifact=ID` and link
@@ -34,22 +35,28 @@ local API and have immutable parent links and MLflow trace IDs.
 The forest now has labeled pathway entrances and saved artifact markers. Select
 a saved marker to reopen that version, rather than starting a model request.
 
-"Explore this question with Astra" first saves the experiment and opens a
-confirmation form. The request uses `learning_artifact_id`, and the backend
-copies the saved record into `learning_artifact_context`. Changes to the question,
-prediction, premise, correction, or notebook selection require confirmation again.
-Artifact requests exclude unrelated image uploads; notebook notes are optional.
+"Ask Astra for a change" requires explicit consent and saves the starting
+experiment. The request uses `learning_artifact_id`, and the backend copies the
+saved record into `learning_artifact_context`. The proposal panel stays beside
+the local controls while the request runs. A supported result offers a preview,
+apply and undo. Changes to the question or source context invalidate consent.
+Changes to the experiment prevent an older proposal from overwriting those edits.
+Artifact requests exclude unrelated image uploads.
 General projections also leave saved images out unless the person checks
 "Include my saved reference images". Changing that choice requires confirmation
 again. Uploading an image alone does not authorize sending it to the model.
-The returned projection offers a return to the same saved experiment. Generated
-scenarios do not overwrite its settings, words, or sources.
+General forest projections still use the separate confirmation form. No proposal
+is applied automatically. Music practice targets preserve recorded attempts and
+phrase settings. Ideas consequences are model-imagined possibilities, not
+predictions or correct answers.
 
 The characters are fictional composites. Their dialogue and peer responses are
 authored, not live conversations. The experiments use deterministic code, not
 an ambient AI tutor. Music is synthesized sound, not a physical piano model.
-Movement is a mathematical comparison, not measured athlete data or impact
-advice. Participant learning has not been evaluated.
+The piano exercise uses the inspected Musicnotes MN0103069 arrangement, not
+verified timing from the original recording. Boxing gaps use simulation units,
+not physical distance or impact force. Movement is not measured athlete data or
+impact advice. Participant learning has not been evaluated.
 
 See [pathway verification](docs/pathway-verification.md) for the recorded tests,
 remaining gaps, and the contribution from the other machine.
@@ -61,7 +68,7 @@ worlds, image references, a persistent notebook, explicit Astra jobs, and a
 trajectory review interface with anchored notes and correction links.
 
 The browser renders the exported GLB with Three.js. Astra returns a structured
-scenario and atmosphere parameters, not newly generated geometry. Authored
+scenario, atmosphere parameters and bounded experiment proposals, not newly generated geometry. Authored
 scenes, generated possibilities, and user observations remain distinct.
 
 ## Run
@@ -108,7 +115,21 @@ npm test
 This verifies installation, startup and served files. It does not establish a
 fluid experience or replay a live model result. See
 [reproducible delivery](docs/reproducible-delivery.md) for the measured checkpoint
-and remaining public replay gate.
+and the separate recorded music replay.
+
+## Recorded music replay
+
+After starting the local server, open `http://127.0.0.1:5188/replay.html`.
+Play the initial phrase, inspect the recorded proposal, apply it, play again,
+and undo. Open "Source and replay events" to inspect its provenance and local
+page events. The bundled input and output are in
+`public/fixtures/recorded-music-proposal.json`.
+
+The page reuses recorded agent QA output without making a model request or
+saving new backend records. It covers a music phrase variation only. It does
+not replay the piano practice target, movement, or ideas. Serving the fixture
+successfully is not proof that the replay interaction or learning experience
+works in a browser.
 
 ## Checkpoint: September 10, 2026
 
@@ -129,7 +150,7 @@ and remaining public replay gate.
   each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
-- The latest verified suite checkpoint is 82 JavaScript tests and 22 backend
+- An earlier verified suite checkpoint recorded 82 JavaScript tests and 22 backend
   tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
   Their jobs, traces, sources, and reported usage are listed in the verification doc.
 - The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.

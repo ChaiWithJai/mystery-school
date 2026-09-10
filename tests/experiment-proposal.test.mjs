@@ -14,6 +14,160 @@ const proposal = pathway => ({version: 1, pathway, base_artifact_id: 'synthetic-
     ideas: {scenario: '  A synthetic disagreement.\n', question: 'What can I choose?', source_quote: 'in our control', source_ref_index: 0},
   }[pathway]});
 
+const practiceSource = 'https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069';
+const practiceTarget = {exercise_id: 'runaway-mn0103069-opening-two-strikes', quarter_bpm: 60};
+const practiceLocator = 'Original E-major arrangement, page 1, first two right-hand strikes including the tied continuation';
+const practiceArtifact = () => ({...artifact('music'),
+  source_refs: [{url: practiceSource, locator: practiceLocator, source_kind: 'notation_exercise'}],
+  state: {lab: structuredClone(proposal('music').music)},
+  experiment_sources: [{source_ref_index: 0, url: practiceSource, source_id: 'MusicnotesMN0103069',
+    exercise_id: practiceTarget.exercise_id, target_pitch: 'E6', target_midi: 88, quarter_bpm: 80, onsets: [.75, 2.25]}]});
+const decisionScene = () => ({kind: 'shared_shelter', choices: [
+  {id: 'a', label: ' Offer shelter. ', consequence: 'An imagined shared shelter, not agreement.\n', shelter: 'shared'},
+  {id: 'b', label: 'Keep it.', consequence: 'An imagined separate shelter.', shelter: 'self'},
+]});
+
+test('music practice target replaces only the target and preserves detached practice history', () => {
+  for (const quarter_bpm of [40, 60, 80]) {
+    const p = proposal('music'); p.music.practice_target = {...practiceTarget, quarter_bpm};
+    const a = practiceArtifact();
+    const current = {practice_target: {...practiceTarget, quarter_bpm: 75, old: true},
+      practice: {attempts: [{timing: [1, 2]}], question: ' My exact words.\n'}, other: {kept: true}};
+    const original = structuredClone({p, a, current});
+    assert.deepEqual(validateExperimentProposal(p, a), p);
+    const next = proposedLabState(p, a, current);
+    assert.deepEqual(next, {...current, ...p.music});
+    assert.deepEqual(next.practice_target, p.music.practice_target);
+    assert.equal(Object.hasOwn(next.practice_target, 'old'), false);
+    next.practice.attempts[0].timing.push(3);
+    next.practice_target.quarter_bpm = 42;
+    assert.deepEqual({p, a, current}, original);
+  }
+});
+
+test('absent or null practice target is not a new operation and does not erase existing target', () => {
+  for (const nullable of [false, true]) {
+    const p = proposal('music'); if (nullable) p.music.practice_target = null;
+    const a = artifact('music');
+    assert.deepEqual(validateExperimentProposal(p, a), p);
+    const empty = proposedLabState(p, a, {});
+    assert.equal(Object.hasOwn(empty, 'practice_target'), false);
+    const current = {practice_target: practiceTarget, practice: {attempts: [1]}};
+    assert.deepEqual(proposedLabState(p, a, current), {...current, ...proposal('music').music});
+  }
+});
+
+test('practice target rejects invalid keys, bounds, numbers and unbound source URLs', () => {
+  for (const target of [{...practiceTarget, quarter_bpm: 39}, {...practiceTarget, quarter_bpm: 81},
+    {...practiceTarget, quarter_bpm: 60.5}, {...practiceTarget, quarter_bpm: '60'},
+    {...practiceTarget, quarter_bpm: NaN}, {...practiceTarget, quarter_bpm: Infinity},
+    {...practiceTarget, exercise_id: 'other'}, {...practiceTarget, extra: 1},
+    {exercise_id: practiceTarget.exercise_id}, {}, [], false,
+    JSON.parse('{"exercise_id":"runaway-mn0103069-opening-two-strikes","quarter_bpm":60,"__proto__":{}}')]) {
+    const p = proposal('music'); p.music.practice_target = target;
+    assert.throws(() => validateExperimentProposal(p, practiceArtifact()));
+  }
+  const p = proposal('music'); p.music.practice_target = practiceTarget;
+  for (const source_refs of [[], [{url: practiceSource + '-fake'}], [{url: 'https://evil.example/MN0103069'}],
+    [{url: 'https://www.musicnotes.com.evil.example/sheetmusic/kanye-west/runaway/MN0103069'}],
+    [{url: 'https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0000000'}], [{note: practiceSource}]]) {
+    assert.throws(() => validateExperimentProposal(p, {...practiceArtifact(), source_refs}));
+  }
+});
+
+test('practice source accepts canonical notation locator or explicit exercise ID, not URL alone', () => {
+  const p = proposal('music'); p.music.practice_target = practiceTarget;
+  const a = practiceArtifact();
+  assert.doesNotThrow(() => validateExperimentProposal(p, a));
+  assert.doesNotThrow(() => validateExperimentProposal(p, {...a,
+    source_refs: [{url: practiceSource, exercise_id: practiceTarget.exercise_id}]}));
+  assert.throws(() => validateExperimentProposal(p, {...a,
+    source_refs: [{url: practiceSource, id: practiceTarget.exercise_id}]}));
+  for (const ref of [{url: practiceSource}, {url: practiceSource, locator: practiceLocator},
+    {url: practiceSource, locator: 'Wrong section', source_kind: 'notation_exercise'},
+    {url: practiceSource, locator: practiceLocator, source_kind: 'external_reference'},
+    {url: practiceSource, exercise_id: 'different-exercise'}, {url: practiceSource, id: 'different-exercise'},
+    {url: 'https://example.org', id: practiceTarget.exercise_id}]) {
+    assert.throws(() => validateExperimentProposal(p, {...a, source_refs: [ref]}));
+  }
+});
+
+test('practice target cannot change frozen variation and ignores JSON key order', () => {
+  const p = proposal('music'); p.music.practice_target = practiceTarget;
+  const a = practiceArtifact();
+  a.state.lab.notes = a.state.lab.notes.map(({midi, beats}) => ({beats, midi}));
+  assert.doesNotThrow(() => validateExperimentProposal(p, a));
+  for (const change of [{attack: .3}, {tempo: 100}, {notes: [{midi: 61, beats: 1}, {midi: 64, beats: .5}]}]) {
+    assert.throws(() => validateExperimentProposal({...p, music: {...p.music, ...change}}, a));
+  }
+  const missing = practiceArtifact(); delete missing.state;
+  assert.throws(() => validateExperimentProposal(p, missing));
+  for (const key of ['attack', 'notes', 'tempo']) {
+    const incomplete = practiceArtifact(); delete incomplete.state.lab[key];
+    assert.throws(() => validateExperimentProposal(p, incomplete));
+  }
+});
+
+test('ideas scene maps into detached modelComparison without writing learner fields', () => {
+  const p = proposal('ideas'); p.ideas.decision_scene = decisionScene();
+  const a = artifact('ideas');
+  const current = {interpretation: '  Keep my view.\n', revisedInterpretation: 'I disagree.', unchanged: true,
+    storyChoice: 'return_umbrella', comparisonChoice: 'keep', sourceId: 'original',
+    youtubeUrl: 'https://example.org/user-reference', youtubeNote: 'My account.', practice: {kept: [1]}};
+  const original = structuredClone({p, a, current});
+  assert.deepEqual(validateExperimentProposal(p, a), p);
+  const next = proposedLabState(p, a, current);
+  assert.deepEqual(next, {...current, modelComparison: p.ideas});
+  assert.equal(Object.hasOwn(next, 'decision_scene'), false);
+  next.modelComparison.decision_scene.choices[0].label = 'Different preview';
+  next.practice.kept.push(2);
+  assert.deepEqual({p, a, current}, original);
+});
+
+test('ideas absence and null remain text-only and length limits are inclusive', () => {
+  for (const nullable of [false, true]) {
+    const p = proposal('ideas'); if (nullable) p.ideas.decision_scene = null;
+    assert.deepEqual(validateExperimentProposal(p, artifact('ideas')), p);
+    const next = proposedLabState(p, artifact('ideas'), {});
+    assert.equal(Object.hasOwn(next.modelComparison, 'decision_scene'), nullable);
+    if (nullable) assert.equal(next.modelComparison.decision_scene, null);
+  }
+  for (const length of [1, 80]) {
+    const p = proposal('ideas'); p.ideas.decision_scene = decisionScene();
+    p.ideas.decision_scene.choices[0].label = 'x'.repeat(length);
+    p.ideas.decision_scene.choices[0].consequence = 'x'.repeat(length === 1 ? 1 : 240);
+    assert.doesNotThrow(() => validateExperimentProposal(p, artifact('ideas')));
+  }
+});
+
+test('ideas scene rejects malformed choices, duplicate IDs, single outcomes and unsafe JSON', () => {
+  const scenes = [{...decisionScene(), extra: 1}, {...decisionScene(), kind: 'script'},
+    {kind: 'shared_shelter', choices: []}, {kind: 'shared_shelter', choices: decisionScene().choices.slice(0, 1)},
+    {kind: 'shared_shelter', choices: [...decisionScene().choices, decisionScene().choices[0]]}, {}, [], false];
+  for (const change of [{id: 'b'}, {id: 'c'}, {shelter: 'self'}, {shelter: 'unknown'},
+    {label: ''}, {label: 'x'.repeat(81)}, {label: 3}, {consequence: ''},
+    {consequence: 'x'.repeat(241)}, {consequence: false}, {extra: 1}]) {
+    const scene = decisionScene(); Object.assign(scene.choices[0], change); scenes.push(scene);
+  }
+  const missing = decisionScene(); delete missing.choices[0].label; scenes.push(missing);
+  const unsafe = decisionScene(); unsafe.choices[0] = JSON.parse('{"id":"a","label":"x","consequence":"x","shelter":"shared","constructor":{}}'); scenes.push(unsafe);
+  for (const scene of scenes) {
+    const p = proposal('ideas'); p.ideas.decision_scene = scene;
+    assert.throws(() => validateExperimentProposal(p, artifact('ideas')));
+  }
+});
+
+test('playable ideas scene still requires exact quote, index, URL and locator binding', () => {
+  const p = proposal('ideas'); p.ideas.decision_scene = decisionScene();
+  for (const change of [{source_quote: 'Invented quotation'}, {source_ref_index: 1}]) {
+    assert.throws(() => validateExperimentProposal({...p, ideas: {...p.ideas, ...change}}, artifact('ideas')));
+  }
+  for (const change of [{url: 'https://example.org/wrong'}, {locator: 'Wrong section'}, {content: 'Other passage'}]) {
+    const a = artifact('ideas'); Object.assign(a.experiment_sources[0], change);
+    assert.throws(() => validateExperimentProposal(p, a));
+  }
+});
+
 for (const path of ['music', 'movement', 'ideas']) {
   test(`${path}: validates and creates a detached preview without altering input`, () => {
     const p = proposal(path), a = artifact(path);

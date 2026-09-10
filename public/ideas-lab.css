@@ -33,3 +33,17 @@
 .ideas-lab__map>.ideas-lab__model-comparison[open]{right:50%;top:50%;transform:translate(50%,-50%);width:min(470px,95%);max-height:95%;overflow:auto;background:#1d2138f5;border:1px solid #ab93cb;padding:22px;box-shadow:0 12px 70px #0009}.ideas-lab__model-comparison[open] summary{float:right;padding:0 8px;font-size:24px}.ideas-lab__model-comparison .ideas-lab__button{margin-right:8px}
 
 .ideas-lab__first-memory{margin-top:16px;padding:12px;border-left:2px solid #b9a0df;background:#ffffff06}.ideas-lab__first-memory small{color:#b6a8d4;font:10px var(--sans,sans-serif);text-transform:uppercase;letter-spacing:.1em}.ideas-lab__first-memory blockquote{margin:7px 0 0;max-height:5.5em;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.45 Georgia,serif;color:#e6d8f4}
+.ideas-lab__story[data-model-scene=true]{height:auto;min-height:430px;padding:300px 24px 30px}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__street{height:290px;bottom:auto}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__umbrella{top:75px;bottom:auto;cursor:default;opacity:1}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__umbrella:after{display:none}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__story-caption{position:relative;bottom:auto;text-align:left;font:24px/1.4 Georgia,serif;overflow-wrap:anywhere}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__story-next{top:205px;bottom:auto}
+.ideas-lab__story[data-model-scene=true] .ideas-lab__story-book{top:65px}
+.ideas-lab__decision{position:relative;z-index:3;overflow-wrap:anywhere}
+.ideas-lab__decision-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ideas-lab__decision .ideas-lab__button{white-space:normal;text-align:left;min-height:44px;line-height:1.5}
+.ideas-lab__decision .ideas-lab__button[aria-pressed=true]{background:#4c6554;border-color:#e5d5a9;color:#fff6dc}
+.ideas-lab__decision-consequence{min-height:3em;color:#f2ddb4;line-height:1.5}
+.ideas-lab__decision>.ideas-lab__note{display:block;padding-right:32px}
+@media(max-width:600px){.ideas-lab__story[data-model-scene=true]{padding:300px 16px 24px}.ideas-lab__decision-choices{grid-template-columns:1fr}.ideas-lab__story[data-model-scene=true] .ideas-lab__story-caption{font-size:21px}}

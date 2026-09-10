@@ -1,8 +1,9 @@
 import { mountMusicLab, normalizeMusicState } from './music-lab.js';
 import { mountPianoPractice, normalizePianoState } from './piano-practice.js';
+import { normalizeOpeningTarget } from './runaway-opening.js';
 
 export function normalizeSongState(value = {}) {
-  return { ...normalizeMusicState(value), practice: normalizePianoState(value.practice || {}) };
+  return { ...normalizeMusicState(value), practice: normalizePianoState(value.practice || {}), practice_target: normalizeOpeningTarget(value.practice_target) };
 }
 
 export function mountSongLab(container, { initialState = {}, onChange = () => {}, onEvent = () => {} } = {}) {
@@ -28,7 +29,7 @@ export function mountSongLab(container, { initialState = {}, onChange = () => {}
   });
   const variation = mountMusicLab(variationHost, {
     initialState: state,
-    onChange: value => { state = { ...value, practice: state.practice }; publish(); },
+    onChange: value => { state = { ...value, practice: state.practice, practice_target: state.practice_target }; publish(); },
     onEvent
   });
   const cleanup = () => {
@@ -41,7 +42,11 @@ export function mountSongLab(container, { initialState = {}, onChange = () => {}
     if (disposed) throw Error('This instrument is closed.');
     const next = normalizeSongState(value);
     applying = true;
-    try { piano.setState(next.practice); variation.setState(next); state = next; }
+    try {
+      if (JSON.stringify(next.practice) !== JSON.stringify(normalizePianoState(state.practice))) piano.setState(next.practice);
+      if (JSON.stringify(normalizeMusicState(next)) !== JSON.stringify(normalizeMusicState(state))) variation.setState(next);
+      state = next;
+    }
     finally { applying = false; }
     publish();
   };

@@ -17,7 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PIL import Image
 import jsonschema
 from server import (App, ACTIVE, make_server, codex_diagnostics, job_view, validate_projection,
-                    captured_experiment_sources, EPICTETUS_URL, EPICTETUS_EXCERPT)
+                    captured_experiment_sources, EPICTETUS_URL, EPICTETUS_EXCERPT,
+                    PRACTICE_URL, PRACTICE_LOCATOR, PRACTICE_EXERCISE_ID)
 from tracing import normalize_usage
 
 
@@ -181,10 +182,10 @@ class BackendTests(unittest.TestCase):
     @staticmethod
     def experiment_result(pathway=None, artifact_id="synthetic-artifact"):
         branches = {
-            "music": {"attack": 0.1, "notes": [{"midi": 60, "beats": 1}, {"midi": 64, "beats": 0.5}], "tempo": 90},
+            "music": {"attack": 0.1, "notes": [{"midi": 60, "beats": 1}, {"midi": 64, "beats": 0.5}], "tempo": 90, "practice_target": None},
             "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity", "boxing_params": None},
             "ideas": {"scenario": "A friend disagrees with your claim.", "question": "What can you choose?",
-                      "source_quote": EPICTETUS_EXCERPT, "source_ref_index": 0}}
+                      "source_quote": EPICTETUS_EXCERPT, "source_ref_index": 0, "decision_scene": None}}
         experiment = None if pathway is None else dict(version=1, pathway=pathway, base_artifact_id=artifact_id,
             status="supported", reason="Synthetic bounded variation", music=None, movement=None, ideas=None)
         if pathway:
@@ -301,6 +302,74 @@ class BackendTests(unittest.TestCase):
             self.assertIn("not physical distance or impact-force", ended["invocation"]["stdin"])
             if not has_round:
                 self.assertIn("boxing_round", ended["error"])
+
+    def test_experiment_practice_target_source_and_unchanged_variation(self):
+        result = self.experiment_result("music")
+        music = result["experiment"]["music"]
+        lab = json.loads(json.dumps(music))
+        lab["practice"] = {"events": ["synthetic attempt"]}
+        artifact = {"id": "synthetic-artifact", "pathway": "music", "state": {"lab": lab},
+                    "source_refs": [{"url": PRACTICE_URL, "locator": PRACTICE_LOCATOR, "source_kind": "notation_exercise"}]}
+        sources = captured_experiment_sources(artifact)
+        self.assertEqual(sources[0]["source_id"], "MusicnotesMN0103069")
+        self.assertEqual((sources[0]["target_pitch"], sources[0]["target_midi"], sources[0]["quarter_bpm"], sources[0]["onsets"]),
+                         ("E6", 88, 80, [0.75, 2.25]))
+        inputs = {"learning_artifact_context": artifact, "experiment_sources": sources}
+        snapshot = json.loads(json.dumps(inputs))
+        for bpm in (40, 80):
+            music["practice_target"] = {"exercise_id": PRACTICE_EXERCISE_ID, "quarter_bpm": bpm}
+            validate_projection(result, self.app.schema, inputs)
+        for refs in ([], [{"url": PRACTICE_URL}], [{"url": PRACTICE_URL, "locator": PRACTICE_LOCATOR}],
+                     [{"url": PRACTICE_URL, "id": PRACTICE_EXERCISE_ID}],
+                     [{"url": "https://example.org", "exercise_id": PRACTICE_EXERCISE_ID}]):
+            with self.assertRaisesRegex(ValueError, "verified notation"):
+                validate_projection(result, self.app.schema, dict(inputs, learning_artifact_context=dict(artifact, source_refs=refs)))
+        for key, value in (("attack", .2), ("tempo", 80), ("notes", [{"midi": 61, "beats": 1}] * 2)):
+            altered = json.loads(json.dumps(result))
+            altered["experiment"]["music"][key] = value
+            with self.assertRaisesRegex(ValueError, "preserve frozen variation"):
+                validate_projection(altered, self.app.schema, inputs)
+        for target in ({"exercise_id": "invented", "quarter_bpm": 60},
+                       *({"exercise_id": PRACTICE_EXERCISE_ID, "quarter_bpm": bpm} for bpm in (39, 81, 60.5, True)),
+                       {"exercise_id": PRACTICE_EXERCISE_ID, "quarter_bpm": 60, "midi": 88}):
+            music["practice_target"] = target
+            with self.assertRaises(jsonschema.ValidationError):
+                validate_projection(result, self.app.schema, inputs)
+        self.assertEqual(inputs, snapshot)
+        del music["practice_target"]
+        self.assertEqual(job_view({"result": result})["result"], result)
+        with self.assertRaises(jsonschema.ValidationError):
+            validate_projection(result, self.app.schema, inputs)
+
+    def test_experiment_decision_scene_choices_and_literal_source(self):
+        result = self.experiment_result("ideas")
+        ideas = result["experiment"]["ideas"]
+        artifact = {"id": "synthetic-artifact", "pathway": "ideas",
+                    "source_refs": [{"url": EPICTETUS_URL, "locator": "Section 1"}]}
+        inputs = {"learning_artifact_context": artifact, "experiment_sources": captured_experiment_sources(artifact)}
+        scene = {"kind": "shared_shelter", "choices": [
+            {"id": "a", "label": "Share", "consequence": "Imagined: you might wait together.", "shelter": "shared"},
+            {"id": "b", "label": "Stay alone", "consequence": "Imagined: you might have more space.", "shelter": "self"}]}
+        ideas["decision_scene"] = scene
+        validate_projection(result, self.app.schema, inputs)
+        for field, value in (("id", "a"), ("shelter", "shared"), ("label", "x" * 81), ("consequence", "x" * 241)):
+            bad = json.loads(json.dumps(result))
+            bad["experiment"]["ideas"]["decision_scene"]["choices"][1][field] = value
+            with self.assertRaises((ValueError, jsonschema.ValidationError)):
+                validate_projection(bad, self.app.schema, inputs)
+        for changes in ({"kind": "other"}, {"choices": scene["choices"][:1]}, {"choices": scene["choices"] * 2}, {"extra": 1}):
+            ideas["decision_scene"] = dict(scene, **changes)
+            with self.assertRaises(jsonschema.ValidationError):
+                validate_projection(result, self.app.schema, inputs)
+        ideas["decision_scene"] = scene
+        ideas["source_quote"] = "Invented quote"
+        with self.assertRaisesRegex(ValueError, "literal substring"):
+            validate_projection(result, self.app.schema, inputs)
+        ideas["source_quote"] = EPICTETUS_EXCERPT
+        del ideas["decision_scene"]
+        self.assertEqual(job_view({"result": result})["result"], result)
+        with self.assertRaises(jsonschema.ValidationError):
+            validate_projection(result, self.app.schema, inputs)
 
     def test_experiment_capture_gate_and_legacy_readback(self):
         refs = [{"url": "https://www.youtube.com/watch?v=abcdefghijk", "locator": "0:10", "content": "Not a transcript"},

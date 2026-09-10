@@ -31,7 +31,7 @@ def main():
     report = {"scope": "empty-data startup and served-file integrity; no inference",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "worktree_status": worktree_status,
-              "checks": [], "public_replay": "BLOCKED: published replay fixtures and verifier are not supplied by this check",
+              "checks": [], "public_replay": "Music fixture bytes checked only; replay interaction and movement/ideas replay not verified",
               "experience_acceptance": "NOT VERIFIED: visual quality, audio response, preview/apply/undo and learner understanding"}
     with tempfile.TemporaryDirectory(prefix="mystery-clean-") as temporary:
         scratch = Path(temporary)
@@ -63,11 +63,15 @@ def main():
                     if state.get(collection) != []:
                         raise RuntimeError(f"Fresh state is not empty: {collection}")
                 report["checks"].append("fresh API collections empty; model executable disabled")
+                for route in ("/api/artifacts", "/api/sidecar-records"):
+                    if json.loads(get(route)) != []:
+                        raise RuntimeError(f"Fresh collection is not empty: {route}")
+                report["checks"].append("fresh artifact and imported sidecar collections empty")
                 files = subprocess.check_output(["git", "ls-files", "public"], cwd=ROOT, text=True).splitlines()
                 hashes = {}
                 for relative in files:
                     local = ROOT / relative
-                    if local.suffix not in (".html", ".js", ".css", ".glb", ".png"):
+                    if local.suffix not in (".html", ".js", ".css", ".json", ".glb", ".png"):
                         continue
                     served = get("/" + relative.removeprefix("public/"))
                     if served != local.read_bytes():
