@@ -33,3 +33,10 @@
 .story-world__status{background:#173e35c9;border:1px solid #d7bc702b;backdrop-filter:blur(10px)}
 .story-world__tools button,.story-world__context,.story-world__controls{background:#173e35cf;backdrop-filter:blur(10px);border-color:#d7bc7044}
 .learning-drawer .story-world__memories p{color:#344737}.learning-drawer .story-world__memories .story-world__memory-observation{font:21px/1.5 Georgia,serif;color:#20372b}.learning-drawer .story-world__memories .story-world__memory-trace{color:#4b5d48}
+.story-world .story-world__writer p,.story-world .story-world__source p{color:#344737}
+.story-world .story-world__writer .story-world__eyebrow,.story-world .story-world__source .story-world__eyebrow{color:#596444}
+.story-world__writer-header{position:sticky;top:-28px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f0e7cc;padding:12px 0;border-bottom:1px solid #b29d65}
+.story-world__writer-header h3{margin:0;font-size:25px}
+.story-world .story-world__writer-header button{margin:0;flex-shrink:0;font-size:12px}
+.story-world__keep-status{min-height:1.5em;overflow-wrap:anywhere}
+@media(max-width:700px){.story-world__writer-header{top:-22px;flex-wrap:wrap}}

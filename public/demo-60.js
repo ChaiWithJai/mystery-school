@@ -26,7 +26,7 @@ $('#demo-start').onclick=()=>{
 function chapterStep(direction){
   if(!started)return;
   const index=DEMO_BEATS.findIndex(beat=>beat.id===scene),next=DEMO_BEATS[index+direction];if(!next)return;
-  cancelAnimationFrame(raf);stopOpening();paused=true;elapsed=next.start;show(elapsed);$('#demo-pause').textContent='Resume';
+  cancelAnimationFrame(raf);if(!soundtrack.continuous)stopOpening();paused=true;elapsed=next.start;show(elapsed);$('#demo-pause').textContent='Resume';
 }
 $('#demo-back').onclick=()=>chapterStep(-1);
 $('#demo-next').onclick=()=>chapterStep(1);

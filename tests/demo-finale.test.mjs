@@ -11,3 +11,8 @@ test('closing keeps Jai values and separates builder coordination from runtime',
   const architecture=finaleMarkup('architecture');for(const name of ['Astra','Bonsai','Buzz','MLflow','Python','Browser'])assert.ok(architecture.includes(name));
   assert.ok(architecture.includes('configured local runtime'));
 });
+test('teacher framing preserves human care rather than claiming an AI teacher',()=>{
+  assert.ok(finaleMarkup('teachers').includes('A CHATBOT IS NOT A TEACHER'));
+  assert.ok(finaleMarkup('jai').includes('the student loves.'));
+  assert.ok(finaleMarkup('jai').includes('We learn together.'));
+});

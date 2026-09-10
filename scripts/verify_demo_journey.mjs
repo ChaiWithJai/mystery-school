@@ -26,18 +26,9 @@ try{
  record('physical L captures E6 without piano focus',take?.events?.some(e=>e.type==='on'&&e.midi===88)&&take.events.some(e=>e.type==='off'&&e.midi===88),take);await shot('02-piano');
  const intoRing=page.getByRole('button',{name:'Keep this. Into the ring →',exact:true});
  if(await intoRing.isVisible()){
-  await intoRing.click();const tour=page.locator('.learning-world-tour');
-  await page.locator('.learning-world-tour,.boxing-journey-intro').first().waitFor({state:'visible'});
-  const shown=await tour.isVisible().catch(()=>false);record('guided three-mode tour',shown,'Manual transition alone does not prove the tour.');
-  if(shown){
-   await page.keyboard.press('Escape');await tour.waitFor({state:'hidden'});
-   const cancelled=await visible('.piano-roll')&&await intoRing.isVisible()&&await intoRing.isEnabled();
-   record('tour Escape retains piano and permits saving again',cancelled,{url:page.url()});
-   if(!cancelled)throw Error('Tour cancel did not restore the playable piano and retry control.');
-   await intoRing.click();await tour.waitFor({state:'visible'});
-   record('repeat Save reopens tour after cancellation',true,{url:page.url()});
-   await tour.locator('.learning-world-tour__continue').click();await tour.waitFor({state:'hidden'});
-  }
+  await intoRing.click();
+  await page.locator('.boxing-journey-intro').waitFor({state:'visible'});
+  record('saved piano advances directly without a tour',!await visible('.learning-world-tour'),{url:page.url()});
   await page.locator('.boxing-journey-intro').waitFor();record('manual advance piano to boxing',true,{url:page.url()});
  }else record('manual advance piano to boxing',false,'No visible explicit transition.');
  if(await visible('.boxing-journey-intro')){

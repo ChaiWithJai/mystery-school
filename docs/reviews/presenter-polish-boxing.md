@@ -13,3 +13,17 @@ Attention previously displayed a cue without entering the mirror. It now enters 
 The actual browser review passed all five foundation entries and source cues, body-map return cleanup, a forty-second local-video round, worker termination and file-URL cleanup, and long exact reflection transfer to the world. The timer did not mark the learner as having tried. Attention's separate test verified hidden video controls, disabled progression before the tried report, enabled progression afterward, and advancement to the parry lesson. No page errors or model calls. The local video contains source instructors and is not learner evidence.
 
 Final integrated product `218b3ea` preserves M5's `427abaa` soundtrack cleanup. All 296 JS tests and the deployment asset build pass.
+# Main integration review
+
+PR 17 was reconciled with the supplied-recording implementation on main. The presenter uses one parent-page MP3 controller; its three scene frames do not create competing soundtrack players. No synthesized opening was restored.
+
+Desktop browser checks at 1080 x 592:
+
+- Next selected boxing at 25 seconds and held the clock. Back from the book world restored boxing.
+- Keep playing remained enabled during chapter navigation. Audio advanced from 0.934575 to 8.563677 seconds while the presentation held at 25 seconds.
+- Resume advanced the presentation to 34 seconds; explicit Pause stopped the recording.
+- Presenter controls stayed within the viewport at x=24, y=522, width=350.71, height=52.
+- Attention entered the mirror, showed the authored body-attention cue, hid its external video, and kept progression disabled before a mirror attempt and reflection. No camera permission or model call was requested by this review.
+- 297 JavaScript tests, 50 Python tests, syntax checks, and the deployment build passed. Missing mirror-start and blank reflection regression checks were added for Attention.
+
+These are agent QA observations, not human learning or physical-technique assessments.

@@ -40,7 +40,7 @@ test('invalid reflection values never become invented observation text',()=>{
 });
 
 const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
-function harness({bitmapFailure=false,transferFailure=false}={}) {
+function harness({bitmapFailure=false,transferFailure=false,lessons=[{id:'lesson-a'},{id:'lesson-b'}],punch='JAB'}={}) {
   class Element {
     constructor(){this.queries=new Map();this.children=[];this.classList={add(){},remove(){},toggle(){},contains(){return true}};this.readyState=2;this.paused=true;this.currentTime=12;this.videoWidth=640;this.videoHeight=480;}
     querySelector(key){if(!this.queries.has(key))this.queries.set(key,new Element());return this.queries.get(key);}
@@ -61,9 +61,9 @@ function harness({bitmapFailure=false,transferFailure=false}={}) {
     Date,structuredClone,clearInterval,setInterval,crypto:{randomUUID:()=>`capture-${++serial}`},performance:{now:()=>++tick},
     requestAnimationFrame:fn=>{const id=++serial;raf.set(id,fn);return id;},cancelAnimationFrame:id=>raf.delete(id),
     createImageBitmap:async()=>{bitmapCalls++;if(bitmapFailure)throw Error('bitmap failed');const bitmap={closed:0,close(){this.closed++;}};bitmaps.push(bitmap);return bitmap;},
-    L:{shoulder:11},BONES:[],makeSmoother:()=>({update:points=>new Map(points.map((p,i)=>[i,p]))}),HandTracker:class {update(){return {type:'JAB'};}}
+    L:{shoulder:11},BONES:[],makeSmoother:()=>({update:points=>new Map(points.map((p,i)=>[i,p]))}),HandTracker:class {update(){return {type:punch};}}
   });
-  const container=new Element();const view=mount(container,{lessons:[{id:'lesson-a'},{id:'lesson-b'}],onEvent:(type,payload)=>events.push({type,payload})});
+  const container=new Element();const view=mount(container,{lessons,onEvent:(type,payload)=>events.push({type,payload})});
   const root=container.children[0],video=root.querySelector('.boxing-mirror-self');
   return {view,root,video,workers,events,bitmaps,raf,get bitmapCalls(){return bitmapCalls;},
     async begin(){const input=root.querySelector('input[type=file]');input.files=[{}];input.onchange();await settle();},
@@ -152,5 +152,81 @@ const kept=keepMirrorObservation(state,lesson);assert.equal(kept.observations.le
 assert.equal(keepMirrorObservation(state,{...lesson,evidenceType:undefined}).observations.length,0);
 assert.equal(keepMirrorObservation(state,{...lesson,source:undefined}).observations.length,0);
 assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reportedTried:false}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],mirrorStartedAt:''}}},lesson).observations.length,0);
+assert.equal(keepMirrorObservation({...state,lessonProgress:{'jai.attention':{...state.lessonProgress['jai.attention'],reflection:'   '}}},lesson).observations.length,0);
 });
 test('target drill estimates require exact anatomical hand, lesson and session; reports stay separate',async()=>{const {targetPunchProgress}=await import('../public/boxing-mirror.js');const l={id:'left',targetPunch:['HOOK','UPPERCUT'],targetHand:'L'};const a={lessonId:'left',sessionId:'s',hand:'L',type:'HOOK'};assert.deepEqual(targetPunchProgress({attempts:[a]},l,'s').map(x=>x.estimated),[true,false]);for(const bad of [{...a,hand:'R'},{...a,sessionId:'old'},{...a,lessonId:'other'}])assert.equal(targetPunchProgress({attempts:[bad]},l,'s')[0].estimated,false);assert.equal(targetPunchProgress({attempts:[a]},l,'')[0].estimated,false);const clean=cleanMirrorState({drillReports:[{lessonId:'left',reportedCompleted:true,mastery:true}]});assert.equal(clean.drillReports[0].evidenceType,'learner_report');assert.equal(clean.drillReports[0].mastery,undefined);});
+
+test('drill achievements survive rolling event eviction and exact saved reopen',async()=>{
+ const {newMirrorPractice,recordDrillAchievement,targetPunchProgress}=await import('../public/boxing-mirror.js');
+ const l={id:'left',targetHand:'L',targetPunch:['UPPERCUT','HOOK']};
+ let s=newMirrorPractice({},l,{id:'practice',startedAt:'now'});
+ s.drillPractices[0].captures.push({captureId:'capture',sessionId:'session'});
+ for(const type of l.targetPunch)s=recordDrillAchievement(s,l,{t:1,type,hand:'L',lessonId:l.id,captureId:'capture',sessionId:'session',sourceMode:'camera',detectorTime:10});
+ const saved=structuredClone(s.drillPractices);
+ s.attempts=Array.from({length:65},()=>({t:2,type:'JAB',hand:'L'}));s=cleanMirrorState(s);
+ assert.deepEqual(targetPunchProgress(s,l,'session').map(t=>t.estimated),[true,true]);
+ assert.deepEqual(s.drillPractices,saved);
+ assert.deepEqual(cleanMirrorState(JSON.parse(JSON.stringify(s))),s);
+ const retry=newMirrorPractice(s,l,{id:'retry'});
+ assert.deepEqual(targetPunchProgress(retry,l,'session').map(t=>t.estimated),[false,false]);
+ assert.deepEqual(retry.drillPractices[0],saved[0]);
+});
+
+test('drill evidence rejects wrong capture, session, lesson, hand and non-target shapes',async()=>{
+ const {newMirrorPractice,recordDrillAchievement}=await import('../public/boxing-mirror.js');
+ const l={id:'left',targetHand:'L',targetPunch:['UPPERCUT','HOOK']};
+ const s=newMirrorPractice({},l,{id:'p'});s.drillPractices[0].captures.push({captureId:'c',sessionId:'s'});
+ const good={t:1,type:'HOOK',hand:'L',lessonId:'left',captureId:'c',sessionId:'s'};
+ for(const patch of [{captureId:'old'},{captureId:null},{sessionId:'old'},{lessonId:'other'},{hand:'R'},{type:'JAB'}])assert.equal(recordDrillAchievement(s,l,{...good,...patch}).drillPractices[0].achievements.length,0);
+ const once=recordDrillAchievement(s,l,good);assert.equal(recordDrillAchievement(once,l,good).drillPractices[0].achievements.length,1);
+ assert.equal(s.drillPractices[0].achievements.length,0);
+});
+
+test('capture-free reports have distinct practice IDs and retry clears current completion only',async()=>{
+ const {newMirrorPractice,reportMirrorPractice}=await import('../public/boxing-mirror.js');
+ const l={id:'left',targetHand:'L',targetPunch:['UPPERCUT','HOOK']};
+ const input={lessonId:'left',reflection:' Exact words\n',sourceMode:'camera',lessonProgress:{left:{reflection:' Exact words\n',reportedTried:true,mirrorStartedAt:'old',sessionId:'old',referenceOpenedAt:'reference',sourceMode:'camera'}}};
+ const a=newMirrorPractice(input,l,{id:'a',startedAt:'now'});
+ assert.equal(a.lessonProgress.left.reportedTried,false);assert.equal(a.lessonProgress.left.mirrorStartedAt,'');assert.equal(a.lessonProgress.left.sessionId,'');assert.equal(a.sourceMode,null);
+ assert.equal(a.reflection,input.reflection);assert.equal(a.lessonProgress.left.referenceOpenedAt,'reference');
+ const reported=reportMirrorPractice(a,{recordedAt:'reported'});
+ assert.equal(reported.drillReports[0].practiceId,'a');assert.equal(reported.drillReports[0].sessionId,'');
+ assert.equal(reportMirrorPractice(reported).drillReports.length,1);
+ const b=reportMirrorPractice(newMirrorPractice(reported,l,{id:'b'}));
+ assert.deepEqual(b.drillReports.map(r=>r.practiceId),['a','b']);
+ assert.deepEqual(b.drillReports[0],reported.drillReports[0]);
+ assert.deepEqual(cleanMirrorState(JSON.parse(JSON.stringify(b))),b);
+ assert.throws(()=>newMirrorPractice(b,l,{id:'a'}),/must be new/);
+});
+
+test('current target selects matching demonstration and advances without changing lesson refs',async()=>{
+ const {newMirrorPractice,recordDrillAchievement,currentTargetSource}=await import('../public/boxing-mirror.js');
+ const l={id:'left',targetHand:'L',targetPunch:['UPPERCUT','HOOK'],targetSources:{UPPERCUT:{url:'https://example.test/upper',embedUrl:'https://example.test/embed/upper',evidenceTimestampSeconds:2419,label:'Uppercut'},HOOK:{url:'https://example.test/hook',embedUrl:'https://example.test/embed/hook',evidenceTimestampSeconds:1824,label:'Hook'}}};
+ const before=structuredClone(l);let s=newMirrorPractice({},l,{id:'p'});
+ assert.deepEqual(currentTargetSource(s,l),{...l.targetSources.UPPERCUT,target:'UPPERCUT'});
+ s.drillPractices[0].captures.push({captureId:'c',sessionId:'s'});
+ s=recordDrillAchievement(s,l,{t:1,type:'UPPERCUT',hand:'L',lessonId:'left',captureId:'c',sessionId:'s'});
+ assert.deepEqual(currentTargetSource(s,l),{...l.targetSources.HOOK,target:'HOOK'});
+  assert.deepEqual(l,before);
+});
+
+test('mounted drill advances the actual source, retries stop capture, and late frames cannot complete retry',async()=>{
+ const lesson={id:'left',targetHand:'L',targetPunch:['UPPERCUT','HOOK'],cues:['Lift','Turn'],targetSources:{UPPERCUT:{url:'https://example.test/upper',embedUrl:'https://example.test/embed/upper',label:'Upper'},HOOK:{url:'https://example.test/hook',embedUrl:'https://example.test/embed/hook',label:'Hook'}}};
+ const h=harness({lessons:[lesson],punch:'UPPERCUT'});
+ try{
+  const first=h.view.newPractice();assert.equal(h.root.querySelector('aside a').href,lesson.targetSources.UPPERCUT.url);
+  await h.begin();await h.ready();h.result();
+  assert.equal(h.root.querySelector('aside a').href,lesson.targetSources.HOOK.url);
+  h.root.querySelector('[data-watch]').onclick();
+  assert.equal(h.root.querySelector('[data-lesson-player]').children[0].src,lesson.targetSources.HOOK.embedUrl);
+  const oldWorker=h.workers.at(-1),old=JSON.parse(JSON.stringify(h.view.getState().drillPractices[0]));
+  const retry=h.view.newPractice();assert.notEqual(retry,first);assert.equal(oldWorker.dead,true);
+  h.result(oldWorker);
+  const state=h.view.getState();assert.equal(state.drillPractices[1].achievements.length,0);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.drillPractices[0])),old);
+  assert.equal(h.root.querySelector('aside a').href,lesson.targetSources.UPPERCUT.url);
+  assert.equal(state.lessonProgress.left.reportedTried,false);assert.equal(state.lessonProgress.left.mirrorStartedAt,'');
+  const saved=JSON.parse(JSON.stringify(state));h.view.setState(saved);assert.equal(h.view.getState().activeDrillId,retry);
+ }finally{h.view.dispose();}
+});

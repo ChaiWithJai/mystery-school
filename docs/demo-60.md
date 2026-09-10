@@ -2,6 +2,8 @@
 
 Open `http://127.0.0.1:5188/demo-60.html` and press Start. Keep the tab visible. Pause stops the presentation clock and opening piano; Resume plays the remaining opening notes. Camera sessions and other manually started media inside a live scene retain their own controls.
 
+Back and Next select a chapter and hold the clock for hands-on practice. Resume returns to the timed presentation. With Keep playing selected, chapter changes preserve the soundtrack; the explicit Pause button pauses both the presentation and the recording. Without Keep playing, chapter changes pause the recording too.
+
 | Seconds | Screen | Presenter |
 | --- | --- | --- |
 | 0-7 | Playable piano | A desire to play can open a school. |
