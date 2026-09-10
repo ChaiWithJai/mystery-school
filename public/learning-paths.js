@@ -110,8 +110,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       events.track('learning.panel.toggle',{pathway,actor_kind:actorKind,panel:button.dataset.panel,open:reveal});
       if(reveal)target.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'nearest'});
     });
-    q('#path-explanation').oninput=e=>{draft.explanation=e.target.value;keep();};
-    q('#path-question').oninput=e=>{draft.question=e.target.value;keep();};
+    q('#path-explanation').oninput=e=>{draft.explanation=e.target.value;keep();experimentDispose?.contextChanged();};
+    q('#path-question').oninput=e=>{draft.question=e.target.value;keep();experimentDispose?.contextChanged();};
     q('.learning-care').ontoggle=e=>{if(e.target.open)events.track('learning.guidance.open',{pathway,character:person.name,actor_kind:actorKind,guidance_kind:'authored_demo',text:person.care});};
     let sources=[],ready=false,validateVideo=null;
     function currentSources(){
@@ -139,6 +139,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       if(!draft.question.trim()){q('#path-question').focus();return;}
       experimentDispose=mountLearningExperiment(q('.learning-next'),{
         api,sessionId,actorKind,pathway,getQuestion:()=>draft.question,
+        getContext:()=>({question:draft.question.trim(),explanation:draft.explanation,source_refs:structuredClone(currentSources())}),
         getState:()=>structuredClone(draft.lab),
         setState:value=>{if(typeof dispose?.setState!=='function')throw Error('This experiment cannot apply changes yet.');dispose.setState(value);},
         save:()=>save('new_question',actorKind,draft.question),

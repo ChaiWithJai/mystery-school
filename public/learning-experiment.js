@@ -2,13 +2,22 @@ import { validateExperimentProposal, proposedLabState } from './experiment-propo
 
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const MOVEMENT_SETTINGS = ['duration', 'distance', 'shape', 'compare_shape', 'view'];
+export function experimentDefinition(pathway, state) {
+  return pathway === 'movement' ? Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])) : structuredClone(state);
+}
+function restoreDefinition(pathway, target, current) {
+  if (pathway !== 'movement') return structuredClone(target);
+  return { ...current, ...experimentDefinition(pathway, target), time: Math.min(current.time || 0, target.duration), playing: false };
+}
 
 // Requests keep their immutable base while the learner continues using the lab.
 export function mountLearningExperiment(container, { api, sessionId, actorKind, pathway,
-  getState, setState, save, track, getQuestion }) {
+  getState, setState, save, track, getQuestion, getContext = () => ({ question: getQuestion().trim() }) }) {
   let disposed = false, busy = false, currentJob = null, timer = null, revision = 0;
   let candidate = null, before = null, applied = null, baseState = null;
   let candidateJobId = null, appliedJobId = null;
+  let requestContext = null;
   const root = document.createElement('section');
   root.className = 'learning-experiment';
   root.innerHTML = `<h3>Try your next idea</h3>
@@ -64,7 +73,7 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     q('[data-reason]').textContent = proposal.reason;
     difference(baseState, candidate);
     q('[data-preview]').hidden = false;
-    status('A change is ready to review. Your current experiment is untouched.');
+    status(same(getContext(), requestContext) ? 'A change is ready to review. Your current experiment is untouched.' : 'Your question or context changed. This proposal answers the earlier question and cannot be applied.');
     emit('preview', { base_artifact_id: artifact.id, proposal, before: baseState, candidate });
   }
   async function inspect(id, artifact, capturedState, token) {
@@ -94,12 +103,15 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     const question = getQuestion().trim();
     if (!question) return status('Write the question you want to try above.');
     busy = true; currentJob = null; candidate = null;
+    requestContext = structuredClone(getContext());
+    q('[data-consent]').checked = false;
     q('[data-preview]').hidden = true;
     const token = ++revision;
     available(); status('Keeping the starting version for this request...');
     try {
       const artifact = await save();
       if (disposed || token !== revision) return;
+      if (!same(getContext(), requestContext)) throw Error('Your question or context changed while saving. Review it and confirm again.');
       const capturedState = structuredClone(artifact.state.lab);
       const request = { session_id: sessionId, actor_kind: actorKind, world: 'questions',
         question, premise: 'Propose a bounded, playable change for this saved experiment. Preserve my words and sources. Explain unsupported requests honestly.',
@@ -121,9 +133,10 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
   q('[data-apply]').onclick = () => {
     if (!candidate) return;
     const current = getState();
-    if (!same(current, baseState)) return status('You changed the experiment since this request. Keep those edits. Ask again from the new version.');
+    if (!same(getContext(), requestContext)) return status('Your question or context changed. Ask again from your current intention.');
+    if (!same(experimentDefinition(pathway, current), experimentDefinition(pathway, baseState))) return status('You changed the experiment since this request. Keep those edits. Ask again from the new version.');
     const previous = structuredClone(current);
-    try { setState(structuredClone(candidate)); }
+    try { setState(restoreDefinition(pathway, candidate, current)); }
     catch (error) { return status('Could not apply this change: ' + error.message); }
     before = previous;
     appliedJobId = candidateJobId;
@@ -134,8 +147,8 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
   };
   q('[data-undo]').onclick = () => {
     if (!before) return;
-    if (!same(getState(), applied)) return status('You edited this version after applying it. Undo will not discard those edits.');
-    try { setState(structuredClone(before)); }
+    if (!same(experimentDefinition(pathway, getState()), experimentDefinition(pathway, applied))) return status('You edited this version after applying it. Undo will not discard those edits.');
+    try { setState(restoreDefinition(pathway, before, getState())); }
     catch (error) { return status('Could not restore this change: ' + error.message); }
     emit('undo', { job_id: appliedJobId, before: applied, after: getState() });
     before = null; applied = null; q('[data-undo]').hidden = true;
@@ -146,5 +159,7 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     emit('dismiss'); status('Left aside. Your experiment is unchanged.');
   };
   available();
-  return () => { disposed = true; revision++; clearTimeout(timer); root.remove(); };
+  const cleanup = () => { disposed = true; revision++; clearTimeout(timer); root.remove(); };
+  cleanup.contextChanged = () => { q('[data-consent]').checked = false; available(); };
+  return cleanup;
 }
