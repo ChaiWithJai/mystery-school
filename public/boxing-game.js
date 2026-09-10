@@ -1,6 +1,7 @@
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const finite = (n, fallback) => Number.isFinite(Number(n)) ? Number(n) : fallback;
 const paramsOf = value => ({ cue: clamp(finite(value?.cue, 1.15), .65, 1.65), gap: clamp(finite(value?.gap, 14), 10, 22) });
+export const boxingParams = value => paramsOf(value);
 const outcomeOf = (jab, endX, params) => jab.x >= 47 + params.gap - 18 ? 'inside_reach' : endX > jab.x && Math.abs(47 + params.gap - endX) <= 18 ? 'outside_then_returned' : 'outside_reply_short';
 function restoreState(input) {
   const value = input && typeof input === 'object' ? input : {};
