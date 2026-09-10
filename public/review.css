@@ -12,6 +12,7 @@
 .related-reviews ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
 .related-review-link{font:12px/1.6 var(--sans);text-align:left;background:var(--sheet);color:var(--green);overflow-wrap:anywhere;max-width:100%}
 .related-review-unavailable{color:var(--muted);overflow-wrap:anywhere}
+.related-records .related-review-link{border-left:3px solid var(--green)}
 .execution-reference-heading{font-size:18px;margin:20px 0 10px}
 .execution-references{list-style:none;padding:0;margin:0;display:grid;gap:14px;max-width:720px}
 .execution-references>li{border-left:2px solid var(--line);padding-left:14px;overflow-wrap:anywhere}

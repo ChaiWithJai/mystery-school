@@ -228,7 +228,7 @@ class App:
             return copy.deepcopy(record)
 
     def create_artifact(self, body):
-        allowed = {"pathway", "session_id", "stage", "actor_kind", "goal", "state", "parent_id", "source_refs", "note"}
+        allowed = {"pathway", "session_id", "stage", "actor_kind", "goal", "state", "parent_id", "source_refs", "note", "event_ids"}
         if set(body) - allowed:
             raise APIError(400, "Unknown artifact fields; existing versions cannot be updated")
         if body.get("pathway") not in ("music", "movement", "ideas"):
@@ -266,10 +266,25 @@ class App:
         note = body.get("note", "")
         if not isinstance(note, str) or len(note) > 8000:
             raise APIError(400, "note must be a string of at most 8000 characters")
+        event_ids = body.get("event_ids", [])
+        if not isinstance(event_ids, list) or len(event_ids) > 100:
+            raise APIError(400, "event_ids must be a list of at most 100 event IDs")
+        if any(not isinstance(event_id, str) or not event_id.strip() or len(event_id) > 128 for event_id in event_ids):
+            raise APIError(400, "Each event_id must be a nonempty string of at most 128 characters")
+        event_ids = list(dict.fromkeys(event_ids))
         payload = copy.deepcopy(body)
         payload.setdefault("source_refs", [])
         payload.setdefault("note", "")
+        if "event_ids" in payload:
+            payload["event_ids"] = event_ids
         with self.lock:
+            events = {event["id"]: event for event in self.state["events"]}
+            for event_id in event_ids:
+                event = events.get(event_id)
+                event_payload = event.get("payload") if event else None
+                if (event is None or event.get("session_id") != payload.get("session_id")
+                        or not isinstance(event_payload, dict) or event_payload.get("pathway") != payload["pathway"]):
+                    raise APIError(400, "event_ids must identify existing app events in the same session and pathway")
             if "parent_id" in payload:
                 if not isinstance(payload["parent_id"], str):
                     raise APIError(400, "parent_id must identify an existing artifact")
@@ -673,6 +688,7 @@ class App:
             for artifact in self.artifacts:
                 metadata = {k: artifact[k] for k in ("pathway", "stage", "actor_kind")}
                 metadata["parent_id"] = artifact.get("parent_id")
+                metadata["event_ids"] = copy.deepcopy(artifact.get("event_ids", []))
                 records.append({"id": artifact["id"], "title": f"{artifact['pathway']} / {artifact['stage']} / {artifact['actor_kind']}: {artifact['goal']}",
                                 "model": "learning artifact", "world": artifact["pathway"], "status": "recorded",
                                 "trace_id": artifact["trace_id"], "created_at": artifact["created_at"],

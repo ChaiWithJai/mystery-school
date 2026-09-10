@@ -1,6 +1,8 @@
 # Verification checkpoint
 
-September 10, 2026. Tests ran on Apple M5 Pro. M4 remains untested.
+September 10, 2026. Main's tests ran on Apple M5 Pro. M4 reported independent
+checks of db6ef74 in Buzz; final per-path evidence and current-patch verification
+remain pending. See `alignment.md` for the attributed handoff.
 
 ## Completed checks
 
@@ -9,8 +11,8 @@ September 10, 2026. Tests ran on Apple M5 Pro. M4 remains untested.
 | Draft preservation | Neo: edit all three Imagine fields, close, visit References, reopen; compare another world | Memory lasts until reload. |
 | Explicit selection | Neo: projection disabled before confirmation and enabled after it | Selection is not evidence of understanding. |
 | Learner request | Neo: the opening request appears unchanged in Imagine | Speech and sketch interpretation require a facilitator. |
-| Backend | Latest checkpoint: 17 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
-| JavaScript | Latest checkpoint: 63 tests pass | Deterministic tests are not participant learning evidence. |
+| Backend | Latest checkpoint: 20 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
+| JavaScript | Latest checkpoint: 82 tests pass | Deterministic tests are not participant learning evidence. |
 | Actual model correction | `verify_demo.mjs` passes for the saved parent and child | QA annotation, not participant feedback. |
 | Exact request capture | `verify_capture.mjs` passes for the bike walkthrough | Capture begins with new jobs; older prompts cannot be reconstructed as fact. |
 | Saved music to Astra | `verify_learning_projection.mjs 14e0de07-b8ea-4083-a395-e89dd2741841` independently passed using GET requests | Checks record integrity, not model understanding or learner outcomes. |
@@ -131,6 +133,34 @@ back, checked keyboard focus, and confirmed the source text stayed unchanged.
 Five regression tests cover known, missing, duplicate, and malformed references.
 Links are resolved from loaded records, not URLs embedded in source text.
 
+## Saved-version continuation and event links
+
+Saving now updates the address to the immutable version and provides exact
+open/copy links. The recipient must reach the same app and its records. Clipboard
+success has unit coverage; browser QA exercised the denial fallback, which keeps
+the address selectable and does not claim a successful copy.
+
+Declared agent browser QA reopened movement artifact
+`af310149-df9a-4b7d-b023-c737a9b95fbb` from session
+`2334695f-a13b-4ffa-977f-597e9640a944`, then saved child
+`6753d3d9-8a8e-4012-b1e5-20897a36858a` from the distinct tab-local session
+`agent-sharing-recipient-20260910`. Settings and annotation survived. This tests
+session separation in one browser, not another human or authenticated identity.
+
+After a help/close/reopen detour, artifact
+`ab9380fb-9cc1-4072-92ca-1cbeee870609` retained four event IDs, including help
+request `6094ee79-8b08-4cbf-affd-59e3bd2c3f1d`. Its trace is
+`tr-98bf4eb22b250415d258b93b8ef20f91`; runtime build is `784291ef24d28bdd`.
+Main API readback confirmed the saved IDs and their session/pathway. Independent
+agent browser QA opened the related help-close event from Studio, inspected its
+settings and trace, and checked heading focus. Source records remain unchanged.
+
+Backend validation accepts only existing event IDs in the artifact's session and
+pathway. All 20 backend tests pass. Frontend tests and independent mocked checks
+cover late save responses, help retention across detours, and the 100-link bound.
+Omitted or failed events and unrecoverable draft history are marked incomplete.
+Historical artifacts are not retroactively assigned event links.
+
 ## Remaining evidence
 
 - Deterministic music, movement, and interpretation interactions now support
@@ -138,8 +168,8 @@ Links are resolved from loaded records, not URLs embedded in source text.
 - Kite and basketball probes ran as synthetic cases; see `open-ended-probes.md`.
 - Test a fresh problem without model guidance. Do not count clicks as learning.
 - Verify the full experience on the user's M4.
-- Verify another person's ability to inspect and continue a saved version.
-  The current localhost app is not an authenticated multi-user deployment.
+- Same-app continuation is verified with separate declared QA sessions. Verify
+  another person's experience; this is not an authenticated multi-user deployment.
 - Evaluate with actual learners. No participant outcome has been established.
 - The [learner pilot](learner-pilot.md) is prepared, not conducted. Its protocol
   and proposed probes are not study results.

@@ -80,3 +80,24 @@ Buzz access resumed at 12:49 PM EDT. MAIN BUILDER posted MS-VERIFY-ed29f6c
 and verified the sent message in the channel. The assignment asks M4 to
 verify each pathway and imported review readback in its isolated clone.
 Sending the assignment does not prove receipt, execution or acceptance.
+
+At 1:02 PM EDT, M4 posted MS-DELIVERY-ACTIVE and resumed independent delivery.
+MS-SHIPPABLE-0f5c169 reported local tests, import readback, and music/movement
+checks, with ideas still finishing. Main received those reports and reconciled
+the duplicate review-navigation PR4 with main commit e6f51e6. Reported M4 checks
+remain attributed to M4 until their published evidence is inspected.
+
+## Direct Buzz delivery
+
+Use the authenticated composer mention picker to address `chaiwithjai`, the
+observed M4-side channel identity. Main sent MS-A2A-HANDOFF through that picker.
+Send completion evidence or a concrete blocker, not repeated status requests.
+The existing alignment heartbeat stays paused.
+
+Read-only local inspection found bundled `buzz-acp` support for WebSocket
+`--subscribe mentions` and encrypted `--relay-observer` frames. No running local
+`buzz-acp` process, authenticated external CLI, or active observer consumer was
+verified. GUI login alone does not attach this Codex session to that harness.
+Main requested the actual running M4 address and telemetry consumer through the
+explicit mention. Do not invent that configuration, extract GUI credentials,
+or describe imported review documents as captured live inference telemetry.
