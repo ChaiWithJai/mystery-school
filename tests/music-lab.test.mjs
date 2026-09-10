@@ -147,3 +147,29 @@ test('cleanup while audio permission is pending prevents delayed playback', asyn
   cleanup(); resume(); await pending;
   assert.equal(audio.oscillators.length, 0); assert.equal(audio.contexts[0].state, 'closed'); assert.equal(events.length, 0);
 });
+
+test('a piano key plays one note with the current envelope and records that note', async () => {
+  const { host, audio, find } = harness();
+  const events = [];
+  const cleanup = mountMusicLab(host, { initialState: { attack: .4 }, onEvent: (type, metadata) => events.push({type, metadata}) });
+  await find('music-lab__key').fire('click');
+  assert.equal(audio.oscillators.length, 1);
+  assert.equal(events.at(-1).type, 'play');
+  assert.equal(events.at(-1).metadata.attack, .4);
+  assert.equal(events.at(-1).metadata.duration_seconds, 1.1);
+  assert.deepEqual(events.at(-1).metadata.notes, [{name:'C4', frequency:261.625565}]);
+  cleanup();
+  assert.equal(audio.contexts[0].state, 'closed');
+});
+
+test('attack edits emit the old and new values once so saved trajectories explain the change', async () => {
+  const { host, find } = harness();
+  const events = [];
+  const cleanup = mountMusicLab(host, { initialState: { attack: .2 }, onEvent: (type, metadata) => events.push({type, metadata}) });
+  const slider = find('music-lab__slider');
+  slider.value = '.4';
+  await slider.fire('input');
+  await slider.fire('input');
+  assert.deepEqual(events, [{type:'attack.change', metadata:{previous_attack:.2, attack:.4, source_kind:'synthesized_phrase'}}]);
+  cleanup();
+});

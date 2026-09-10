@@ -1,0 +1,90 @@
+[
+  {
+    "pathway": "music",
+    "artifact_id": "8b4de085-727a-41cb-8c72-f0c9bab7ae57",
+    "trace_id": "tr-abc258a38af800b679910c13c89d4c54",
+    "lab": {
+      "attack": 0.03
+    },
+    "telemetry": {
+      "status": "recorded",
+      "failed_events": 0,
+      "omitted_events": 0,
+      "unlinked_draft_history": false
+    },
+    "events": [
+      {
+        "id": "18a2aad5-d199-4351-b379-d9168d4d2fd7",
+        "type": "learning.path.open",
+        "trace_id": "tr-470c724402c93e15e2b0b6835cfde25f"
+      },
+      {
+        "id": "c4c9aba8-6968-4225-8cc9-fe4a1c7c9261",
+        "type": "learning.music.action",
+        "trace_id": "tr-e6884455cbefcbdaf878ba5ab5078f27"
+      },
+      {
+        "id": "b00e750a-3794-44aa-9fe3-373bd23326b1",
+        "type": "learning.panel.toggle",
+        "trace_id": "tr-4e376984b7a0d83eaa29654080157e8a"
+      }
+    ],
+    "actor_kind": "agent_review"
+  },
+  {
+    "pathway": "movement",
+    "artifact_id": "e1136794-fbcb-4b95-9903-70ba069cfc3b",
+    "trace_id": "tr-8cd108832ae941943b60e82dd14d7b5d",
+    "lab": {
+      "duration": 4,
+      "distance": 0.4,
+      "shape": "cubic",
+      "time": 0,
+      "playing": false,
+      "assistanceOpen": true,
+      "position": 0,
+      "velocity": 0,
+      "acceleration": 0.15000000000000002,
+      "progress": 0,
+      "version": 1,
+      "source_kind": "labeled_simulation",
+      "units": {
+        "time": "s",
+        "duration": "s",
+        "distance": "m",
+        "position": "m",
+        "velocity": "m/s",
+        "acceleration": "m/s^2"
+      }
+    },
+    "telemetry": {
+      "status": "recorded",
+      "failed_events": 0,
+      "omitted_events": 0,
+      "unlinked_draft_history": false
+    },
+    "events": [
+      {
+        "id": "f62c1b94-5cf5-4de2-ac55-7a85783791ba",
+        "type": "learning.path.open",
+        "trace_id": "tr-3dcb6593545f97b6b216932f623d33e8"
+      },
+      {
+        "id": "9b575487-1132-4683-8e47-97a839dd7a0c",
+        "type": "learning.movement.action",
+        "trace_id": "tr-4712f2a0ca3a7544f32259402c278570"
+      },
+      {
+        "id": "5c84ab7b-ca2f-4a22-b59b-954b6075d6cb",
+        "type": "learning.movement.action",
+        "trace_id": "tr-04768b80b62d2af1af40cffe2f1c57a9"
+      },
+      {
+        "id": "560c7f43-19e2-490d-974e-49072141e1d7",
+        "type": "learning.panel.toggle",
+        "trace_id": "tr-aa39d089b1d7867595a2207446acc0f6"
+      }
+    ],
+    "actor_kind": "agent_review"
+  }
+]

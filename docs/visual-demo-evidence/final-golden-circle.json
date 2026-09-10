@@ -1,0 +1,140 @@
+{
+  "results": [
+    {
+      "path": "music",
+      "attempt": "c3e1b4cd-ae9b-4f43-9a99-29d352fde22a",
+      "peer": "baefde5e-090a-44f5-828b-b66852f0efb7",
+      "revision": "597266fd-e930-4151-987e-00ad7a94db20",
+      "final": "60767946-ff90-49cc-979f-c962327ef6f2",
+      "url": "http://127.0.0.1:5188/?path=music&actor=agent_review&artifact=60767946-ff90-49cc-979f-c962327ef6f2",
+      "restored": 0.02,
+      "question": "How would a gentler ending change this same song?",
+      "isolatedContext": true,
+      "chain": [
+        {
+          "id": "c3e1b4cd-ae9b-4f43-9a99-29d352fde22a",
+          "stage": "attempt",
+          "actor_kind": "agent_review",
+          "parent_id": null,
+          "trace_id": "tr-f20ef130b44c0338cb65dcceb0e0463a",
+          "event_ids": [
+            "dcf1cb63-7a62-4477-94d6-830a018bd7ca",
+            "48b5efec-f726-4583-a3aa-514e22cbbae3",
+            "31d86efa-9df3-4b5c-9df7-1314830e274a"
+          ]
+        },
+        {
+          "id": "8e385ecf-5d6a-4096-b024-67573e38d0ff",
+          "stage": "revision",
+          "actor_kind": "agent_review",
+          "parent_id": "c3e1b4cd-ae9b-4f43-9a99-29d352fde22a",
+          "trace_id": "tr-0c1d95a48d9d803c2642e39497f27443",
+          "event_ids": [
+            "5c63cf49-4952-4edf-a347-0629aaf9c901"
+          ]
+        },
+        {
+          "id": "baefde5e-090a-44f5-828b-b66852f0efb7",
+          "stage": "sharing_response",
+          "actor_kind": "staged_peer_response",
+          "parent_id": "8e385ecf-5d6a-4096-b024-67573e38d0ff",
+          "trace_id": "tr-b761156edcb9d30385687eadac49c1b3",
+          "event_ids": []
+        },
+        {
+          "id": "597266fd-e930-4151-987e-00ad7a94db20",
+          "stage": "revision",
+          "actor_kind": "agent_review",
+          "parent_id": "baefde5e-090a-44f5-828b-b66852f0efb7",
+          "trace_id": "tr-5fb8f6bcb215308ca1a00f646d8f534b",
+          "event_ids": [
+            "3547dbc2-8778-43c7-8117-313aa602d585"
+          ]
+        },
+        {
+          "id": "60767946-ff90-49cc-979f-c962327ef6f2",
+          "stage": "new_question",
+          "actor_kind": "agent_review",
+          "parent_id": "597266fd-e930-4151-987e-00ad7a94db20",
+          "trace_id": "tr-f95f203b97d5fcc61623a92b1a3bbfd4",
+          "event_ids": [
+            "798815d6-61db-423b-b08c-82b0d5df2e6a"
+          ]
+        }
+      ],
+      "final_trace_id": "tr-f95f203b97d5fcc61623a92b1a3bbfd4",
+      "api_mlflow_readback": "PASS",
+      "staged_response_label_visible": true
+    },
+    {
+      "path": "movement",
+      "attempt": "f7ee43c2-b1ad-4161-9a59-87354746218c",
+      "peer": "69d0a6f2-eda6-4e47-8b38-c752989a9b36",
+      "revision": "f24c5d34-b6d4-4882-8b2c-0960e0025095",
+      "final": "8e525619-43ec-4acc-80da-aa3d9edbfb5a",
+      "url": "http://127.0.0.1:5188/?path=movement&actor=agent_review&artifact=8e525619-43ec-4acc-80da-aa3d9edbfb5a",
+      "restored": 3.9,
+      "question": "Where is the hand fastest if I change the reach shape?",
+      "isolatedContext": true,
+      "chain": [
+        {
+          "id": "f7ee43c2-b1ad-4161-9a59-87354746218c",
+          "stage": "attempt",
+          "actor_kind": "agent_review",
+          "parent_id": null,
+          "trace_id": "tr-03ef801e0425401e6c88e6dfb24e3090",
+          "event_ids": [
+            "99d7c5f0-d6d2-429e-9dd5-ee89073084f7",
+            "5c47053c-ce37-495c-a297-22fd516fa0b1",
+            "e510a3fb-9784-4e4a-8844-42e54a8378bf",
+            "90da820a-b1f8-4782-b038-d6dd14cf2533"
+          ]
+        },
+        {
+          "id": "de0d4e45-f085-4863-aa62-ff0ea7d11275",
+          "stage": "revision",
+          "actor_kind": "agent_review",
+          "parent_id": "f7ee43c2-b1ad-4161-9a59-87354746218c",
+          "trace_id": "tr-36c3bd53c72c2d49cfc40a71a0073dae",
+          "event_ids": [
+            "67bd50cc-4b3a-4e77-a32f-252dd84c6fcd"
+          ]
+        },
+        {
+          "id": "69d0a6f2-eda6-4e47-8b38-c752989a9b36",
+          "stage": "sharing_response",
+          "actor_kind": "staged_peer_response",
+          "parent_id": "de0d4e45-f085-4863-aa62-ff0ea7d11275",
+          "trace_id": "tr-fa767e5677a8a85473f047533b739e34",
+          "event_ids": []
+        },
+        {
+          "id": "f24c5d34-b6d4-4882-8b2c-0960e0025095",
+          "stage": "revision",
+          "actor_kind": "agent_review",
+          "parent_id": "69d0a6f2-eda6-4e47-8b38-c752989a9b36",
+          "trace_id": "tr-75d204b424b897fb2c7840db10db7285",
+          "event_ids": [
+            "469eeb5f-637c-40bd-9b01-8a52a431dab2",
+            "045f68aa-61f0-4091-8b67-226420262676"
+          ]
+        },
+        {
+          "id": "8e525619-43ec-4acc-80da-aa3d9edbfb5a",
+          "stage": "new_question",
+          "actor_kind": "agent_review",
+          "parent_id": "f24c5d34-b6d4-4882-8b2c-0960e0025095",
+          "trace_id": "tr-06d81917e3e9d6e3b97f1c28aca351f5",
+          "event_ids": [
+            "262086a7-f7d8-4f4f-92a4-057e8c74325a"
+          ]
+        }
+      ],
+      "final_trace_id": "tr-06d81917e3e9d6e3b97f1c28aca351f5",
+      "api_mlflow_readback": "PASS",
+      "staged_response_label_visible": true
+    }
+  ],
+  "tested_commit": "577ee4ddae7d06032ba53cd7d2fb80ad95cfa8d4",
+  "scope": "Synthetic agent browser golden-circle actions and immutable persistence; no learner or live-peer outcome; no model calls"
+}

@@ -1,0 +1,208 @@
+[
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.ideas.action",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "character": "Leena",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "type": "open",
+      "payload": {
+        "lab": "ideas",
+        "sourceId": "epictetus-enchiridion-1",
+        "guidanceId": "control-and-care",
+        "state": {
+          "version": 1,
+          "sourceId": "epictetus-enchiridion-1",
+          "interpretation": "SYNTHETIC: I can choose my response.",
+          "revisedInterpretation": "SYNTHETIC: I can act with care without controlling agreement.",
+          "helpOpen": true,
+          "helpSeen": true,
+          "sourceOpened": false,
+          "unchanged": false,
+          "youtubeUrl": "https://www.youtube.com/watch?v=abcdefghijk",
+          "youtubeTimestamp": "01:23",
+          "youtubeNote": "SYNTHETIC unverified fixture"
+        }
+      }
+    },
+    "id": "faec13d7-eeb4-468e-8ca5-260c7008530e",
+    "created_at": "2026-09-10T17:22:27.015144+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-d7fca93356f1e12251f14f29cf1c88db"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.path.open",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "character": "Leena",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "goal": "Explain one idea I believe to a friend, in my own words."
+    },
+    "id": "f021e5ca-c68e-41b3-b215-4f02efe27f47",
+    "created_at": "2026-09-10T17:22:27.054646+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-fafe4bb8e91cddbc62df6d5c33ba43c6"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.ideas.action",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "character": "Leena",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "type": "focus",
+      "payload": {
+        "lab": "ideas",
+        "sourceId": "epictetus-enchiridion-1",
+        "guidanceId": "control-and-care",
+        "node": "interpretation",
+        "state": {
+          "version": 1,
+          "sourceId": "epictetus-enchiridion-1",
+          "interpretation": "SYNTHETIC: I can choose my response.",
+          "revisedInterpretation": "SYNTHETIC: I can act with care without controlling agreement.",
+          "helpOpen": true,
+          "helpSeen": true,
+          "sourceOpened": false,
+          "unchanged": false,
+          "youtubeUrl": "https://www.youtube.com/watch?v=abcdefghijk",
+          "youtubeTimestamp": "01:23",
+          "youtubeNote": "SYNTHETIC unverified fixture"
+        }
+      }
+    },
+    "id": "4e9b5e56-3e6d-4e83-aa1a-2e630fda727e",
+    "created_at": "2026-09-10T17:22:44.549332+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-e6489fb1f091b611841b2e91b5afb516"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.ideas.action",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "character": "Leena",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "type": "focus",
+      "payload": {
+        "lab": "ideas",
+        "sourceId": "epictetus-enchiridion-1",
+        "guidanceId": "control-and-care",
+        "node": "revision",
+        "state": {
+          "version": 1,
+          "sourceId": "epictetus-enchiridion-1",
+          "interpretation": "MERGED SYNTHETIC: My first reading is to act where I can.",
+          "revisedInterpretation": "SYNTHETIC: I can act with care without controlling agreement.",
+          "helpOpen": true,
+          "helpSeen": true,
+          "sourceOpened": false,
+          "unchanged": false,
+          "youtubeUrl": "https://www.youtube.com/watch?v=abcdefghijk",
+          "youtubeTimestamp": "01:23",
+          "youtubeNote": "SYNTHETIC unverified fixture"
+        }
+      }
+    },
+    "id": "f78ed746-8321-4024-9d0b-064c5f0d595f",
+    "created_at": "2026-09-10T17:22:55.519490+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-be0f54a70383b0bae58f87f29b5ecf76"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.ideas.action",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "character": "Leena",
+      "actor_kind": "agent_review",
+      "scenario_kind": "fictional_composite",
+      "type": "help",
+      "payload": {
+        "lab": "ideas",
+        "sourceId": "epictetus-enchiridion-1",
+        "guidanceId": "control-and-care",
+        "expanded": true,
+        "state": {
+          "version": 1,
+          "sourceId": "epictetus-enchiridion-1",
+          "interpretation": "MERGED SYNTHETIC: My first reading is to act where I can.",
+          "revisedInterpretation": "SYNTHETIC: I can act with care without controlling agreement.",
+          "helpOpen": true,
+          "helpSeen": true,
+          "sourceOpened": false,
+          "unchanged": false,
+          "youtubeUrl": "https://www.youtube.com/watch?v=abcdefghijk",
+          "youtubeTimestamp": "01:23",
+          "youtubeNote": "SYNTHETIC unverified fixture"
+        }
+      }
+    },
+    "id": "70dd3276-fb5b-4917-bb9e-ae049d2b6514",
+    "created_at": "2026-09-10T17:22:55.538639+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-5070986d195fe531fb33279974ab4780"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.panel.toggle",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "actor_kind": "agent_review",
+      "panel": "save",
+      "open": true
+    },
+    "id": "19dcc40f-65f3-4525-b85a-add915bd3fa5",
+    "created_at": "2026-09-10T17:23:19.562525+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-34a0af92dcd7b0a9e1e0e8e73d9ef855"
+  },
+  {
+    "session_id": "7313ba79-94d3-4aa5-a707-84eacd403f2e",
+    "type": "learning.panel.toggle",
+    "payload": {
+      "world": "reflection",
+      "pathway": "ideas",
+      "actor_kind": "agent_review",
+      "panel": "share",
+      "open": true
+    },
+    "id": "b049a94d-c326-4d4f-936a-b72e77c2ef74",
+    "created_at": "2026-09-10T17:23:32.295954+00:00",
+    "build_id": "784291ef24d28bdd",
+    "capture_scope": "One accepted app event or saved reflection and its submitted payload, server timestamp, and persistence outcome. This is not a model call or continuous browser recording.",
+    "usage": null,
+    "cost_usd": null,
+    "trace_id": "tr-ea1d957bf370d735e44facde1ab0e26d"
+  }
+]

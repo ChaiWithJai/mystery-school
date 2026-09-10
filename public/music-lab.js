@@ -100,7 +100,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   storyContext.append(node('p', '', 'Keep the same four notes; change how gently each one begins.'));
 
   const phrase = node('div', 'music-lab__phrase'); phrase.setAttribute('aria-label', 'Phrase: C4, E4, G4, C5');
-  for (const note of PHRASE) phrase.append(node('span', '', note.name));
+  for (const note of PHRASE) { const key=node('button', 'music-lab__key', note.name); key.type='button'; key.setAttribute('aria-label','Play '+note.name); listen(key,'click',()=>play('after',[note])); phrase.append(key); }
   root.append(phrase);
   const playback = node('div', 'music-lab__playback');
   const before = button('Hear original', () => play('before'), 'music-lab__before');
@@ -197,8 +197,10 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
 
   function changeAttack(attack) {
     if (disposed || validateAttack(attack) === state.attack) return;
+    const previousAttack = state.attack;
     if (playing || starting) stopPlayback('edited');
     state.attack = attack; render(); onChange({ attack: state.attack });
+    emit('attack.change', { previous_attack: previousAttack, attack: state.attack });
   }
 
   function releaseVoices() {
@@ -224,7 +226,8 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
     if (notify && (prior || wasStarting)) emit('stop', { reason, version: prior?.version ?? null, attack: prior?.attack ?? state.attack });
   }
 
-  async function play(version) {
+  async function play(version, notes = PHRASE) {
+    const duration = Number(((notes.length - 1) * NOTE_SPACING + NOTE_DURATION).toFixed(3));
     if (disposed) return;
     if (playing || starting) stopPlayback('replaced');
     const token = ++generation;
@@ -241,7 +244,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
       if (context.state !== 'running') throw new Error('The browser has not enabled audio. Try pressing Hear again.');
       const startTime = context.currentTime + .03;
       master = context.createGain(); master.gain.value = .05; master.connect(context.destination);
-      PHRASE.forEach((note, index) => {
+      notes.forEach((note, index) => {
         const start = startTime + index * NOTE_SPACING;
         const oscillator = context.createOscillator(), gain = context.createGain();
         voices.push({ oscillator, gain });
@@ -251,18 +254,18 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
         for (const point of points.slice(1)) gain.gain.linearRampToValueAtTime(point.amplitude, start + point.time);
         oscillator.connect(gain); gain.connect(master);
         oscillator.start(start); oscillator.stop(start + NOTE_DURATION + .01);
-        if (index === PHRASE.length - 1) oscillator.onended = () => { if (!disposed && token === generation) stopPlayback('ended'); };
+        if (index === notes.length - 1) oscillator.onended = () => { if (!disposed && token === generation) stopPlayback('ended'); };
       });
       starting = false; playing = { version, attack };
-      audioStatus.textContent = `Playing ${version === 'before' ? 'the original' : 'your version'} with ${fmt(attack)} s attack. Same four notes, different entrance.`;
+      audioStatus.textContent = notes.length === 1 ? `Playing ${notes[0].name} with ${fmt(attack)} s attack.` : `Playing ${version === 'before' ? 'the original' : 'your version'} with ${fmt(attack)} s attack. Same four notes, different entrance.`;
       render();
       // Detect a suspended context without pretending the phrase finished audibly.
       timer = win.setTimeout(() => {
         if (token === generation && playing && context.state !== 'running') {
           stopPlayback('interrupted'); audioError.hidden = false; audioError.textContent = 'The browser interrupted audio. Press Hear to try again.';
         }
-      }, (PHRASE_DURATION + .3) * 1000);
-      emit('play', { version, attack, duration_seconds: PHRASE_DURATION, oscillator: 'sine', notes: PHRASE.map(note => ({ ...note })), peak_gain: .05 });
+      }, (duration + .3) * 1000);
+      emit('play', { version, attack, duration_seconds: duration, oscillator: 'sine', notes: notes.map(note => ({ ...note })), peak_gain: .05 });
     } catch (error) {
       if (disposed || token !== generation) return;
       stopPlayback('error', false); audioError.hidden = false;
