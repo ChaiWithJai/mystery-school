@@ -32,7 +32,7 @@ function element() {
     replaceChildren(...children) { this.children = children; }, remove() { this.removed = true; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
-function harness({ delay = false, delayTelemetry = false, pathway = 'music' } = {}) {
+function harness({ delay = false, delayTelemetry = false, pathway = 'music', boxing = false } = {}) {
   const nodes = new Map();
   const root = { ...element(), querySelector(selector) {
     if (!nodes.has(selector)) nodes.set(selector, element());
@@ -44,12 +44,14 @@ function harness({ delay = false, delayTelemetry = false, pathway = 'music' } = 
   const initial = pathway === 'movement'
     ? { duration: 2, distance: .4, shape: 'cubic', compare_shape: 'quintic', view: 'position', time: 0, playing: false }
     : { attack: .02, notes: [{ midi: 60, beats: 1 }, { midi: 64, beats: 1 }], tempo: 100 };
+  if (boxing) initial.boxing_round = {params:{cue:1.15,gap:14},prediction:39,attempts:[],question:'How do I make room?'};
   let state = structuredClone(initial), release, releaseTelemetry, dispatched = 0;
   let question = 'Change the ending.';
   const artifact = { id: 'base', pathway, state: { lab: structuredClone(initial), question } };
   const proposal = { version: 1, pathway, base_artifact_id: 'base', status: 'supported', reason: 'Try a comparison.',
     music: pathway === 'music' ? { ...initial, notes: [{ midi: 60, beats: 1 }, { midi: 67, beats: 2 }] } : null,
     movement: pathway === 'movement' ? { duration: 2, distance: .4, shape: 'cubic', compare_shape: 'quintic', view: 'acceleration' } : null, ideas: null };
+  if (boxing) proposal.movement.boxing_params = {cue:1.5,gap:20};
   const events = [];
   const dispose = mountLearningExperiment(element(), {
     sessionId: 'test', actorKind: 'agent_review', pathway,
@@ -139,6 +141,35 @@ test('movement parameter edits still invalidate a proposal', async () => {
     assert.equal(h.state.view, 'position');
     assert.equal(h.state.duration, 4);
     assert.match(h.nodes.get('[data-progress]').textContent, /changed the experiment/);
+  } finally { h.close(); }
+});
+
+test('boxing proposals change timing and gap without erasing attempts made during inference or after apply', async () => {
+  const h = harness({pathway:'movement', boxing:true, delay:true});
+  try {
+    const pending = h.request(); await settle();
+    h.edit({...h.state,boxing_round:{...h.state.boxing_round,prediction:35,attempts:[{id:'during-request'}]}});
+    h.release(); await pending;
+    h.nodes.get('[data-apply]').onclick();
+    assert.deepEqual(h.state.boxing_round.params,{cue:1.5,gap:20});
+    assert.deepEqual(h.state.boxing_round.attempts,[{id:'during-request'}]);
+    assert.equal(h.state.boxing_round.prediction,35);
+    h.edit({...h.state,boxing_round:{...h.state.boxing_round,attempts:[...h.state.boxing_round.attempts,{id:'after-apply'}]}});
+    h.nodes.get('[data-undo]').onclick();
+    assert.deepEqual(h.state.boxing_round.params,{cue:1.15,gap:14});
+    assert.deepEqual(h.state.boxing_round.attempts,[{id:'during-request'},{id:'after-apply'}]);
+    assert.equal(h.state.boxing_round.question,'How do I make room?');
+  } finally { h.close(); }
+});
+
+test('editing boxing timing prevents a stale proposal from overwriting it', async () => {
+  const h = harness({pathway:'movement',boxing:true});
+  try {
+    await h.request();
+    h.edit({...h.state,boxing_round:{...h.state.boxing_round,params:{cue:1.3,gap:14}}});
+    h.nodes.get('[data-apply]').onclick();
+    assert.deepEqual(h.state.boxing_round.params,{cue:1.3,gap:14});
+    assert.match(h.nodes.get('[data-progress]').textContent,/changed the experiment/);
   } finally { h.close(); }
 });
 

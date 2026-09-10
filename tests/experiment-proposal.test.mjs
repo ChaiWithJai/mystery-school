@@ -80,6 +80,58 @@ test('unsupported requires null branches and can never create an apply state', (
   }
 });
 
+test('optional boxing parameters accept absence and null without creating game state', () => {
+  for (const includeNull of [false, true]) {
+    const p = proposal('movement');
+    if (includeNull) p.movement.boxing_params = null;
+    assert.deepEqual(validateExperimentProposal(p, artifact('movement')), p);
+    const next = proposedLabState(p, artifact('movement'), {time: 0});
+    assert.equal(Object.hasOwn(next, 'boxing_params'), false);
+    assert.equal(Object.hasOwn(next, 'boxing_round'), false);
+    assert.deepEqual(next, {time: 0, ...proposal('movement').movement});
+  }
+});
+
+test('boxing parameters merge only into params and preserve detached game history', () => {
+  for (const cue of [.65, 1.65]) for (const gap of [10, 22]) {
+    const p = proposal('movement'); p.movement.boxing_params = {cue, gap};
+    const round = {prediction: '  My prediction\n', attempts: [{result: 'synthetic', nested: [1]}],
+      question: 'My exact question?', params: {cue: 1, gap: 15, other: 'preserved'}, score: 7};
+    const a = {...artifact('movement'), state: {lab: {boxing_round: structuredClone(round)}}};
+    const current = {duration: 3, distance: .3, shape: 'quintic', compare_shape: 'cubic', view: 'position',
+      time: .2, assistanceOpen: true, boxing_round: round};
+    const before = structuredClone({p, a, current});
+    assert.deepEqual(validateExperimentProposal(p, a), p);
+    const next = proposedLabState(p, a, current);
+    assert.deepEqual(next, {...current, ...proposal('movement').movement,
+      boxing_round: {...round, params: {...round.params, cue, gap}}});
+    assert.equal(Object.hasOwn(next, 'boxing_params'), false);
+    next.boxing_round.attempts[0].nested.push(2);
+    next.boxing_round.params.cue = 1;
+    assert.deepEqual({p, a, current}, before);
+  }
+});
+
+test('boxing parameters reject bounds, nonfinite, extra fields and missing source game', () => {
+  const a = {...artifact('movement'), state: {lab: {boxing_round: {params: {cue: 1, gap: 15}}}}};
+  for (const boxing_params of [{cue: .64, gap: 15}, {cue: 1.66, gap: 15}, {cue: 1, gap: 9.9},
+    {cue: 1, gap: 22.1}, {cue: NaN, gap: 15}, {cue: 1, gap: Infinity}, {cue: '1', gap: 15},
+    {cue: 1, gap: 15, extra: 1}, {cue: 1}, {}, [], false,
+    JSON.parse('{"cue":1,"gap":15,"__proto__":{}}')]) {
+    const p = proposal('movement'); p.movement.boxing_params = boxing_params;
+    assert.throws(() => validateExperimentProposal(p, a));
+  }
+  const p = proposal('movement'); p.movement.boxing_params = {cue: 1.1, gap: 15.5};
+  assert.doesNotThrow(() => validateExperimentProposal(p, a));
+  for (const base of [artifact('movement'), {...a, state: {lab: {}}},
+    ...[null, false, 'round', []].map(boxing_round => ({...a, state: {lab: {boxing_round}}}))]) {
+    assert.throws(() => validateExperimentProposal(p, base));
+  }
+  for (const current of [{}, {boxing_round: null}, {boxing_round: []}, {boxing_round: {params: 'bad'}}]) {
+    assert.throws(() => proposedLabState(p, a, current));
+  }
+});
+
 test('ideas quote grounding uses only exact indexed source content', () => {
   for (const change of [{source_quote: 'IN OUR CONTROL'}, {source_quote: ''}, {source_quote: ' '},
     {source_quote: 'My own note'}, {source_ref_index: 1}, {source_ref_index: -1},

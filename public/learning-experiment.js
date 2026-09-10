@@ -1,6 +1,7 @@
 import { validateExperimentProposal, proposedLabState } from './experiment-proposal.js';
 import { normalizeSongState } from './song-lab.js';
 import { validateIdeasState } from './ideas-lab.js';
+import { boxingParams } from './boxing-game.js';
 
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -15,6 +16,7 @@ export function describeExperimentValue(key, value) {
   if (key === 'attack') return `${value} seconds to full volume`;
   if (key === 'duration') return `${value} seconds`;
   if (key === 'distance') return `${value} metres`;
+  if (key === 'boxing_round') return `Jab after ${value.params.cue} seconds; starting gap ${value.params.gap} simulation units`;
   if (key === 'modelComparison') return `Source: "${value.source_quote}". Situation: ${value.scenario} Question: ${value.question}`;
   return typeof value === 'object' ? 'Saved experiment details' : String(value);
 }
@@ -24,12 +26,17 @@ export function experimentDefinition(pathway, state) {
     const { helpOpen, helpSeen, sourceOpened, ...content } = validateIdeasState(state);
     return structuredClone(content);
   }
-  return pathway === 'movement' ? Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])) : structuredClone(state);
+  return pathway === 'movement' ? {...Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])),
+    boxing_round:{params:boxingParams(state.boxing_round?.params)}} : structuredClone(state);
 }
 function restoreDefinition(pathway, target, current) {
   if (pathway === 'ideas') return { ...current, ...experimentDefinition(pathway, target) };
   if (pathway !== 'movement') return structuredClone(target);
-  return { ...current, ...experimentDefinition(pathway, target), time: Math.min(current.time || 0, target.duration), playing: false };
+  const definition = experimentDefinition(pathway, target);
+  const {boxing_round, ...physics} = definition;
+  return { ...current, ...physics,
+    ...(current.boxing_round || target.boxing_round ? {boxing_round:{...structuredClone(current.boxing_round || {}),params:definition.boxing_round.params}} : {}),
+    time: Math.min(current.time || 0, target.duration), playing: false };
 }
 
 // Requests keep their immutable base while the learner continues using the lab.

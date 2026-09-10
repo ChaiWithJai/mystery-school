@@ -35,6 +35,7 @@ export function mountSongLab(container, { initialState = {}, onChange = () => {}
     disposed = true; piano(); variation(); root.remove();
   };
   cleanup.getState = () => structuredClone(state);
+  cleanup.demonstrate = value => piano.demonstrate(value);
   cleanup.setState = value => {
     if (disposed) throw Error('This instrument is closed.');
     const next = normalizeSongState(value);

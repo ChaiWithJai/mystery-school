@@ -74,12 +74,22 @@ export function validateExperimentProposal(proposal, artifact) {
       number(note.beats, .25, 4);
     }
   } else if (p.pathway === 'movement') {
-    fields(branch, ['duration', 'distance', 'shape', 'compare_shape', 'view']);
+    fields(branch, ['duration', 'distance', 'shape', 'compare_shape', 'view',
+      ...(branch && Object.hasOwn(branch, 'boxing_params') ? ['boxing_params'] : [])]);
     number(branch.duration, 1, 4);
     number(branch.distance, .1, 1);
     choice(branch.shape, ['cubic', 'quintic']);
     choice(branch.compare_shape, ['cubic', 'quintic']);
     choice(branch.view, ['position', 'velocity', 'acceleration']);
+    if (branch.boxing_params != null) {
+      fields(branch.boxing_params, ['cue', 'gap']);
+      number(branch.boxing_params.cue, .65, 1.65);
+      number(branch.boxing_params.gap, 10, 22);
+      const round = base.state?.lab?.boxing_round;
+      if (!round || typeof round !== 'object' || Array.isArray(round)) {
+        throw new TypeError('Boxing parameters require a boxing round in the source artifact.');
+      }
+    }
   } else {
     fields(branch, ['scenario', 'question', 'source_quote', 'source_ref_index']);
     for (const key of ['scenario', 'question', 'source_quote']) {
@@ -107,6 +117,18 @@ export function proposedLabState(proposal, artifact, currentState) {
   const state = jsonCopy(currentState);
   if (!state || typeof state !== 'object' || Array.isArray(state)) throw new TypeError('Lab state must be an object.');
   if (p.pathway === 'ideas') state.modelComparison = p.ideas;
+  else if (p.pathway === 'movement') {
+    const {boxing_params, ...physics} = p.movement;
+    Object.assign(state, physics);
+    if (boxing_params != null) {
+      const round = state.boxing_round;
+      if (!round || typeof round !== 'object' || Array.isArray(round) ||
+          (round.params != null && (typeof round.params !== 'object' || Array.isArray(round.params)))) {
+        throw new TypeError('Current state must retain a valid boxing round.');
+      }
+      round.params = {...round.params, ...boxing_params};
+    }
+  }
   else Object.assign(state, p[p.pathway]);
   return state;
 }

@@ -45,8 +45,9 @@ interaction is not evidence of musical accuracy, boxing proficiency or learning.
   Terence Crawford's full technique or measure a person's body. Its geometry is
   a simplified model, with no impact-force or physical reaction-time claims.
 - Boxing round parameters are separate from the older meter-based physics lab.
-  Until a typed proposal supports `boxing_round.params`, an Astra movement
-  proposal changes the optional physics experiment, not the new boxing game.
+  Maincar commit `b3f4c6f` adds bounded typed proposals for
+  `boxing_round.params` while preserving attempts. Earlier agent walkthroughs
+  below predate that integration and do not prove a live model-controlled round.
 - The classics activity preserves Jai's supplied learning circle. Jiang-specific
   materials were not found in the available project context; this implementation
   must not be attributed to Jiang. The rainy-street scene is authored for the
@@ -77,10 +78,12 @@ return does. The replay scrubber read −4.5 simulation units / 0.30 seconds =
 −15.0 simulation units/s from the recorded trace. These are software/model
 observations, not participant results.
 
-The opening exercise was separately checked in Chromium: teacher playback left
-the learner event array empty. A recorded E6 pair with observed onset spacing
-2.05 seconds produced “Try 0.55 s less space,” matching its actual timestamps.
-No page exceptions occurred. Speaker fidelity and original-recording alignment
+After reconciliation with maincar `01c241e`, the opening uses the shared
+`demonstrate` / `analyzeOpening` implementation. Chromium teacher playback left
+the learner event array empty. The learner recorded E6 twice; feedback reported
+the actual 2.17-second interval and the 1.50-second target. No page exceptions
+occurred. All 146 JavaScript tests passed. The unavailable embedded artist
+video has been replaced by an optional external artist link. Speaker fidelity and original-recording alignment
 remain unverified; this is an arrangement exercise, not a recording transcription.
 
 ![Cinematic entry](game-demo-images/opening.png)

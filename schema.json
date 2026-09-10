@@ -24,8 +24,12 @@
           }
         }]},
         "movement": {"anyOf": [{"type": "null"}, {
-          "type": "object", "additionalProperties": false, "required": ["duration", "distance", "shape", "compare_shape", "view"],
+          "type": "object", "additionalProperties": false, "required": ["duration", "distance", "shape", "compare_shape", "view", "boxing_params"],
           "properties": {
+            "boxing_params": {"anyOf": [{"type": "null"}, {
+              "type": "object", "additionalProperties": false, "required": ["cue", "gap"],
+              "properties": {"cue": {"type": "number", "minimum": 0.65, "maximum": 1.65}, "gap": {"type": "number", "minimum": 10, "maximum": 22}}
+            }]},
             "duration": {"type": "number", "minimum": 1, "maximum": 4},
             "distance": {"type": "number", "minimum": 0.1, "maximum": 1},
             "shape": {"type": "string", "enum": ["cubic", "quintic"]},

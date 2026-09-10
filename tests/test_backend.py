@@ -182,7 +182,7 @@ class BackendTests(unittest.TestCase):
     def experiment_result(pathway=None, artifact_id="synthetic-artifact"):
         branches = {
             "music": {"attack": 0.1, "notes": [{"midi": 60, "beats": 1}, {"midi": 64, "beats": 0.5}], "tempo": 90},
-            "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity"},
+            "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity", "boxing_params": None},
             "ideas": {"scenario": "A friend disagrees with your claim.", "question": "What can you choose?",
                       "source_quote": EPICTETUS_EXCERPT, "source_ref_index": 0}}
         experiment = None if pathway is None else dict(version=1, pathway=pathway, base_artifact_id=artifact_id,
@@ -236,6 +236,71 @@ class BackendTests(unittest.TestCase):
         nonfinite["experiment"]["music"]["attack"] = float("nan")
         with self.assertRaises(ValueError):
             validate_projection(nonfinite, self.app.schema, {})
+
+    def test_inference_schema_requires_every_object_property(self):
+        def check(node, path="root"):
+            if isinstance(node, dict):
+                if node.get("type") == "object":
+                    self.assertEqual(set(node.get("required", [])), set(node.get("properties", {})), path)
+                    self.assertIs(node.get("additionalProperties"), False, path)
+                for key, value in node.items():
+                    check(value, path + "." + key)
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    check(value, path + "." + str(index))
+        check(self.app.schema)
+
+    def test_experiment_boxing_nullable_bounds_and_frozen_baseline(self):
+        result = self.experiment_result("movement")
+        artifact = {"id": "synthetic-artifact", "pathway": "movement", "state": {"lab": {}}}
+        inputs = {"learning_artifact_context": artifact}
+        legacy = json.loads(json.dumps(result))
+        del legacy["experiment"]["movement"]["boxing_params"]
+        # Strict inference rejects omission, but historical read views never normalize it.
+        with self.assertRaises(jsonschema.ValidationError):
+            validate_projection(legacy, self.app.schema, inputs)
+        self.assertEqual(job_view({"result": legacy})["result"], legacy)
+        result["experiment"]["movement"]["boxing_params"] = None
+        validate_projection(result, self.app.schema, inputs)
+        result["experiment"]["movement"]["boxing_params"] = {"cue": 1, "gap": 16}
+        for state in ({}, {"lab": None}, {"lab": {}}, {"lab": {"boxing_round": None}}):
+            with self.subTest(state=state), self.assertRaisesRegex(ValueError, "frozen artifact"):
+                validate_projection(result, self.app.schema, {"learning_artifact_context": dict(artifact, state=state)})
+        artifact["state"]["lab"] = {"boxing_round": {"attempts": ["synthetic miss"], "prediction": "Later cue"},
+                                    "question": "Can I try again?"}
+        before = json.loads(json.dumps(inputs))
+        for params in ({"cue": 0.65, "gap": 10}, {"cue": 1.65, "gap": 22}):
+            result["experiment"]["movement"]["boxing_params"] = params
+            validate_projection(result, self.app.schema, inputs)
+        for params in ({"cue": 0.649, "gap": 16}, {"cue": 1.651, "gap": 16},
+                       {"cue": 1, "gap": 9.99}, {"cue": 1, "gap": 22.01},
+                       {"cue": True, "gap": 16}, {"cue": "1", "gap": 16},
+                       {"cue": 1}, {"gap": 16}, {"cue": 1, "gap": 16, "force": 10}, []):
+            result["experiment"]["movement"]["boxing_params"] = params
+            with self.subTest(params=params), self.assertRaises(jsonschema.ValidationError):
+                validate_projection(result, self.app.schema, inputs)
+        self.assertEqual(inputs, before)
+
+    def test_experiment_boxing_new_output_gate(self):
+        for has_round in (True, False):
+            lab = {"boxing_round": {"attempts": [], "prediction": "Synthetic prediction"}} if has_round else {}
+            _, artifact = self.request("/api/artifacts", dict(pathway="movement", session_id="synthetic-boxing",
+                stage="attempt", actor_kind="agent_review", goal="Synthetic timing test", state={"lab": lab, "question": "Try later?"}))
+            result = self.experiment_result("movement", artifact["id"])
+            result["experiment"]["movement"]["boxing_params"] = {"cue": 1.2, "gap": 18}
+            script = "from pathlib import Path; Path('result.json').write_text(" + repr(json.dumps(result)) + ")"
+            with patch.object(self.app, "command_builder", return_value=[sys.executable, "-c", script]):
+                status, queued = self.request("/api/project", dict(session_id="synthetic-boxing", question="Try later?",
+                    premise="Synthetic only", world="futures", actor_kind="agent_review", learning_artifact_id=artifact["id"]))
+                self.assertEqual(status, 202)
+                ended = self.wait_job(queued["id"])
+            self.assertEqual(ended["status"], "succeeded" if has_round else "failed")
+            self.assertEqual(ended["result"], result if has_round else None)
+            self.assertEqual(ended["input"]["learning_artifact_context"], artifact)
+            self.assertIn("cue is seconds", ended["invocation"]["stdin"])
+            self.assertIn("not physical distance or impact-force", ended["invocation"]["stdin"])
+            if not has_round:
+                self.assertIn("boxing_round", ended["error"])
 
     def test_experiment_capture_gate_and_legacy_readback(self):
         refs = [{"url": "https://www.youtube.com/watch?v=abcdefghijk", "locator": "0:10", "content": "Not a transcript"},

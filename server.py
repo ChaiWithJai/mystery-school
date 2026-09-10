@@ -60,6 +60,11 @@ def validate_projection(result, schema, inputs):
     expected = [artifact["pathway"]] if experiment["status"] == "supported" else []
     if branches != expected:
         raise ValueError("Experiment branches must match its pathway and support status")
+    if experiment["movement"] is not None and experiment["movement"].get("boxing_params") is not None:
+        state = artifact.get("state")
+        lab = state.get("lab") if isinstance(state, dict) else None
+        if not isinstance(lab, dict) or lab.get("boxing_round") is None:
+            raise ValueError("boxing_params requires boxing_round in the frozen artifact state.lab")
     if experiment["ideas"] is not None:
         ideas = experiment["ideas"]
         source = next((source for source in inputs.get("experiment_sources", [])
@@ -600,7 +605,12 @@ class App:
                 "a learning outcome observed, or a real physical simulation performed. Ideas source_ref_index "
                 "indexes the frozen artifact source_refs; source_quote must be a nonempty literal substring "
                 "of the corresponding experiment_sources content. Only that captured excerpt is available. "
-                "User video references and notes are not fetched or verified transcripts. Do not claim video analysis.\n"
+                "User video references and notes are not fetched or verified transcripts. Do not claim video analysis. "
+                "Movement boxing_params is required and nullable; use null when not applicable. Only propose non-null boxing_params when the frozen "
+                "artifact state.lab.boxing_round exists. cue is seconds (0.65 to 1.65); gap is simulation units "
+                "(10 to 22), not physical distance or impact-force. It applies only timing/gap and preserves "
+                "attempts, prediction, and question. Retain the other required movement fields for compatibility; "
+                "never invent a boxing game for an unrelated baseline.\n"
                 + json.dumps(inputs, ensure_ascii=False))
             atomic_json(folder / "input.json", inputs)
             prompt_bytes = prompt.encode("utf-8")
