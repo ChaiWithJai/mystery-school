@@ -2,13 +2,17 @@ const BLACK = new Set([1, 3, 6, 8, 10]);
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export const COMPUTER_KEYS = Object.freeze({ a: 60, w: 61, s: 62, e: 63, d: 64, f: 65, t: 66, g: 67, y: 68, h: 69, u: 70, j: 71, k: 72, o: 73, l: 74, p: 75, ';': 76 });
 export const PHYSICAL_KEYS = Object.freeze(Object.fromEntries(Object.entries(COMPUTER_KEYS).map(([key,midi]) => [key === ';' ? 'Semicolon' : `Key${key.toUpperCase()}`, midi])));
+// Virtual Piano's opening letters, transposed +4 as specified on Jai's sheet.
+export const RUNAWAY_OPENING_KEYS = Object.freeze({KeyL:88,KeyS:76,KeyK:87,KeyA:75,KeyJ:85,KeyP:73,KeyG:81,KeyF:80});
+const SAMPLED_OPENING_PITCHES = new Set(Object.values(RUNAWAY_OPENING_KEYS));
 const mountedPianos = [];
 export function physicalPianoKey(event, keyboardMap = 'standard') {
   if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.isComposing) return null;
   const origin = event.composedPath?.()[0] || event.target;
   if (origin?.isContentEditable || origin?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="combobox"],[role="slider"]')) return null;
   const code = event.code || (event.key === ';' ? 'Semicolon' : `Key${String(event.key || '').toUpperCase()}`);
-  return Object.hasOwn(PHYSICAL_KEYS, code) ? { midi: keyboardMap === 'runaway' && code === 'KeyL' ? 88 : PHYSICAL_KEYS[code], source: `physical:${code}` } : null;
+  const mapping = keyboardMap === 'runaway' ? RUNAWAY_OPENING_KEYS : PHYSICAL_KEYS;
+  return Object.hasOwn(mapping, code) ? { midi: mapping[code], source: `physical:${code}` } : null;
 }
 export const noteName = midi => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
 export const noteFrequency = midi => 440 * 2 ** ((midi - 69) / 12);
@@ -90,6 +94,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   let generation = 0;
   const voices = new Map();
   const held = new Map();
+  const pendingStrikes = new Map();
   const scheduled = [];
   const listeners = [];
   const root = document.createElement('section');
@@ -104,12 +109,12 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     <div class="piano-practice__take" data-take></div>
     <button type="button" data-reset>Reset take</button>
     <details><summary>Edit this performance</summary><p>Adjust your own note's pitch, entrance or release in seconds. These are recorded timings, not a score or an accuracy grade.</p><div data-editor></div></details>
-    <details><summary>What am I hearing?</summary><p data-timbre>Synthesized piano-like fallback while the local piano sample loads. E6 can use Alexander Holm's Salamander Yamaha C5 D-sharp-6 sample, shifted up one semitone. Other keys use synthesis. This is not audio from Runaway.</p><a href="/audio/piano/SOURCE-LICENSE.txt">Sample attribution and CC BY 3.0 license</a></details></details>`;
+    <details><summary>What am I hearing?</summary><p data-timbre>Opening keys use Alexander Holm's Salamander Yamaha C5 piano sample, transposed from D-sharp-6, once loaded. Synthesis is the fallback. This is not audio from Runaway.</p><a href="/audio/piano/SOURCE-LICENSE.txt">Sample attribution and CC BY 3.0 license</a></details></details>`;
   container.append(root);
   mountedPianos.push(root);
   const find = selector => root.querySelector(selector);
   const keyboard = find('.piano-practice__keyboard');
-  if (keyboardMap === 'runaway') find('.piano-practice__hint').textContent = 'Runaway keyboard mode: hold physical L for E6. Other letter keys keep their standard mapping. This is our practice shortcut, not the reference website keyboard layout. Typing in a field does not play notes.';
+  if (keyboardMap === 'runaway') find('.piano-practice__hint').textContent = 'Opening letters from Virtual Piano, transposed +4: L S K A J P G F. Hold a key to sustain. Click the piano for other notes. The complete arrangement is on Virtual Piano. Typing in a field does not play notes.';
   const status = find('[data-status]');
   const error = find('[data-error]');
   const keyElements = new Map();
@@ -173,7 +178,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
         if (disposed) return;
         sampleBuffer = buffer;
         root.dataset.timbre = 'sample-ready';
-        find('[data-timbre]').textContent = 'E6: recorded Salamander Yamaha C5 piano by Alexander Holm (CC BY 3.0), D-sharp-6 shifted up one semitone. Other keys: synthesized piano-like tones. This is not the Runaway recording.';
+        find('[data-timbre]').textContent = 'Opening keys: recorded Salamander Yamaha C5 piano by Alexander Holm (CC BY 3.0), transposed from D-sharp-6; E6 is one semitone higher. Other keys use synthesis. This is not the Runaway recording.';
       } catch {
         if (!disposed) {
           root.dataset.timbre = 'synthesized-fallback';
@@ -197,10 +202,11 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(peak, start + Math.min(attack, .004));
     gain.connect(context.destination);
-    if (midi === 88 && sampleBuffer) {
+    if (SAMPLED_OPENING_PITCHES.has(midi) && sampleBuffer) {
       const source = context.createBufferSource();
       source.buffer = sampleBuffer;
-      source.playbackRate.setValueAtTime(Math.pow(2, 1 / 12), start);
+      const rate = Math.pow(2, (midi - 87) / 12);
+      source.playbackRate.setValueAtTime(rate, start);
       source.connect(gain);
       const entry = { gain, peak, stop(time) { source.stop(time); } };
       source.onended = () => {
@@ -210,7 +216,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
         if (voices.get(midi) === entry) voices.delete(midi);
       };
       source.start(start);
-      emit('audio_voice', { midi, timbre: 'sampled_piano', sample: '/audio/piano/Ds6.mp3', source_midi: 87, playback_rate: Math.pow(2, 1 / 12), scheduled_start: start });
+      emit('audio_voice', { midi, timbre: 'sampled_piano', sample: '/audio/piano/Ds6.mp3', source_midi: 87, playback_rate: rate, scheduled_start: start });
       return entry;
     }
     // Authored additive piano-like timbre, not a sampled piano or song recording.
@@ -282,25 +288,31 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     recordEvent('on', midi);
     emit('note_on', { midi, recording, time: recording ? state.duration : null });
     const token = generation;
+    const strike = { released: false };
+    pendingStrikes.set(midi, strike);
     try {
       await audioReady();
-      if (midi === 88) await waitForSample(150);
-      if (disposed || generation !== token || voices.has(midi)) return;
-      if (![...held.values()].includes(midi)) {
+      if (SAMPLED_OPENING_PITCHES.has(midi)) await waitForSample(150);
+      if (disposed || generation !== token) return;
+      if (strike.released) {
         // A real quick tap may end while the browser unlocks audio. Sound a short
         // tap once ready, without rewriting its recorded input timestamps.
         const tap = voice(midi, context.currentTime);
         releaseVoice(tap, context.currentTime + .06); scheduled.push(tap);
         return;
       }
+      if (voices.has(midi)) return;
       voices.set(midi, voice(midi, context.currentTime));
     } catch (err) { if (!disposed) fail(err); }
+    finally { if (pendingStrikes.get(midi) === strike) pendingStrikes.delete(midi); }
   }
   function up(source) {
     const midi = held.get(source);
     if (midi === undefined) return;
     held.delete(source);
     if ([...held.values()].includes(midi)) return;
+    const pending = pendingStrikes.get(midi);
+    if (pending) { pending.released = true; pendingStrikes.delete(midi); }
     const v = voices.get(midi);
     if (v) { releaseVoice(v, context.currentTime); voices.delete(midi); }
     paintKey(midi, false);
@@ -326,9 +338,11 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     button.className = `piano-practice__key ${key.black ? 'is-black' : 'is-white'}`;
     button.style.left = `${key.left}%`; button.style.width = `${key.width}%`;
     button.textContent = noteName(key.midi);
-    if (key.midi === 88 && keyboardMap === 'runaway') {
-      const shortcut = document.createElement('kbd'); shortcut.className = 'piano-practice__shortcut'; shortcut.textContent = 'L';
-      button.append(shortcut); button.setAttribute('aria-keyshortcuts', 'l'); button.title = 'Runaway mode: hold physical L to play E6';
+    const openingCode = keyboardMap === 'runaway' && Object.keys(RUNAWAY_OPENING_KEYS).find(code => RUNAWAY_OPENING_KEYS[code] === key.midi);
+    if (openingCode) {
+      const letter = openingCode.slice(3);
+      const shortcut = document.createElement('kbd'); shortcut.className = 'piano-practice__shortcut'; shortcut.textContent = letter;
+      button.append(shortcut); button.setAttribute('aria-keyshortcuts', letter.toLowerCase()); button.title = `Runaway opening: hold physical ${letter} to play ${noteName(key.midi)}`;
     }
     button.setAttribute('aria-label', `${noteName(key.midi)}, hold to play`);
     button.setAttribute('aria-pressed', 'false');

@@ -1,7 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RUNAWAY_OPENING_SOURCE, createOpeningDemoTake, analyzeOpening, normalizeOpeningTarget, openingTempoLabel } from '../public/runaway-opening.js';
+import { RUNAWAY_OPENING_SOURCE, createOpeningDemoTake, createOpeningPresenterTake, OPENING_PRESENTER_SOURCE, analyzeOpening, normalizeOpeningTarget, openingTempoLabel } from '../public/runaway-opening.js';
 import { normalizePianoState } from '../public/piano-practice.js';
+
+test('seven-second presenter take repeats only the bounded exercise with explicit authored provenance', () => {
+  const take=createOpeningPresenterTake();
+  assert.equal(take.duration,7);
+  assert.deepEqual(take.events.filter(event=>event.type==='on').map(event=>event.time),[.75,2.25,3.75,5.25]);
+  assert.ok(take.events.every(event=>event.midi===88));
+  assert.equal(take.events.at(-1).time,6.75);
+  assert.deepEqual(normalizePianoState(take),take);
+  assert.equal(OPENING_PRESENTER_SOURCE.provenance,'authored_practice_repetition');
+  assert.ok(Object.isFrozen(OPENING_PRESENTER_SOURCE));
+  take.events[0].midi=60;
+  assert.equal(createOpeningPresenterTake().events[0].midi,88);
+  assert.equal(createOpeningDemoTake().duration,3.75);
+});
 
 test('target normalization is exact, bounded and detached with null legacy default', () => {
   assert.equal(normalizeOpeningTarget(),null);

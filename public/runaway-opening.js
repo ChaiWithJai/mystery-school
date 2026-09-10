@@ -48,6 +48,22 @@ export function createOpeningDemoTake(target = null) {
   });
 }
 
+export const OPENING_PRESENTER_SOURCE = Object.freeze({
+  provenance: 'authored_practice_repetition',
+  source_id: RUNAWAY_OPENING_SOURCE.id,
+  duration_seconds: 7,
+  limits: 'Two-strike exercise repeated at 80 BPM for presentation, not a seven-second song transcription or original recording.',
+});
+
+export function createOpeningPresenterTake() {
+  const original = createOpeningDemoTake();
+  return normalizePianoState({
+    duration: 7,
+    reference: { title: 'Authored repetition of the opening two-strike exercise', url: RUNAWAY_OPENING_SOURCE.url },
+    events: [...original.events, ...original.events.map(event => ({ ...event, time: event.time + 3 }))],
+  });
+}
+
 export function analyzeOpening(take, target = null) {
   const bpm = normalizeOpeningTarget(target)?.quarter_bpm ?? 80;
   const targetInterval = 120 / bpm;

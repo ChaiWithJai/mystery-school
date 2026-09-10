@@ -24,6 +24,7 @@ test('scene label, single Hear button and comparison follow the applied target w
     prepend(node){this.children.unshift(node);}
     replaceChildren(...nodes){this.children=nodes;}
     setAttribute(){} remove(){} focus(){}
+    addEventListener(){} removeEventListener(){}
   }
   const document={head:new Element('head'),createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
   const rollTargets=[],rollEvents=[];let rollDisposed=false;

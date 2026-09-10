@@ -1,0 +1,31 @@
+import {demoBeatAt,renderFinale} from './demo-finale.js';
+const $=s=>document.querySelector(s),frames=new Map(),stage=$('#demo-stage');
+const portraitURL=new URLSearchParams(location.search).get('portrait')||'/assets/jai-portrait.jpg';
+let started=false,paused=false,elapsed=0,last=0,scene='',raf=0;
+for(const path of ['music','movement','ideas']){
+  const frame=document.createElement('iframe');frame.title=path+' / live school';frame.src=`/?path=${path}&actor=agent_review`;frame.hidden=true;frame.allow='autoplay; camera';stage.append(frame);frames.set(path,frame);
+}
+function show(seconds){
+  const beat=demoBeatAt(seconds);
+  if(beat.id!==scene){scene=beat.id;for(const [id,frame]of frames)frame.hidden=id!==scene;$('.demo-slide').hidden=frames.has(scene);$('.demo-slide').dataset.scene=scene;if(!frames.has(scene))renderFinale($('.demo-slide'),scene,portraitURL);}
+  $('.demo-time').textContent=`${Math.floor(Math.min(seconds,60))} / 60 s`;
+  $('.demo-progress').style.transform=`scaleX(${Math.min(seconds/60,1)})`;
+}
+function tick(now){if(!started||paused)return;elapsed+=Math.max(0,now-last)/1000;last=now;show(elapsed);if(elapsed>=60){paused=true;$('#demo-pause').textContent='Replay';return;}raf=requestAnimationFrame(tick);}
+$('#demo-start').onclick=()=>{
+  $('.demo-start').hidden=true;$('#demo-pause').hidden=false;started=true;paused=false;elapsed=0;last=performance.now();show(0);
+  const piano=frames.get('music').contentDocument;
+  piano?.querySelector('.piano-practice')?.dispatchEvent(new Event('presenter-opening'));
+  raf=requestAnimationFrame(tick);
+};
+$('#demo-pause').onclick=()=>{
+  if(elapsed>=60){$('#demo-start').click();$('#demo-pause').textContent='Pause';return;}
+  paused=!paused;$('#demo-pause').textContent=paused?'Resume':'Pause';
+  if(paused)cancelAnimationFrame(raf);else{last=performance.now();raf=requestAnimationFrame(tick);}
+};
+// Preparation is event-driven; a missing scene keeps Start disabled, not a fake readiness claim.
+await Promise.all([...frames.values()].map(frame=>new Promise(resolve=>{
+  const ready=()=>{const doc=frame.contentDocument;if(!doc)return;const observer=new MutationObserver(()=>{if(doc.querySelector('.piano-roll,.boxing-journey-intro,.story-world')){observer.disconnect();resolve();}});observer.observe(doc,{subtree:true,childList:true});if(doc.querySelector('.piano-roll,.boxing-journey-intro,.story-world')){observer.disconnect();resolve();}};
+  frame.addEventListener('load',ready,{once:true});if(frame.contentDocument?.readyState==='complete')ready();
+})));
+$('#demo-start').disabled=false;$('#demo-start').textContent='Start 60-second demo';

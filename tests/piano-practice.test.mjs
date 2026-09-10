@@ -6,10 +6,51 @@ const take = { duration: 1.2, events: [{ type: 'on', midi: 60, time: .2 }, { typ
 
 test('physical map is deterministic and excludes typing, modifiers and composition', () => {
   assert.equal(physicalPianoKey({code:'KeyL',key:'x'},'runaway').midi,88);
+  for (const [letter,midi] of Object.entries({L:88,S:76,K:87,A:75,J:85,P:73,G:81,F:80})) {
+    assert.equal(physicalPianoKey({code:`Key${letter}`},'runaway').midi,midi);
+  }
+  assert.equal(physicalPianoKey({code:'KeyW'},'runaway'),null);
+  assert.equal(physicalPianoKey({code:'KeyS'},'standard').midi,62);
   assert.equal(physicalPianoKey({code:'KeyL',key:'l'}).midi,74);
   for(const modifier of ['ctrlKey','altKey','metaKey','shiftKey','isComposing','defaultPrevented']) assert.equal(physicalPianoKey({code:'KeyL',[modifier]:true},'runaway'),null);
   assert.equal(physicalPianoKey({code:'KeyL',target:{closest:()=>({})}},'runaway'),null);
   assert.equal(physicalPianoKey({code:'KeyL',target:{isContentEditable:true}},'runaway'),null);
+  for(const [letter,midi] of Object.entries({L:88,S:76,K:87,A:75,J:85,P:73,G:81,F:80})) assert.equal(physicalPianoKey({code:`Key${letter}`},'runaway').midi,midi);
+  assert.equal(physicalPianoKey({code:'KeyW'},'runaway'),null);
+  assert.equal(physicalPianoKey({code:'KeyS'},'standard').midi,62);
+});
+
+test('all eight opening shortcuts use the same piano sample with exact pitch rates', async t => {
+  const h=harness(t);const events=[];
+  globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+  const api=mountPianoPractice(h.host,{keyboardMap:'runaway',onEvent:(type,payload)=>events.push({type,payload})});h.cleanups.push(api);
+  for(const [letter,midi] of Object.entries({L:88,S:76,K:87,A:75,J:85,P:73,G:81,F:80})) {
+    await h.win.fire('keydown',{code:`Key${letter}`});await h.win.fire('keyup',{code:`Key${letter}`});
+    const voice=events.filter(event=>event.type==='audio_voice').at(-1).payload;
+    assert.equal(voice.midi,midi);assert.equal(voice.timbre,'sampled_piano');
+    assert.equal(voice.playback_rate,2**((midi-87)/12));
+    assert.equal(h.find('.piano-practice__keyboard').children[midi-48].attributes['aria-keyshortcuts'],letter.toLowerCase());
+  }
+  assert.equal(h.audio.buffers.length,8);assert.equal(h.audio.oscillators.length,0);
+});
+
+test('restriking during first decode preserves both attacks and the second held release', async t => {
+  const h=harness(t);let finishDecode;
+  globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+  const Base=globalThis.AudioContext;
+  globalThis.AudioContext=class extends Base {decodeAudioData(){return new Promise(resolve=>{finishDecode=resolve;});}};
+  const api=mountPianoPractice(h.host,{keyboardMap:'runaway',autoCapture:true});h.cleanups.push(api);
+  await h.win.fire('keydown',{code:'KeyL'});await h.win.fire('keyup',{code:'KeyL'});
+  await h.win.fire('keydown',{code:'KeyL'});
+  const before=JSON.stringify(api.getState());
+  finishDecode({duration:4});for(let i=0;i<20;i++) await Promise.resolve();
+  assert.equal(h.audio.buffers.length,2);
+  assert.ok(h.audio.buffers[0].stopTime>10);
+  assert.equal(h.audio.buffers[1].stopTime,undefined);
+  assert.equal(JSON.stringify(api.getState()),before);
+  await h.win.fire('keyup',{code:'KeyL'});
+  assert.equal(h.audio.buffers[1].stopTime,10.065);
+  assert.deepEqual(api.getState().events.map(event=>event.type),['on','off','on','off']);
 });
 
 test('Runaway L plays from Close-panel focus; release ignores new modifiers and cleanup detaches', async t => {
