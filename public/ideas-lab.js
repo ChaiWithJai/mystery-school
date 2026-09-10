@@ -135,10 +135,9 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const root = node('section', 'ideas-lab');
   root.setAttribute('aria-labelledby', `${prefix}-title`);
   root.append(node('p', 'ideas-lab__eyebrow', 'Leena / Ideas after work'));
-  const title = node('h3', 'ideas-lab__title', 'From a saved lecture to a thought of your own');
+  const title = node('h3', 'ideas-lab__title', 'Make a thought your own.');
   title.id = `${prefix}-title`;
-  root.append(title, node('p', 'ideas-lab__intro', 'Leena, 28, saves Great Books lectures on YouTube after work. She wants to tell a friend what she believes. Begin with one passage and something you can say in your own words.'));
-  root.append(node('p', 'ideas-lab__note', 'Leena is a fictional composite. Begin with the inspected text below. You can also attach a moment from a lecture you saved.'));
+  root.append(title, node('p', 'ideas-lab__intro', 'Touch a light. Follow the connection.'));
 
   const source = node('section', 'ideas-lab__source');
   source.append(node('h4', 'ideas-lab__step', '01 / Read the source'));
@@ -153,14 +152,15 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const paraphrase = node('p', 'ideas-lab__paraphrase');
   paraphrase.append(node('strong', '', 'Authored paraphrase: '), node('span', '', IDEAS_GUIDANCE.paraphrase));
   source.append(paraphrase);
-  root.append(source);
+
   listen(sourceLink, 'click', () => { update({ sourceOpened: true }); emit('source', { url: IDEAS_SOURCE.url }); });
   listen(sourceLink, 'auxclick', event => {
     if (event.button === 1) { update({ sourceOpened: true }); emit('source', { url: IDEAS_SOURCE.url }); }
   });
 
-  const videoSection = node('section', 'ideas-lab__video');
-  videoSection.append(node('h4', 'ideas-lab__step', 'Optional / A lecture you saved'));
+  const videoSection = node('details', 'ideas-lab__video');
+  videoSection.append(node('summary', '', '+ Connect a lecture'));
+
   const videoNotice = node('p', 'ideas-lab__note', 'User reference, not a verified source. No video or transcript is fetched, verified, or analyzed here. Your note is your account of the moment; the Epictetus passage remains separate.');
   videoNotice.id = `${prefix}-video-notice`;
   videoSection.append(videoNotice);
@@ -196,7 +196,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     if (reference.valid) emit('source', { sourceId: 'user-youtube-reference', referenceKind: 'user_reference_unverified', url: reference.url, seconds: reference.seconds });
   });
   videoSection.append(videoStatus, videoLink);
-  root.append(videoSection);
+
 
   function draftField(key, heading, labelText, hintText) {
     const section = node('section', 'ideas-lab__draft');
@@ -205,7 +205,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     const input = node('textarea', 'ideas-lab__textarea');
     input.id = `${prefix}-${key}`;
     input.name = key;
-    input.rows = 4;
+    input.rows = 3;
     input.value = state[key];
     label.htmlFor = input.id;
     const hint = node('p', 'ideas-lab__hint', hintText);
@@ -216,7 +216,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     return { section, input };
   }
   const first = draftField('interpretation', '02 / Make a first reading', 'What does this mean to you?', 'Try one sentence you could say to a friend. You can agree, disagree, or be unsure.');
-  root.append(first.section);
+
 
   const helpSection = node('section', 'ideas-lab__help');
   helpSection.append(node('h4', 'ideas-lab__step', '03 / Consider another reading'));
@@ -231,7 +231,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   helpContent.append(node('p', 'ideas-lab__note', 'Written for this activity, not generated from or used to judge your answer. Keep what helps; you can leave it aside.'));
   listen(helpButton, 'click', () => { update({ helpOpen: !state.helpOpen }); emit('help', { expanded: state.helpOpen }); });
   helpSection.append(helpButton, helpContent);
-  root.append(helpSection);
+
 
   const revised = draftField('revisedInterpretation', '04 / Say what you believe now', 'What would you say to your friend now?', 'Keep, change, or qualify your view. Your first reading stays above so you can compare.');
   const unchangedLabel = node('label', 'ideas-lab__unchanged');
@@ -241,15 +241,16 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   unchangedLabel.append(unchangedInput, node('span', '', 'Nothing changed yet. I am keeping my view for now.'));
   listen(unchangedInput, 'change', () => update({ unchanged: unchangedInput.checked }));
   revised.section.append(unchangedLabel);
-  root.append(revised.section);
+
 
   const map = node('section', 'ideas-lab__map');
   const mapTitle = node('h4', 'ideas-lab__step', 'Your concept map');
   mapTitle.id = `${prefix}-map-title`;
   map.setAttribute('aria-labelledby', mapTitle.id);
-  map.append(mapTitle, node('p', 'ideas-lab__hint', 'The passage and your words, linked so you can inspect your account. This is a personal concept map, not trained model weights.'));
+  map.append(mapTitle);
   const chain = node('ol', 'ideas-lab__chain');
   const mapTexts = [];
+  const mapCards = [];
   const mapEdges = [];
   const initialMap = deriveConceptMap(state);
   for (const [index, item] of initialMap.nodes.entries()) {
@@ -259,7 +260,11 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
       mapEdges.push(edge);
       entry.append(edge);
     }
-    const card = node('div', 'ideas-lab__map-card');
+    const card = node('button', 'ideas-lab__map-card');
+    card.type = 'button';
+    mapCards.push(card);
+    card.setAttribute('aria-label', ['Open source passage', 'Shape my first thought', 'Revisit my thought'][index]);
+    listen(card, 'click', () => selectOrb(index));
     card.append(node('h5', '', item.label));
     const text = node('p');
     mapTexts.push(text);
@@ -270,6 +275,26 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   }
   map.append(chain);
   root.append(map);
+  const editor = node('div', 'ideas-lab__editor');
+  editor.append(source, first.section, revised.section, helpSection);
+  root.append(editor, videoSection);
+  let activeOrb = state.revisedInterpretation ? 2 : 0;
+  function selectOrb(index, notify = true) {
+    activeOrb = index;
+    source.hidden = index !== 0;
+    first.section.hidden = index !== 1;
+    revised.section.hidden = index !== 2;
+    helpSection.hidden = index === 0;
+    mapCards.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+    if (notify) emit('focus', { node: ['source', 'interpretation', 'revision'][index] });
+  }
+  const begin = node('button', 'ideas-lab__button', 'What do I think? →');
+  listen(begin, 'click', () => { selectOrb(1); first.input.focus(); });
+  source.append(begin);
+  const connect = node('button', 'ideas-lab__button', 'Try another angle →');
+  listen(connect, 'click', () => { selectOrb(2); update({helpOpen: true}); emit('help', {expanded:true}); revised.input.focus(); });
+  first.section.append(connect);
+  selectOrb(activeOrb, false);
   const status = node('p', 'ideas-lab__status');
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
@@ -290,7 +315,8 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     helpButton.setAttribute('aria-expanded', String(state.helpOpen));
     const conceptMap = deriveConceptMap(state);
     conceptMap.nodes.forEach((item, index) => {
-      mapTexts[index].textContent = item.text || (index === 1 ? 'Your first words will appear here.' : 'Your words now will appear here.');
+      mapTexts[index].textContent = item.text || (index === 1 ? 'A thought waiting to take shape' : 'What changes when you look again?');
+      mapCards[index].setAttribute('data-has-thought', String(Boolean(item.text)));
     });
     conceptMap.edges.forEach((edge, index) => { mapEdges[index].textContent = edge.label; });
     const nextStatus = state.revisedInterpretation.trim()

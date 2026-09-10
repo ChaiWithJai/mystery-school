@@ -90,10 +90,14 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   }
 
   const root = node('section', 'music-lab'); root.setAttribute('aria-labelledby', `${prefix}-title`);
-  root.append(node('p', 'music-lab__eyebrow', 'Maya / 15 / plays by ear'));
+  root.append(node('p', 'music-lab__eyebrow', 'Maya / a synthesized musical sketch'));
   const title = node('h3', 'music-lab__title', 'A gentler entrance for Grandma.'); title.id = `${prefix}-title`;
-  root.append(title, node('p', 'music-lab__voice', '"I want to finish a song for my grandmother. I hear how it should begin, but this entrance feels too sudden."'));
-  root.append(node('p', 'music-lab__intro', 'Try a short musical sketch. Keep the same four notes; change how gently each one begins.'));
+  const storyContext = node('details', 'music-lab__context');
+  storyContext.append(node('summary', '', 'The song behind this experiment'));
+  root.append(title);
+  storyContext.append(node('p', 'music-lab__voice', '"I want to finish a song for my grandmother. I hear how it should begin, but this entrance feels too sudden."'));
+  root.append(node('p', 'music-lab__intro', 'Hear the phrase. Shape its entrance.'));
+  storyContext.append(node('p', '', 'Keep the same four notes; change how gently each one begins.'));
 
   const phrase = node('div', 'music-lab__phrase'); phrase.setAttribute('aria-label', 'Phrase: C4, E4, G4, C5');
   for (const note of PHRASE) phrase.append(node('span', '', note.name));
@@ -106,7 +110,8 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   const audioStatus = node('p', 'music-lab__status', 'Ready when you are. Playback begins only when you press Hear.');
   audioStatus.setAttribute('role', 'status'); audioStatus.setAttribute('aria-live', 'polite');
   const audioError = node('p', 'music-lab__error'); audioError.setAttribute('role', 'alert'); audioError.hidden = true;
-  root.append(audioStatus, audioError, node('p', 'music-lab__scope', 'A quiet synthesized sine-tone phrase, not a recorded piano. Your device controls the listening level.'));
+  root.append(audioStatus, audioError);
+  storyContext.append(node('p', 'music-lab__scope', 'A quiet synthesized sine-tone phrase, not a recorded piano. Your device controls the listening level.'));
 
   const controls = node('div', 'music-lab__controls');
   const row = node('div', 'music-lab__slider-row');
@@ -146,7 +151,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   const legend = node('figcaption', 'music-lab__legend');
   legend.append(node('span', 'music-lab__legend-before', 'Dashed: original (0.02 s)'), node('span', 'music-lab__legend-after', 'Solid: my version'));
   figure.append(legend); root.append(figure);
-  root.append(node('p', 'music-lab__hint', 'This is the amplitude envelope of one note, not the sound wave. Note pitches and the 1.1-second note duration stay fixed.'));
+  storyContext.append(node('p', 'music-lab__hint', 'This is the amplitude envelope of one note, not the sound wave. Note pitches and the 1.1-second note duration stay fixed.'));
   const observation = node('p', 'music-lab__observation'); root.append(observation);
 
   const help = node('details', 'music-lab__help');
@@ -174,7 +179,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
     emit('help', { action: 'reject', attack: state.attack, restored: restore !== null });
   }, 'music-lab__reject'));
   const helpStatus = node('p', 'music-lab__hint'); helpStatus.setAttribute('role', 'status');
-  help.append(decisions, helpStatus); root.append(help);
+  help.append(decisions, helpStatus); root.append(help, storyContext);
   listen(help, 'toggle', () => { if (!disposed) emit('help', { action: help.open ? 'open' : 'close', attack: state.attack }); });
   container.append(root);
 

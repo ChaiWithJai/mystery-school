@@ -95,12 +95,14 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   root.append(el('p', 'movement-lab__eyebrow', 'Labeled simulation / controlled non-contact reach'));
   const title = el('h3', 'movement-lab__title', 'Make the reach smoother.');
   title.id = `${id}-title`;
-  root.append(title, el('p', 'movement-lab__intro', 'Andre wants a smooth reach. Try the marker, then compare its timing and shape. This is an on-screen model; no physical movement is required.'));
+  root.append(title, el('p', 'movement-lab__intro', 'Give the reach more time. Watch what changes.'));
 
   const diagram = svg('svg', { viewBox: '0 0 520 160', class: 'movement-lab__diagram', role: 'img', 'aria-labelledby': `${id}-diagram-title ${id}-diagram-desc` });
   diagram.append(svg('title', { id: `${id}-diagram-title` }, 'A hand marker moves along a straight modeled reach'));
   const diagramDesc = svg('desc', { id: `${id}-diagram-desc` });
-  diagram.append(diagramDesc, svg('path', { d: 'M 60 80 H 460', class: 'movement-lab__track' }));
+  diagram.append(diagramDesc, svg('rect', {x: 60, y: 58, width: 400, height: 44, rx: 22, class: 'movement-lab__lane'}), svg('path', { d: 'M 60 80 H 460', class: 'movement-lab__track' }));
+  const trail = svg('path', {d: 'M 60 80 H 60', class: 'movement-lab__trail'});
+  diagram.append(trail, svg('circle', {cx: 460, cy: 80, r: 28, class: 'movement-lab__target'}));
   for (const x of [60, 160, 260, 360, 460]) diagram.append(svg('path', { d: `M ${x} 72 V 88`, class: 'movement-lab__tick' }));
   diagram.append(svg('text', { x: 60, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' }, '0 m'));
   const endLabel = svg('text', { x: 460, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' });
@@ -137,7 +139,7 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   const actions = el('div', 'movement-lab__actions');
   function button(text) { const node = el('button', '', text); node.type = 'button'; actions.append(node); return node; }
   const play = button('Play'); const replay = button('Replay'); const stop = button('Stop');
-  controls.append(actions);
+  controls.prepend(actions);
   const motionNote = el('p', 'movement-lab__note'); controls.append(motionNote);
   root.append(controls);
 
@@ -169,13 +171,16 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   const formula = el('p', 'movement-lab__formula'); assumptions.append(formula);
   assumptions.append(el('p', '', 'D is reach distance in meters, T is duration in seconds, and u = t/T during 0 <= t <= T. Before t = 0 the marker rests at x = 0; after t = T it rests at x = D. Velocity and acceleration are zero strictly outside the interval.'));
   assumptions.append(el('p', '', 'The cubic has nonzero acceleration at the interval endpoints, which jumps to zero during rest. This is an idealization. The quintic joins rest with zero acceleration, but still simplifies human movement. Pausing playback freezes the display; the numbers describe the modeled instant.'));
-  root.append(help, assumptions, el('p', 'movement-lab__scope', 'This simulation describes one-dimensional position, velocity and acceleration. It measures no person, analyzes no video, and cannot establish impact force, boxing skill or learning progress.'));
+  assumptions.append(el('p', '', 'Andre wants a smooth reach. This is an on-screen model; no physical movement is required.'));
+  assumptions.append(el('p', 'movement-lab__scope', 'This simulation describes one-dimensional position, velocity and acceleration. It measures no person, analyzes no video, and cannot establish impact force, boxing skill or learning progress.'));
+  root.append(help, assumptions);
   container.append(root);
 
   function paint() {
     const sample = sampleMovement(state.time, state);
     const x = 60 + 400 * sample.position / state.distance;
     hand.setAttribute('transform', `translate(${x} 80)`);
+    trail.setAttribute('d', `M 60 80 H ${x}`);
     endLabel.textContent = `${format(state.distance)} m`;
     diagramDesc.textContent = `Modeled marker at ${format(sample.position)} meters after ${format(state.time)} seconds. Total reach ${format(state.distance)} meters.`;
     durationControl.input.value = String(state.duration);

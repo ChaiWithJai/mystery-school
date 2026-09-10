@@ -1,60 +1,80 @@
 .music-lab {
-  --music-paper: var(--paper, #f3f1e7);
-  --music-ink: var(--ink, #173c33);
-  --music-line: var(--line, #d6d9cc);
-  --music-muted: #526154;
-  max-width: 760px;
-  min-width: 0;
+  --music-paper: #0b211d;
+  --music-ink: #ecf5df;
+  --music-line: #35574a;
+  --music-muted: #bbccbb;
   color: var(--music-ink);
-  background: var(--music-paper);
-  font: 13px/1.65 var(--sans, "Avenir Next", "Trebuchet MS", sans-serif);
+  background: radial-gradient(ellipse at 80% 15%, #204c3b80, transparent 65%), var(--music-paper);
+  border: 1px solid var(--music-line);
+  border-radius: 24px;
+  padding: clamp(20px, 3vw, 36px);
+  min-width: 0;
+  max-width: none;
+  box-shadow: 0 24px 70px #02110c35, inset 0 1px 0 #c4e4b81a;
+  font: 14px/1.6 var(--sans, "Avenir Next", "Trebuchet MS", sans-serif);
 }
 .music-lab *, .music-lab *::before, .music-lab *::after { box-sizing: border-box; }
-.music-lab .music-lab__eyebrow { margin: 0 0 9px; color: var(--music-muted); text-transform: uppercase; letter-spacing: 1.5px; font-size: 9px; font-weight: 600; }
-.music-lab .music-lab__title { margin: 0 0 14px; font: 400 clamp(27px, 3vw, 37px)/1.08 var(--serif, Georgia, serif); letter-spacing: -.5px; }
-.music-lab .music-lab__voice { font: italic 19px/1.45 var(--serif, Georgia, serif); color: var(--music-ink); margin: 0 0 15px; }
-.music-lab .music-lab__intro { margin: 0 0 18px; font-size: 12px; color: var(--music-muted); line-height: 1.75; }
-.music-lab__phrase { display: flex; justify-content: space-around; gap: 12px; padding: 16px 20px; border: 1px solid var(--music-line); border-radius: 5px; background: linear-gradient(140deg, #e3e9d9, #faf7ec); }
-.music-lab__phrase span { font: 22px var(--serif, Georgia, serif); color: var(--music-ink); }
-.music-lab__playback, .music-lab__decisions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-.music-lab button { font: 600 11px var(--sans, "Avenir Next", "Trebuchet MS", sans-serif); min-height: 44px; border: 1px solid #7c9171; border-radius: 4px; padding: 11px 13px; cursor: pointer; background: transparent; color: var(--music-ink); }
-.music-lab button:hover:not(:disabled) { background: #e4eadb; }
-.music-lab .music-lab__after { background: #244f3d; color: #fff9e8; flex: 1; }
-.music-lab .music-lab__after:hover:not(:disabled) { background: #173c33; }
-.music-lab button[aria-pressed="true"] { outline: 2px solid #967632; outline-offset: 2px; }
-.music-lab button:disabled { opacity: .5; cursor: not-allowed; }
-.music-lab :is(button, input, summary):focus-visible { outline: 3px solid #967632; outline-offset: 4px; }
-.music-lab .music-lab__status { margin: 8px 0; font-size: 11px; line-height: 1.65; color: var(--music-ink); }
-.music-lab .music-lab__error { padding: 12px; margin: 10px 0; border-left: 2px solid #984d35; background: #f4e6dd; color: #773a28; font-size: 12px; }
+.music-lab .music-lab__eyebrow { margin: 0 0 10px; color: #b9d691; text-transform: uppercase; letter-spacing: .16em; font-size: 10px; font-weight: 650; }
+.music-lab .music-lab__title { margin: 0 0 14px; font: 400 clamp(30px, 3.4vw, 46px)/1.06 var(--serif, Georgia, serif); letter-spacing: -.035em; text-wrap: balance; color: var(--music-ink); }
+.music-lab .music-lab__voice { font: italic 19px/1.5 var(--serif, Georgia, serif); color: #d5e4ca; margin: 0 0 14px; max-width: 42ch; }
+.music-lab .music-lab__intro { margin: 0 0 20px; font-size: 13px; color: var(--music-muted); max-width: 52ch; }
+.music-lab__phrase { display: flex; align-items: stretch; gap: 5px; padding: 12px; border: 1px solid #78956960; border-radius: 16px; background: #061711; box-shadow: inset 0 3px 14px #0005; }
+.music-lab__phrase span { display: flex; flex: 1; align-items: end; justify-content: center; min-height: 104px; padding: 14px 5px; border-radius: 5px 5px 10px 10px; background: linear-gradient(165deg, #f7f4db, #c9d8b6); color: #193f30; border-bottom: 5px solid #7e9772; font: 25px var(--serif, Georgia, serif); box-shadow: 0 5px 9px #0006; }
+.music-lab__playback, .music-lab__decisions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; }
+.music-lab button { font: 600 12px var(--sans, "Avenir Next", "Trebuchet MS", sans-serif); min-height: 46px; border: 1px solid #70927a; border-radius: 30px; padding: 12px 16px; cursor: pointer; background: #16382c; color: var(--music-ink); transition: background .18s, box-shadow .18s; }
+.music-lab button:hover:not(:disabled) { background: #2c5640; box-shadow: 0 0 0 3px #bddd9620; }
+.music-lab .music-lab__after { background: #d0e7a6; color: #102a20; flex: 1; border-color: #d0e7a6; }
+.music-lab .music-lab__after:hover:not(:disabled) { background: #e5f5c5; }
+.music-lab button[aria-pressed="true"] { outline: 2px solid #e9cc87; outline-offset: 3px; box-shadow: 0 0 24px #d0e7a630; }
+.music-lab button:disabled { opacity: .48; cursor: not-allowed; }
+.music-lab :is(button, input, summary):focus-visible { outline: 3px solid #f6d693; outline-offset: 4px; }
+.music-lab .music-lab__status { margin: 8px 0; font-size: 12px; color: var(--music-ink); }
+.music-lab .music-lab__error { padding: 14px; margin: 10px 0; border-left: 3px solid #f0af91; border-radius: 5px; background: #532f28; color: #ffe5cd; font-size: 13px; }
 .music-lab [hidden] { display: none !important; }
-.music-lab .music-lab__scope, .music-lab .music-lab__hint { font-size: 10px; color: var(--music-muted); line-height: 1.7; margin: 8px 0 16px; }
-.music-lab__controls { margin: 22px 0 12px; border-top: 1px solid var(--music-line); padding-top: 17px; }
+.music-lab .music-lab__scope, .music-lab .music-lab__hint { font-size: 12px; color: var(--music-muted); line-height: 1.6; margin: 8px 0 14px; }
+.music-lab__controls { margin: 20px 0 10px; border-top: 1px solid var(--music-line); padding-top: 20px; }
 .music-lab__slider-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.music-lab__slider-row label { font-size: 11px; font-weight: 600; margin: 0; }
-.music-lab__attack-value { white-space: nowrap; font: 22px var(--serif, Georgia, serif); }
-.music-lab .music-lab__slider { display: block; width: 100%; min-height: 32px; margin: 5px 0; padding: 0; accent-color: #244f3d; cursor: pointer; }
-.music-lab__figure { margin: 16px 0 8px; padding: 0; }
-.music-lab__figure svg { display: block; width: 100%; height: auto; border: 1px solid var(--music-line); border-radius: 5px; background: #fbf9f0; }
-.music-lab__grid { stroke: #d6d9cc; stroke-width: 1; fill: none; }
-.music-lab__tick { fill: #526154; font: 11px "Avenir Next", "Trebuchet MS", sans-serif; }
-.music-lab__axis-label { fill: #173c33; font: 11px "Avenir Next", "Trebuchet MS", sans-serif; }
-.music-lab__original-envelope { fill: none; stroke: #a27c39; stroke-width: 2.5; stroke-dasharray: 5 5; }
-.music-lab__current-envelope { fill: none; stroke: #244f3d; stroke-width: 2.5; }
-.music-lab__peak { fill: #244f3d; stroke: #fbf9f0; stroke-width: 1.5; }
-.music-lab__legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-top: 8px; font-size: 10px; color: var(--music-muted); }
-.music-lab__legend span::before { display: inline-block; content: ""; width: 18px; margin-right: 6px; vertical-align: middle; border-top: 2px solid #244f3d; }
-.music-lab__legend .music-lab__legend-before::before { border-top: 2px dashed #a27c39; }
-.music-lab .music-lab__observation { border-left: 2px solid #81966e; background: #e5eadb; color: var(--music-ink); margin: 18px 0; padding: 12px 14px; font-size: 12px; line-height: 1.75; }
-.music-lab .music-lab__help { padding-top: 14px; margin: 20px 0 0; border-top: 1px solid var(--music-line); }
-.music-lab__help summary { cursor: pointer; min-height: 34px; font-size: 12px; font-weight: 600; }
-.music-lab__help p { font-size: 12px; line-height: 1.75; color: var(--music-muted); }
-.music-lab .music-lab__equation { color: var(--music-ink); background: #fcf9ed; border: 1px solid var(--music-line); padding: 11px 13px; border-radius: 4px; }
-.music-lab__decisions button { flex: 1 1 120px; }
+.music-lab__slider-row label { font-size: 13px; font-weight: 600; margin: 0; color: var(--music-ink); }
+.music-lab__attack-value { white-space: nowrap; font: 30px var(--serif, Georgia, serif); color: #d0e7a6; }
+.music-lab .music-lab__slider { display: block; width: 100%; min-height: 44px; margin: 5px 0; padding: 0; accent-color: #d0e7a6; cursor: pointer; }
+.music-lab__figure { margin: 24px 0 8px; padding: 0; min-width: 0; }
+.music-lab__figure svg { display: block; width: 100%; height: auto; border: 1px solid #476e5366; border-radius: 20px; background: radial-gradient(ellipse at 45% 50%, #28594080, transparent 70%), #071b16; box-shadow: inset 0 0 60px #020c0880, 0 16px 50px #0002; }
+.music-lab__grid { stroke: #47745b60; stroke-width: 1; fill: none; }
+.music-lab__tick { fill: #b5cbb6; font: 11px "Avenir Next", "Trebuchet MS", sans-serif; }
+.music-lab__axis-label { fill: #e0edd3; font: 11px "Avenir Next", "Trebuchet MS", sans-serif; }
+.music-lab__original-envelope { fill: none; stroke: #d8b678; stroke-width: 2.5; stroke-dasharray: 5 5; }
+.music-lab__current-envelope { fill: none; stroke: #c6f2a0; stroke-width: 3; filter: drop-shadow(0 0 5px #a7e78070); }
+.music-lab__peak { fill: #e6ffbd; stroke: #254932; stroke-width: 1.5; }
+.music-lab__legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-top: 14px; font-size: 12px; color: var(--music-muted); }
+.music-lab__legend span::before { display: inline-block; content: ""; width: 18px; margin-right: 7px; vertical-align: middle; border-top: 2px solid #c6f2a0; }
+.music-lab__legend .music-lab__legend-before::before { border-top: 2px dashed #d8b678; }
+.music-lab .music-lab__observation { border-left: 2px solid #b6d796; background: #294b354d; color: var(--music-ink); margin: 18px 0 0; padding: 15px 18px; border-radius: 0 12px 12px 0; font-size: 14px; }
+.music-lab .music-lab__help, .music-lab .music-lab__context { padding: 18px 0 0; margin: 20px 0 0; border-top: 1px solid var(--music-line); }
+.music-lab__help summary, .music-lab__context summary { cursor: pointer; min-height: 44px; font-size: 14px; font-weight: 600; color: #d0e7a6; }
+.music-lab__help p, .music-lab__context p { font-size: 13px; line-height: 1.7; color: var(--music-muted); }
+.music-lab .music-lab__equation { color: #edfad9; background: #071c15; border: 1px solid var(--music-line); padding: 16px; border-radius: 12px; }
+.music-lab__decisions button { flex: 1 1 140px; }
+@media (min-width: 1050px) {
+  .music-lab { display: grid; grid-template-columns: minmax(250px, .85fr) minmax(300px, 1.15fr); column-gap: 32px; align-items: start; }
+  .music-lab > * { grid-column: 1; }
+  .music-lab > .music-lab__figure { grid-column: 2; grid-row: 1 / span 10; margin: 0; align-self: center; }
+  .music-lab > .music-lab__observation, .music-lab > .music-lab__help, .music-lab > .music-lab__context { grid-column: 1 / -1; }
+}
 @media (max-width: 420px) {
+  .music-lab { padding: 18px; border-radius: 18px; }
+  .music-lab__phrase span { min-height: 86px; }
   .music-lab__playback { gap: 6px; }
-  .music-lab__playback button { padding-inline: 9px; }
+  .music-lab__playback button { padding-inline: 12px; }
   .music-lab__slider-row { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .music-lab *, .music-lab *::before, .music-lab *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (min-width: 1050px) {
+  .music-lab { padding: 22px 28px; }
+  .music-lab .music-lab__title { font-size: 30px; }
+  .music-lab__phrase span { min-height: 78px; }
+  .music-lab > .music-lab__figure { grid-row: 1 / span 4; align-self: start; }
+  .music-lab > .music-lab__controls { grid-column: 2; grid-row: 5 / span 3; margin: 8px 0 0; padding-top: 10px; }
+  .music-lab .music-lab__hint { margin-bottom: 6px; }
 }
