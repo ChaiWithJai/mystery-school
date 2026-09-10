@@ -6,7 +6,7 @@ import { mountBoxingGame } from './boxing-game.js';
 import { mountBoxingJourney, BOXING_JOURNEY_LESSONS as BOXING_LESSONS } from './boxing-journey.js';
 import { mountRealWorldReflection } from './real-world-reflection.js';
 import { mountStoryWorld } from './story-world.js';
-import {createBoxingMemory,appendMemory} from './learning-memory.js';
+import {createBoxingMemory,createIdeasMemory,appendMemory} from './learning-memory.js';
 import { showLearningWorldTour } from './learning-world-tour.js';
 import { showMovieOpening } from './movie-opening.js';
 
@@ -223,7 +223,15 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       storyWorld=mountStoryWorld(storyHost,{initialState:{...draft.lab.story_world,memories:draft.lab.knowledge_memories||[],modelComparison:draft.lab.modelComparison,decisionResponses:draft.lab.decisionResponses,storyChoice:draft.lab.storyChoice},onChange:state=>{const writingChanged=state.learnerIntent!==(draft.lab.story_world?.learnerIntent||'')||state.learnerStory!==(draft.lab.story_world?.learnerStory||'');draft.lab.story_world=structuredClone(state);draft.lab.modelComparison=state.modelComparison;draft.lab.decisionResponses=state.decisionResponses;draft.lab.storyChoice=state.storyChoice;if(writingChanged)experimentDispose?.contextChanged();keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
       const host=document.createElement('div');host.hidden=true;q('[data-lab]').append(host);
       const leave=document.createElement('button');leave.className='universe-next';leave.textContent='Take this into life ↗';q('[data-lab]').append(leave);
-      worldReflection=mountRealWorldReflection(host,{initialState:draft.lab.real_world_reflection||{},onChange:state=>{draft.lab.real_world_reflection=structuredClone(state);keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload})});
+      worldReflection=mountRealWorldReflection(host,{initialState:draft.lab.real_world_reflection||{},onChange:state=>{draft.lab.real_world_reflection=structuredClone(state);keep();},onEvent:(type,payload)=>events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type,payload}),onKeep:async()=>{
+        try{
+          const record=await save(draft.parentId?'revision':'attempt');
+          if(token!==opening)return;
+          const memory=createIdeasMemory(record);
+          if(!memory)throw Error('Keep an action or observation first. Your words are still here.');
+          await open('ideas',null,memory);
+        }catch(error){if(token===opening)toast(error.message);}
+      }});
       leave.onclick=()=>{const showing=host.hidden;host.hidden=!showing;storyHost.hidden=showing;reading.hidden=showing;leave.textContent=showing?'Return to the story ↩':'Take this into life ↗';events.track('learning.ideas.action',{pathway,actor_kind:actorKind,type:'reflection.open',payload:{open:showing}});};
     }
     // Preserve adapter query roots while exposing their panels through one menu.

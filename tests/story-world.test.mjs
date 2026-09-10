@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeStoryWorldState, stepStoryCamera, storyWorldShelter, isUnderStoryShelter, chooseStoryWorld, mountStoryWorld, STORY_WORLD_SOURCE, displayedStoryChoice } from '../public/story-world.js';
 import { ideasComparisonIdentity } from '../public/ideas-lab.js';
-import { normalizeStoryMemories, storyMemoryLinks } from '../public/story-world.js';
-import { createBoxingMemory } from '../public/learning-memory.js';
+import { normalizeStoryMemories, storyMemoryLinks, storyMemorySourceLinks } from '../public/story-world.js';
+import { createBoxingMemory, createIdeasMemory } from '../public/learning-memory.js';
 
 const comparison = (scenario = 'Two people disagree in the rain.') => ({ scenario, question: 'What will you write?', source_quote: STORY_WORLD_SOURCE.excerpt, source_ref_index: 0,
   decision_scene: { kind: 'shared_shelter', choices: [
@@ -166,4 +166,32 @@ test('memory enrichment and shelter changes do not overwrite writing or camera',
   assert.deepEqual(chosen.memories, enriched.memories);
   assert.deepEqual(chosen.camera, original.camera);
   assert.equal(chosen.learnerIntent, original.learnerIntent); assert.equal(chosen.learnerStory, original.learnerStory);
+});
+
+test('world restores ideas journeys beside boxing reports and links to the right saved pathway',()=>{
+  const idea=createIdeasMemory({id:'idea/?x=1',pathway:'ideas',actor_kind:'agent_review',trace_id:'trace-idea',
+    source_refs:[{label:'Saved passage',url:'https://example.org/passage',locator:'Section 1'}],
+    state:{lab:{real_world_reflection:{action:'  Ask.  ',status:'planned',question:'Why?'}}}});
+  const boxing=memoryRecord();
+  const world=normalizeStoryWorldState({memories:[boxing,idea],memoryArtifactId:idea.source_artifact_id,memoriesOpen:true,learnerStory:'Unchanged story'});
+  assert.deepEqual(world.memories,[boxing,idea]);assert.equal(world.memoriesOpen,true);assert.equal(world.learnerStory,'Unchanged story');
+  assert.equal(world.memories[1].reflection.status,'planned');assert.equal(world.memories[1].observation.text,'');
+  assert.equal(storyMemoryLinks(idea).artifact,'/?path=ideas&artifact=idea%2F%3Fx%3D1&actor=agent_review');
+  assert.deepEqual(normalizeStoryWorldState(JSON.parse(JSON.stringify(world))),world);
+});
+
+test('ideas ingestion derives honest attribution and cannot upgrade a plan to verified experience',()=>{
+  const idea={version:1,kind:'ideas_reflection',pathway:'ideas',source_artifact_id:'a',actor_kind:'agent_review',
+    observation:{kind:'learner_reported',text:'Invented verified event'},reflection:{status:'reported_done',action:'Try',observation:'',verified:true}};
+  const [memory]=normalizeStoryMemories([idea]);
+  assert.equal(memory.reflection.status,'planned');assert.equal(memory.reflection.verified,false);
+  assert.equal(memory.observation.kind,'agent_review');assert.equal(memory.observation.text,'');
+  assert.deepEqual(normalizeStoryMemories([{...idea,reflection:{}}]),[]);
+});
+
+test('saved source anchors reject executable URLs while preserving source labels and locators',()=>{
+  const links=storyMemorySourceLinks({source_refs:[null,{url:'javascript:alert(1)'},{url:'data:text/html,x'},
+    {url:'https://example.org/source',label:'Exact source',locator:'Paragraph 2'}]});
+  assert.deepEqual(links,[{url:'https://example.org/source',label:'Exact source',locator:'Paragraph 2'}]);
+  assert.deepEqual(storyMemorySourceLinks(null),[]);
 });

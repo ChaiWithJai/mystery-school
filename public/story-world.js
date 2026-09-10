@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { IDEAS_SOURCE, ideasComparisonIdentity, validateIdeasState } from './ideas-lab.js';
-import { appendMemory } from './learning-memory.js';
+import { appendMemory, createIdeasMemory } from './learning-memory.js';
+import { mountDiscoveryTrail, normalizeDiscoveryTrail } from './story-discovery-trail.js';
 
 const LIMIT = 17;
 const EYE = 1.68;
@@ -21,6 +22,13 @@ export function displayedStoryChoice(state,index) {
 export function normalizeStoryMemories(input) {
   let memories = [];
   for (const value of Array.isArray(input) ? input : []) {
+    if (value?.version === 1 && value.kind === 'ideas_reflection' && value.pathway === 'ideas' &&
+      typeof value.source_artifact_id === 'string' && value.source_artifact_id.trim() && value.source_artifact_id.length <= 256) {
+      const memory = createIdeasMemory({id: value.source_artifact_id, pathway: 'ideas', trace_id: value.source_trace_id,
+        actor_kind: value.actor_kind, source_refs: value.source_refs, state: {lab: {real_world_reflection: value.reflection}}});
+      if (memory) memories = appendMemory(memories, memory);
+      continue;
+    }
     if (!value || value.version !== 1 || value.kind !== 'boxing_reflection' || value.pathway !== 'movement' ||
       typeof value.source_artifact_id !== 'string' || !value.source_artifact_id.trim() || value.source_artifact_id.length > 256 ||
       !['learner_reported', 'agent_review', 'unknown'].includes(value.observation?.kind) ||
@@ -42,8 +50,18 @@ export function normalizeStoryMemories(input) {
 
 export function storyMemoryLinks(memory) {
   const id = encodeURIComponent(memory.source_artifact_id);
-  return { artifact: `/?path=movement&artifact=${id}${memory.actor_kind === 'agent_review' ? '&actor=agent_review' : ''}`,
+  return { artifact: `/?path=${memory.kind === 'ideas_reflection' && memory.pathway === 'ideas' ? 'ideas' : 'movement'}&artifact=${id}${memory.actor_kind === 'agent_review' ? '&actor=agent_review' : ''}`,
     trace: memory.source_trace_id ? `/review.html?sample=${id}` : null };
+}
+
+export function storyMemorySourceLinks(memory) {
+  return (Array.isArray(memory?.source_refs) ? memory.source_refs : []).flatMap(ref => {
+    try {
+      const url = new URL(ref.url);
+      if (!['https:', 'http:'].includes(url.protocol)) return [];
+      return [{url: url.href, label: ref.label || url.hostname, locator: ref.locator || ''}];
+    } catch { return []; }
+  });
 }
 
 /** All lengths are scene units, not measured human distances. */
@@ -59,6 +77,7 @@ export function normalizeStoryWorldState(input = {}) {
   if (length > LIMIT) { x *= LIMIT / length; z *= LIMIT / length; }
   return {
     version: 1,
+    discoveryTrail: normalizeDiscoveryTrail(value.discoveryTrail),
     learnerIntent: text(value.learnerIntent, 2000),
     learnerStory: text(value.learnerStory, 12000),
     camera: { x, z, yaw: ((finite(camera.yaw, 0) % TAU) + TAU) % TAU, pitch: clamp(finite(camera.pitch, 0), -.95, .95) },
@@ -160,7 +179,7 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   const storyLabel = make('label', '', 'Write the story in your own words'); storyLabel.htmlFor = `${id}-story`;
   const story = make('textarea', ''); story.id = storyLabel.htmlFor; story.rows = 8; story.maxLength = 12000;
   story.placeholder = 'Start anywhere. You decide what the people say, do, or leave unresolved.';
-  writer.append(intentLabel, intent, storyLabel, story, make('p', '', 'Choosing a shelter changes the setting, not your writing. The host app receives your draft; this module does not save or send it by itself.'), closeWriter);
+  writer.append(intentLabel, intent, storyLabel, story, make('p', '', 'Your words stay yours. Keep a discovery to return to this version.'), closeWriter);
   const sourcePanel = make('section', 'story-world__source'); sourcePanel.setAttribute('aria-label', 'Optional source passage');
   const closeSource = button('Return to the world');
   const sourceLink = make('a', '', 'Read section 1 in context'); sourceLink.href = IDEAS_SOURCE.url; sourceLink.target = '_blank'; sourceLink.rel = 'noopener noreferrer';
@@ -172,13 +191,17 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   const memoryActor = make('p', 'story-world__memory-actor');
   const memoryKindLabel = make('p', 'story-world__memory-label');
   const memoryObservation = make('blockquote', 'story-world__memory-observation');
+  const memoryJourney = make('section', 'story-world__memory-journey');
+  memoryJourney.setAttribute('aria-label', 'Saved ideas journey');
+  const memorySources = make('section', 'story-world__memory-sources');
+  memorySources.setAttribute('aria-label', 'Sources attached to this saved journey');
   const memoryArtifactLink = make('a', '', 'Open exact saved artifact');
   const memoryTraceLink = make('a', '', 'Inspect source record and trace');
   for (const link of [memoryArtifactLink, memoryTraceLink]) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
   const memoryTrace = make('p', 'story-world__memory-trace');
   memoryPanel.append(make('p', 'story-world__eyebrow', 'REPORTED MEMORY / NOT MODEL FICTION'), make('h3', '', 'What was reported'),
     make('p', '', 'Reports are not independently verified. Saving a report does not establish its accuracy, technique, or authorship.'),
-    memoryLabel, memorySelect, memoryActor, memoryKindLabel, memoryObservation, memoryArtifactLink, memoryTraceLink, memoryTrace, closeMemories);
+    memoryLabel, memorySelect, memoryActor, memoryKindLabel, memoryObservation, memoryJourney, memorySources, memoryArtifactLink, memoryTraceLink, memoryTrace, closeMemories);
   const context=make('details','story-world__context');context.append(make('summary','','About this scene'),sceneNote,source,reset);
   root.append(viewport, header, context, crosshair, prompt, status, compass, controls, writer, sourcePanel, memoryPanel); container.append(root);
 
@@ -301,6 +324,9 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
   const notify = () => { if (!disposed) { dirty = false; onChange(snapshot()); } };
   const emit = (type, extra = {}) => { if (!disposed) onEvent(type, { lab: 'story-world', fiction_kind: state.modelComparison?.decision_scene ? 'model_imagined' : 'authored_setting', sourceId: IDEAS_SOURCE.id, ...extra, state: snapshot() }); };
   const listen = (element, name, fn, options) => { element.addEventListener(name, fn, options); listeners.push(() => element.removeEventListener(name, fn, options)); };
+  const discoveryTrail=mountDiscoveryTrail({THREE,scene,root,initialState:state.discoveryTrail,
+    onChange:value=>{state.discoveryTrail=value;notify();},
+    onEvent:(type,payload)=>emit(type,payload),onFinish:()=>openPanel('writer')});
   function refresh() {
     const shelter = storyWorldShelter(state);
     roof.position.x = roofRidge.position.x = shelter.centerX; roof.scale.x = roofRidge.scale.x = shelter.width;
@@ -322,9 +348,32 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     memoryBooks.forEach((book, index) => { book.visible = index < state.memories.length; });
     memoryControl.disabled = !state.memories.length; memoryControl.textContent = state.memories.length ? `Visit reported memories (${state.memories.length})` : 'No reported memories yet';
     memoryControl.setAttribute('aria-expanded', String(state.memoriesOpen));
-    memorySelect.replaceChildren(...state.memories.map((memory, index) => { const option = make('option', '', `Report ${index + 1}${memory.actor_kind === 'agent_review' ? ' / agent QA' : ''}`); option.value = memory.source_artifact_id; return option; }));
+    memorySelect.replaceChildren(...state.memories.map((memory, index) => { const option = make('option', '', `${memory.kind === 'ideas_reflection' ? 'Ideas journey' : 'Boxing report'} ${index + 1}${memory.actor_kind === 'agent_review' ? ' / agent QA' : ''}`); option.value = memory.source_artifact_id; return option; }));
     memorySelect.value = state.memoryArtifactId || '';
     const memory = state.memories.find(record => record.source_artifact_id === state.memoryArtifactId);
+    const isJourney = memory?.kind === 'ideas_reflection';
+    memoryObservation.hidden = isJourney;
+    memoryJourney.hidden = !isJourney;
+    memoryJourney.replaceChildren();
+    if (isJourney) {
+      const reflection = memory.reflection;
+      memoryJourney.append(make('p', '', reflection.status === 'reported_done' ? 'Learner-reported action · not independently verified' : reflection.status === 'planned' ? 'Planned · not marked done' : 'Draft · not marked done'));
+      for (const [key, label] of [['action', reflection.status === 'reported_done' ? 'The action I reported' : 'The action I am considering'], ['observation', 'What I observed'], ['interpretation', 'My interpretation'], ['revisedBelief', 'What I believe now'], ['question', 'My next question']]) {
+        if (!reflection[key].trim()) continue;
+        memoryJourney.append(make('h4', '', label), make('blockquote', 'story-world__memory-observation', reflection[key]));
+      }
+    }
+    const savedSources = storyMemorySourceLinks(memory);
+    memorySources.hidden = !isJourney || !savedSources.length;
+    memorySources.replaceChildren();
+    if (isJourney && savedSources.length) {
+      memorySources.append(make('h4', '', 'Sources saved with this journey'));
+      for (const ref of savedSources) {
+        const link = make('a', '', ref.label); link.href = ref.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        memorySources.append(link);
+        if (ref.locator) memorySources.append(make('p', '', ref.locator));
+      }
+    }
     memoryObservation.textContent = memory?.observation.text || '';
     memoryKindLabel.textContent = memory?.observation.label || '';
     memoryActor.textContent = memory?.actor_kind === 'agent_review' ? 'Agent QA record, not learner evidence.' : `Declared actor: ${memory?.actor_kind || 'not supplied'}. This is not verified identity.`;
@@ -347,7 +396,7 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     catch (error) { status.textContent = error.message; }
   }
   function activate(action) { if (['writer', 'source', 'memories'].includes(action)) openPanel(action); else choose(action); }
-  listen(enter, 'click', () => { viewport.focus({ preventScroll: true }); status.textContent = 'You have control. W A S D to walk; arrows or drag to look; E near a marker.'; });
+  listen(enter, 'click', () => { discoveryTrail.enableAudio(); viewport.focus({ preventScroll: true }); status.textContent = 'Follow the golden trail. W A S D to move; E to explore.'; });
   listen(write, 'click', () => openPanel('writer')); listen(source, 'click', () => openPanel('source'));
   listen(closeWriter, 'click', closePanels); listen(closeSource, 'click', closePanels);
   listen(memoryControl, 'click', () => openPanel('memories')); listen(closeMemories, 'click', closePanels);
@@ -395,6 +444,7 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
         state.camera = stepStoryCamera(state.camera, { forward: Number(keys.has('w')) - Number(keys.has('s')), right: Number(keys.has('d')) - Number(keys.has('a')), turn: Number(keys.has('ArrowLeft')) - Number(keys.has('ArrowRight')), look: Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown')) }, dt, obstacles); dirty = true;
       }
       if (!reduced) elapsed += dt;
+      discoveryTrail.update(state.camera,dt,elapsed,{active:viewport.contains(doc.activeElement)&&!panelOpen()});
       camera.position.set(state.camera.x, EYE, state.camera.z); camera.rotation.set(state.camera.pitch, state.camera.yaw, 0);
       const shelter = storyWorldShelter(state);
       rainSeeds.forEach((p, i) => { const y = ((p.y - elapsed * 5) % 12 + 12) % 12; const hidden = y < 3.3 && isUnderStoryShelter(p.x, p.z, shelter); const n = i * 6; rainValues.set([p.x, hidden ? -2 : y, p.z, p.x + .025, hidden ? -2 : y - .3, p.z], n); });
@@ -414,11 +464,11 @@ export function mountStoryWorld(container, { initialState = {}, onChange = () =>
     setState(value) {
       if (disposed) throw new Error('This book-world is closed.');
       const next = normalizeStoryWorldState(value);
-      keys.clear(); drag = null; state = next; refresh(); notify(); emit('state.restored');
+      keys.clear(); drag = null; state = next; discoveryTrail.setState(state.discoveryTrail); refresh(); notify(); emit('state.restored');
     },
     dispose() {
       if (disposed) return;
-      disposed = true; keys.clear(); win.cancelAnimationFrame(frame); observer.disconnect(); listeners.forEach(remove => remove());
+      disposed = true; keys.clear(); discoveryTrail.dispose(); win.cancelAnimationFrame(frame); observer.disconnect(); listeners.forEach(remove => remove());
       schoolBackdrop?.removeFromParent(); disposeSchoolResources(); geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); Object.values(materials).forEach(m => m.dispose()); renderer.dispose(); renderer.forceContextLoss(); root.remove();
     },
   };

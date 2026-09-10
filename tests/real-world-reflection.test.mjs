@@ -31,3 +31,13 @@ test('narration requires explicit activation and cancels on disposal',()=>{
  container.ownerDocument.defaultView={speechSynthesis:{speak(){spoken++;},cancel(){cancelled++;}},SpeechSynthesisUtterance:class{constructor(text){this.text=text;}}};
  const api=mountRealWorldReflection(container);assert.equal(spoken,0);all.find(e=>e.textContent==='Hear this moment').fire('click');assert.equal(spoken,1);api.dispose();assert.equal(cancelled,1);
 });
+test('keeping a journey sends exact structured words once while save is pending',async()=>{
+ const {container,all}=dom();let release;const calls=[];
+ const initialState={step:'journey',status:'planned',action:'  Ask a friend.\n',question:'What might change?'};
+ const api=mountRealWorldReflection(container,{initialState,onKeep:state=>{calls.push(state);return new Promise(resolve=>{release=resolve;});}});
+ const keep=all.find(e=>e.textContent==='Keep this journey in my world →');
+ const pending=keep.handlers.click();await keep.handlers.click();
+ assert.equal(calls.length,1);assert.equal(calls[0].action,initialState.action);
+ assert.equal(calls[0].status,'planned');assert.equal(calls[0].verified,false);
+ release();await pending;assert.equal(keep.disabled,false);api.dispose();
+});

@@ -1,3 +1,5 @@
+import { normalizeReflection } from './real-world-reflection.js';
+
 const textOrNull = value => typeof value === 'string' && value.trim() ? value : null;
 
 function freeze(value) {
@@ -38,6 +40,28 @@ export function createBoxingMemory(savedArtifact) {
     detector_estimates: {label: 'Detector estimates, not verified punches or technique', count: estimateCount},
     source_refs,
   });
+}
+
+/** Carry an explicitly saved ideas journey into the world without completing it. */
+export function createIdeasMemory(savedArtifact) {
+  if (!savedArtifact || savedArtifact.pathway !== 'ideas' || !textOrNull(savedArtifact.id)) {
+    throw new TypeError('A saved ideas artifact with an ID is required.');
+  }
+  const reflection = normalizeReflection(savedArtifact.state?.lab?.real_world_reflection);
+  if (!['action', 'observation', 'interpretation', 'revisedBelief', 'question'].some(key => reflection[key].trim())) return null;
+  const actor = textOrNull(savedArtifact.actor_kind);
+  const kind = actor === 'user_action' ? 'learner_reported' : actor === 'agent_review' ? 'agent_review' : 'unknown';
+  const label = kind === 'agent_review' ? 'Agent test journey (not human learning evidence)'
+    : kind === 'unknown' ? 'Journey with unverified authorship'
+      : reflection.status === 'reported_done' ? 'Learner-reported journey (not independently verified)' : 'Learner journey draft or plan (not a completed action)';
+  const source_refs = (Array.isArray(savedArtifact.source_refs) ? savedArtifact.source_refs : [])
+    .filter(ref => ref && typeof ref === 'object' && !Array.isArray(ref))
+    .map(ref => Object.fromEntries(['id', 'label', 'url', 'locator', 'source_kind']
+      .filter(key => typeof ref[key] === 'string').map(key => [key, ref[key]])))
+    .filter(ref => Object.keys(ref).length);
+  return freeze({version: 1, kind: 'ideas_reflection', pathway: 'ideas',
+    source_artifact_id: savedArtifact.id, source_trace_id: textOrNull(savedArtifact.trace_id), actor_kind: actor,
+    observation: {kind, label, text: reflection.observation}, reflection, source_refs});
 }
 
 /** First deposit wins for a saved artifact. Retain the most recent 60 deposits. */

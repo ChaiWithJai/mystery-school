@@ -9,7 +9,7 @@ export function normalizeReflection(value = {}) {
     status, evidenceKind: status === 'reported_done' ? 'learner_report' : 'intention', verified: false};
 }
 
-export function mountRealWorldReflection(container, {initialState = {}, onChange = () => {}, onEvent = () => {}} = {}) {
+export function mountRealWorldReflection(container, {initialState = {}, onChange = () => {}, onEvent = () => {}, onKeep = null} = {}) {
   if (!container?.ownerDocument || typeof container.append !== 'function') throw TypeError('A DOM container is required.');
   if (typeof onChange !== 'function' || typeof onEvent !== 'function') throw TypeError('Callbacks must be functions.');
   const doc = container.ownerDocument, listeners = [], fields = {}, panels = {};
@@ -56,6 +56,14 @@ export function mountRealWorldReflection(container, {initialState = {}, onChange
   const journeyFields = {}; let actionLabel;
   for (const [key,label] of [['action','Tried'],['observation','Noticed'],['interpretation','Made sense of'],['revisedBelief','Believe now'],['question','Wonder']]) {const item=node('div',''); const caption=node('small','',label);if(key==='action')actionLabel=caption;item.append(caption);journeyFields[key]=node('p','');item.append(journeyFields[key]);trail.append(item);}
   journey.append(node('p', '', 'Start with someone you know. Your words, your next beginning.'));
+  if (typeof onKeep === 'function') {
+    const keep = button(journey, 'Keep this journey in my world →', async () => {
+      if (keep.disabled) return;
+      keep.disabled = true;
+      try { await onKeep(structuredClone(state)); }
+      finally { if (!disposed) keep.disabled = false; }
+    });
+  }
   button(journey, 'Keep shaping my account', () => go('meaning'));
   const status = node('small', 'world-reflection__status');status.setAttribute('role','status');root.append(status);
   if (speech && Voice) button(root, 'Hear this moment', () => {stop();const text=panels[state.step].heading.textContent;const utterance=new Voice(text);speaking=true;utterance.onend=utterance.onerror=()=>{speaking=false;};speech.speak(utterance);emit('reflection.read-aloud',{voice:'browser_speech_synthesis',text});});

@@ -1,3 +1,4 @@
+@import url('/story-discovery-trail.css');
 .story-world{position:relative;isolation:isolate;min-height:620px;height:min(880px,calc(100dvh - 90px));overflow:hidden;border:1px solid #6a78534a;border-radius:20px;background:#182d2a;color:#f1e4c6;font:14px/1.5 var(--sans,'Avenir Next',sans-serif)}
 .story-world *{box-sizing:border-box}.story-world [hidden]{display:none!important}.story-world button,.story-world summary,.story-world a{touch-action:manipulation}
 .story-world__context{position:absolute;right:24px;top:110px;z-index:4;max-width:450px;background:#102821e8;border-radius:12px;padding:10px 16px}
