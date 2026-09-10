@@ -123,6 +123,7 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
         learning_artifact_id: artifact.id, reference_ids: [], reflection_ids: [] };
       await emit('confirm', { request, confirmation: 'explicit_selection' });
       if (disposed || token !== revision) return;
+      if (!same(getContext(), requestContext)) throw Error('Your question or context changed before sending. Review it and confirm again.');
       const job = await api('/api/project', request);
       if (disposed || token !== revision) return;
       currentJob = job; available();
@@ -157,6 +158,7 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     catch (error) { return status('Could not restore this change: ' + error.message); }
     emit('undo', { job_id: appliedJobId, before: applied, after: getState() });
     before = null; applied = null; q('[data-undo]').hidden = true;
+    q('[data-preview]').hidden = !candidate;
     status('Your previous experiment is restored. Saved versions remain unchanged.');
   };
   q('[data-dismiss]').onclick = () => {
@@ -166,5 +168,25 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
   available();
   const cleanup = () => { disposed = true; revision++; clearTimeout(timer); root.remove(); };
   cleanup.contextChanged = () => { q('[data-consent]').checked = false; available(); };
+  cleanup.resume = async (jobId, artifactId) => {
+    if (busy || disposed) return;
+    const token = ++revision;
+    busy = true; available(); status('Opening the recorded proposal. No model request is being made.');
+    try {
+      const job = await api('/api/jobs/' + encodeURIComponent(jobId));
+      if (disposed || token !== revision) return;
+      if (job.input?.learning_artifact_id !== artifactId) throw Error('This proposal belongs to a different saved experiment.');
+      const artifact = await api('/api/artifacts/' + encodeURIComponent(artifactId));
+      if (disposed || token !== revision) return;
+      if (artifact.pathway !== pathway || artifact.state.question.trim() !== getQuestion().trim()) throw Error('Open the original saved question before reviewing this proposal.');
+      if (!same(experimentDefinition(pathway, artifact.state.lab), experimentDefinition(pathway, getState()))) throw Error('The experiment differs from the saved proposal starting point.');
+      if (!['completed', 'succeeded', 'success'].includes(job.status)) throw Error('This recorded proposal is not complete. Inspect its trace for status.');
+      currentJob = job;
+      requestContext = structuredClone(getContext());
+      receive(job, artifact, artifact.state.lab);
+      emit('resume', { base_artifact_id: artifactId, replay_kind: 'stored_output', model_called: false });
+    } catch (error) { status(error.message); }
+    finally { if (!disposed && token === revision) { busy = false; available(); } }
+  };
   return cleanup;
 }

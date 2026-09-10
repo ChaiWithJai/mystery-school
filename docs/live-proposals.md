@@ -28,3 +28,24 @@ This proves a supported request produced an executable musical proposal. It does
 not yet prove browser preview, audio output, apply/undo, or saved-result reopening.
 The run was submitted through the app API, not through the browser consent flow.
 Movement, ideas, source breadth, public replay, and desktop acceptance remain open.
+
+## Recorded music proposal in the desktop UI
+
+Main inspected BrowserOS Neo page 96. This was agent QA using the stored output,
+with no additional inference. The route uses `path=music`, the starting artifact
+ID above, and `experiment=06864f01-6af0-4db6-bda2-242f3a305d44`.
+
+The page initially retained four notes and showed an unapplied proposal. Selecting
+Try this change produced five playable keys. Hear my version reported five notes
+at 100 BPM and 0.4-second attack. The recorded playback schedule lasted seven
+seconds. Undo restored the original four-note state.
+
+- Apply event: `7c0c6a84-6fa1-49bf-9d42-b4a3b6f63aa0`.
+- Playback event: `e6377a09-a2da-42c0-814d-e5d821cc4709`.
+- Undo event: `1548e0fe-1eae-43cf-a1a9-4c62f738b886`.
+
+Apply and undo identify the original model job. Playback contains the scheduled
+notes and their durations. Browser status and scheduling do not prove speaker
+output quality, perceived latency, or learning. Saving and reopening the applied
+artifact still needs verification. The numeric proposal preview also needs visual
+improvement. None of this establishes the newer goal of teaching Runaway.
