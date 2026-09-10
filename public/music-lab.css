@@ -73,7 +73,7 @@
 }
 @media (max-width: 420px) {
   .music-lab { padding: 18px; border-radius: 18px; }
-  .music-lab__phrase span { min-height: 86px; }
+  .music-lab .music-lab__phrase .music-lab__key { min-height: 86px; }
   .music-lab__playback { gap: 6px; }
   .music-lab__playback button { padding-inline: 12px; }
   .music-lab__slider-row { gap: 10px; }
@@ -84,8 +84,10 @@
 @media (min-width: 1050px) {
   .music-lab { padding: 22px 28px; }
   .music-lab .music-lab__title { font-size: 30px; }
-  .music-lab__phrase span { min-height: 78px; }
+  .music-lab .music-lab__phrase .music-lab__key { min-height: 78px; }
   .music-lab > .music-lab__figure { grid-row: 1 / span 4; align-self: start; }
   .music-lab > .music-lab__controls { grid-column: 2; grid-row: 5 / span 3; margin: 8px 0 0; padding-top: 10px; }
   .music-lab .music-lab__hint { margin-bottom: 6px; }
 }
+
+.music-lab .music-lab__phrase .music-lab__key:hover{background:linear-gradient(165deg,#fff9d9,#deebbe);color:#183b2c}.music-lab .music-lab__phrase .music-lab__key:active{transform:translateY(3px);border-bottom-width:2px}

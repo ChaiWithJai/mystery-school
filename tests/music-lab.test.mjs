@@ -175,6 +175,18 @@ test('cleanup while audio permission is pending prevents delayed playback', asyn
   assert.equal(audio.oscillators.length, 0); assert.equal(audio.contexts[0].state, 'closed'); assert.equal(events.length, 0);
 });
 
+test('PR 6 attack edits retain one old-to-new event without duplicate no-op events', async () => {
+  const { host, find } = harness();
+  const events = [];
+  const cleanup = mountMusicLab(host, { initialState: { attack: .2 }, onEvent: (type, metadata) => events.push({type, metadata}) });
+  const slider = find('music-lab__slider');
+  slider.value = '.4';
+  await slider.fire('input');
+  await slider.fire('input');
+  assert.deepEqual(events, [{type:'attack.change', metadata:{previous_attack:.2, attack:.4, source_kind:'synthesized_phrase'}}]);
+  cleanup();
+});
+
 test('legacy phrase preserves original timing, pitch and independent state copies', () => {
   const state = normalizeMusicState({attack: .2});
   const schedule = musicSchedule(state);
