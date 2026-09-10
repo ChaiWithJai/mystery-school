@@ -1,4 +1,5 @@
 import {performanceNotes,noteName} from './piano-practice.js';
+import {mountPianoRoll} from './piano-roll.js';
 import {RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel} from './runaway-opening.js';
 export const pianoScenePoint = midi => ({x:45+(midi-48)/48*1010,y:280-(midi-48)*5});
 export function mountPianoScene(container,adapter,track,onContinue){
@@ -37,5 +38,10 @@ export function mountPianoScene(container,adapter,track,onContinue){
       track('lesson.compare',{...comparison,learner_outcome_claimed:false});
     }
   }render();}
-  render();return{render,event,dispose(){disposed=true;scene.remove();}};
+  const rollStyles=document.createElement('link');rollStyles.rel='stylesheet';rollStyles.href='/piano-roll.css';document.head.append(rollStyles);
+  const roll=mountPianoRoll(piano,{adapter,onEvent:track,getPlaybackClock:()=>adapter.getPlaybackClock?.()});
+  invitation.hidden=true;
+  scene.querySelector('.piano-scene__notes').style.display='none';
+  const sync=()=>{render();roll.setTarget(adapter.getState().practice_target);};
+  sync();return{render:sync,event(type,payload){event(type,payload);roll.event(type,payload);},dispose(){disposed=true;roll();rollStyles.remove();scene.remove();}};
 }

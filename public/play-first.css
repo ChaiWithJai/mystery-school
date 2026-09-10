@@ -25,3 +25,7 @@
 .ideas-lab__story[data-shared=true] .ideas-lab__person--stranger{left:calc(39% + 64px)}
 .ideas-lab__story[data-shared=true] .ideas-lab__umbrella{left:calc(39% - 12px)}
 .ideas-lab__story[data-model-scene=true] .ideas-lab__umbrella{top:35px}
+.learning-drawer .play-support-panel.projection-game[open]{left:20px!important;right:auto!important;width:calc(100vw - 520px)!important;max-height:78vh}
+.projection-game>.movement-lab{display:none}
+.learning-drawer .projection-game .boxing-game{height:62vh;min-height:420px}
+.learning-drawer .projection-game .bg-ring{height:70%}

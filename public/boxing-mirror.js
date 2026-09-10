@@ -1,13 +1,17 @@
 import {L,BONES,HandTracker,makeSmoother} from './vendor/shadowbox/punch.js';
 const VERSION='shadowbox-pr5-2ba80b5';
+const knownString=v=>typeof v==='string'&&v?v:null;
+const knownTime=v=>Number.isFinite(v)&&v>=0?v:null;
+function provenance(e){return {captureId:knownString(e.captureId),lessonId:knownString(e.lessonId),sourceMode:['camera','local-video'].includes(e.sourceMode)?e.sourceMode:null,detectorTime:knownTime(e.detectorTime),mediaTime:knownTime(e.mediaTime),seekSegment:Number.isInteger(e.seekSegment)&&e.seekSegment>=0?e.seekSegment:null};}
 export function cleanMirrorState(value={}) {
-  return {version:1,detector:VERSION,lessonId:String(value.lessonId||''),reflection:String(value.reflection||'').slice(0,2000),attempts:(Array.isArray(value.attempts)?value.attempts:[]).slice(-60).filter(e=>Number.isFinite(e.t)&&['JAB','CROSS','HOOK','UPPERCUT'].includes(e.type)).map(e=>({t:e.t,type:e.type,hand:e.hand==='R'?'R':'L',estimated:true})),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null};
+  return {version:1,detector:VERSION,lessonId:String(value.lessonId||''),reflection:String(value.reflection||'').slice(0,2000),attempts:(Array.isArray(value.attempts)?value.attempts:[]).slice(-60).filter(e=>e&&Number.isFinite(e.t)&&['JAB','CROSS','HOOK','UPPERCUT'].includes(e.type)).map(e=>({t:e.t,type:e.type,hand:e.hand==='R'?'R':'L',estimated:true,...provenance(e)})),sourceMode:['camera','local-video'].includes(value.sourceMode)?value.sourceMode:null};
 }
 export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onEvent=()=>{},lessons=[]}={}) {
-  let state=cleanMirrorState(initialState),stream,worker,frame=0,busy=false,alive=true,epoch=0,url,started=0,smoother,hands;
+  let state=cleanMirrorState(initialState),stream,worker,frame=0,busy=false,alive=true,epoch=0,url,started=0,smoother,hands,capture,seekSegment=0;
   const root=document.createElement('section');root.className='boxing-mirror';
   root.innerHTML=`<video class="boxing-mirror-self" muted playsinline></video><canvas class="boxing-mirror-pose"></canvas><div class="boxing-mirror-aura"></div><header><span>YOUR BODY. YOUR LAB.</span><h2>Meet yourself in the ring.</h2></header><div class="boxing-mirror-center"><span class="boxing-mirror-outline">◯</span><p data-status>See the lesson. Then see yourself.</p><button data-start>Start camera</button><label class="boxing-mirror-upload">Use my video<input type="file" accept="video/*" hidden></label></div><aside class="boxing-mirror-lesson"><select aria-label="Boxing lesson"></select><video controls playsinline preload="metadata"></video><button data-watch>Watch the demonstration</button><div data-lesson-player></div><p data-cue></p><a target="_blank" rel="noopener">Lesson source ↗</a></aside><footer><span data-estimate>Local mirror · frames stay on this device</span><button data-stop hidden>Stop mirror</button></footer><details class="boxing-mirror-reflection"><summary>What did you notice?</summary><textarea aria-label="My boxing reflection" placeholder="One thing I saw. One thing I’ll try next."></textarea><small>Pose estimates help you notice movement. They do not measure punch power or certify technique.</small></details>`;
   container.append(root);
+  const disclosure=document.createElement('p');disclosure.className='boxing-mirror-storage';disclosure.textContent='Before you start: derived movement estimates and your reflections are saved locally with this experiment. Raw camera and video frames are not stored or uploaded.';root.querySelector('.boxing-mirror-center').append(disclosure);
   const q=s=>root.querySelector(s),video=q('.boxing-mirror-self'),canvas=q('canvas'),ctx=canvas.getContext('2d'),status=q('[data-status]'),estimate=q('[data-estimate]'),start=q('[data-start]'),stop=q('[data-stop]'),file=q('input'),select=q('select'),lessonVideo=q('aside video'),cue=q('[data-cue]'),source=q('aside a'),reflection=q('textarea');
   const emit=(type,detail={})=>onEvent(type,{...detail,detector:VERSION,rawFramesStored:false});
   const changed=()=>onChange(cleanMirrorState(state));
@@ -16,25 +20,32 @@ export function mountBoxingMirror(container,{initialState={},onChange=()=>{},onE
   lessons.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.title;select.append(o);});lesson();reflection.value=state.reflection;
   select.onchange=()=>{state.lessonId=select.value;lesson();changed();emit('boxing.mirror.lesson',{lessonId:state.lessonId});};reflection.oninput=()=>{state.reflection=reflection.value;changed();};
   function release(){epoch++;cancelAnimationFrame(frame);worker?.terminate();worker=null;stream?.getTracks().forEach(t=>t.stop());stream=null;video.pause();video.srcObject=null;video.removeAttribute('src');if(url)URL.revokeObjectURL(url);url=null;busy=false;ctx.clearRect(0,0,canvas.width,canvas.height);root.classList.remove('is-live');start.hidden=false;stop.hidden=true;}
-  function process(points,t){
+  function process(points,t,origin){
     if(!points||Object.values(L).some(i=>!points[i]||(points[i].visibility??1)<.5)){status.textContent='Step back until your upper body is visible.';ctx.clearRect(0,0,canvas.width,canvas.height);return;}
     const lm=smoother.update(points,t),ls=lm.get(11),rs=lm.get(12),sw=Math.hypot(ls.x-rs.x,ls.y-rs.y);if(sw<.02)return;
     canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='#b7f5bb';ctx.lineWidth=3;ctx.shadowColor='#99efa6';ctx.shadowBlur=10;
     for(const [a,b]of BONES){ctx.beginPath();ctx.moveTo(points[a].x*canvas.width,points[a].y*canvas.height);ctx.lineTo(points[b].x*canvas.width,points[b].y*canvas.height);ctx.stroke();}
     status.textContent=(lessons.find(l=>l.id===state.lessonId)?.cues||[])[0]||'Move slowly. Watch your return to guard.';
-    for(const [hand,wi,ei,si]of [['L',15,13,11],['R',16,14,12]]){const e=hands[hand].update(lm.get(wi),lm.get(ei),lm.get(si),{sw,hipY:(lm.get(23).y+lm.get(24).y)/2},t);if(e){const attempt={t:Math.round(t-started),type:e.type,hand,estimated:true};state.attempts.push(attempt);state.attempts=state.attempts.slice(-60);estimate.textContent=`${e.type.toLowerCase()} · detector estimate`;emit('boxing.mirror.estimate',attempt);changed();}}
+    for(const [hand,wi,ei,si]of [['L',15,13,11],['R',16,14,12]]){const e=hands[hand].update(lm.get(wi),lm.get(ei),lm.get(si),{sw,hipY:(lm.get(23).y+lm.get(24).y)/2},t);if(e){const attempt={t:Math.round(t-started),type:e.type,hand,estimated:true,...provenance(origin)};state.attempts.push(attempt);state.attempts=state.attempts.slice(-60);estimate.textContent=`${e.type.toLowerCase()} · detector estimate`;emit('boxing.mirror.estimate',attempt);changed();}}
   }
   async function begin(localFile){release();const token=epoch;status.textContent='Opening your mirror…';start.hidden=true;
     try {
       if(localFile){url=URL.createObjectURL(localFile);video.src=url;video.loop=false;video.controls=true;root.classList.add('is-local-video');state.sourceMode='local-video';}else{const acquired=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720},audio:false});if(!alive||token!==epoch){acquired.getTracks().forEach(t=>t.stop());return;}stream=acquired;video.controls=false;root.classList.remove('is-local-video');video.srcObject=stream;state.sourceMode='camera';}
       await video.play();if(!alive||token!==epoch)return;root.classList.add('is-live');stop.hidden=false;status.textContent='Loading local movement tracking…';smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};started=performance.now();changed();emit('boxing.mirror.start',{mode:state.sourceMode,lessonId:state.lessonId});
-      worker=new Worker(new URL('./boxing-mirror-worker.js',import.meta.url));
-      const loop=async()=>{if(!alive||token!==epoch)return;if(!busy&&video.readyState>=2&&!video.paused){busy=true;try{const bitmap=await createImageBitmap(video);if(!alive||token!==epoch){bitmap.close();return;}worker.postMessage({type:'frame',bitmap,t:performance.now()},[bitmap]);}catch{busy=false;}}frame=requestAnimationFrame(loop);};
-      worker.onmessage=({data:m})=>{if(token!==epoch)return;if(m.type==='ready'){status.textContent='Step back until your upper body is visible.';emit('boxing.mirror.detector_ready');loop();}if(m.type==='landmarks'){busy=false;process(m.landmarks,m.t);}if(m.type==='error'){busy=false;cancelAnimationFrame(frame);worker?.terminate();worker=null;status.textContent='Your mirror is live. Movement tracking is unavailable.';emit('boxing.mirror.detector_error');}};
-      worker.onerror=()=>{status.textContent='Your mirror is live. Movement tracking is unavailable.';worker?.terminate();worker=null;cancelAnimationFrame(frame);};worker.postMessage({type:'init'});
+      capture=Object.freeze({captureId:crypto.randomUUID(),lessonId:state.lessonId,sourceMode:state.sourceMode});seekSegment=0;
+      const instance=new Worker(new URL('./boxing-mirror-worker.js',import.meta.url));worker=instance;
+      let failures=0,pending=null;
+      const current=()=>alive&&token===epoch&&worker===instance;
+      const fail=(reason)=>{if(!current())return;busy=false;cancelAnimationFrame(frame);instance.terminate();worker=null;status.textContent='Your mirror is live. Movement tracking is unavailable. Stop and start to try again.';emit('boxing.mirror.detector_error',{...capture,reason,frameFailures:failures});};
+      const loop=async()=>{if(!current())return;if(!busy&&video.readyState>=2&&!video.paused&&!video.seeking){busy=true;let bitmap;
+        try{const origin={...capture,lessonId:state.lessonId,detectorTime:performance.now(),mediaTime:capture.sourceMode==='local-video'?video.currentTime:null,seekSegment};bitmap=await createImageBitmap(video);if(!current()||origin.seekSegment!==seekSegment){bitmap.close();if(current())busy=false;}else{pending=origin;instance.postMessage({type:'frame',bitmap,t:origin.detectorTime,provenance:origin},[bitmap]);bitmap=null;failures=0;}}
+        catch{bitmap?.close();if(!current())return;busy=false;pending=null;failures++;if(failures>=3){fail('frame_capture_or_transfer');return;}}
+      }if(current())frame=requestAnimationFrame(loop);};
+      instance.onmessage=({data:m})=>{if(!current())return;if(m.type==='ready'){status.textContent='Step back until your upper body is visible.';emit('boxing.mirror.detector_ready',{...capture});loop();}if(m.type==='landmarks'){busy=false;const origin=pending;pending=null;if(origin&&origin.seekSegment===seekSegment&&m.t===origin.detectorTime)process(m.landmarks,m.t,origin);}if(m.type==='error')fail('detector');};
+      instance.onerror=()=>fail('worker');instance.postMessage({type:'init'});
     }catch(e){if(token!==epoch)return;release();status.textContent=e.name==='NotAllowedError'?'Camera permission was not granted. You can use your own video.':'Could not open this camera or video. Try another local video.';emit('boxing.mirror.start_error',{reason:e.name});}
   }
-  video.onseeking=()=>{smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};};
+  video.onseeking=()=>{seekSegment++;smoother=makeSmoother();hands={L:new HandTracker('L'),R:new HandTracker('R')};};
   start.onclick=()=>begin();file.onchange=()=>{if(file.files[0])begin(file.files[0]);};stop.onclick=()=>{release();status.textContent='What changed when you watched yourself?';emit('boxing.mirror.stop',{estimates:state.attempts.length});};video.onended=()=>{status.textContent='What did you notice? Keep one observation.';emit('boxing.mirror.video_complete');};
   return {getState:()=>cleanMirrorState(state),setState(v){state=cleanMirrorState(v);reflection.value=state.reflection;lesson();},dispose(){alive=false;release();lessonVideo.pause();lessonVideo.removeAttribute('src');root.remove();}};
 }
