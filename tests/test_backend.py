@@ -348,6 +348,73 @@ class BackendTests(unittest.TestCase):
         # JSON string quotes count toward the exact 30KB limit.
         self.assertEqual(self.request("/api/artifacts", dict(payload, state="x" * (30 * 1024 - 2)))[0], 201)
 
+    def test_artifact_event_ids_roundtrip_and_deduplication(self):
+        payload = {"pathway": "ideas", "session_id": "event-link-test", "stage": "attempt",
+                   "actor_kind": "agent_review", "goal": "Synthetic event linkage", "state": {}}
+        events = []
+        for action in ("open", "help"):
+            status, event = self.request("/api/events", {"session_id": payload["session_id"],
+                "type": "learning.ideas.action", "payload": {"pathway": "ideas", "type": action}})
+            self.assertEqual(status, 201)
+            events.append(event)
+        ids = [event["id"] for event in events]
+        status, artifact = self.request("/api/artifacts", dict(payload, event_ids=[ids[0], ids[1], ids[0]]))
+        self.assertEqual(status, 201)
+        self.assertEqual(artifact["event_ids"], ids)
+        self.assertEqual(self.request("/api/artifacts/" + artifact["id"])[1], artifact)
+        self.assertEqual(App(self.temp.name).learning_artifact(artifact["id"]), artifact)
+        trace = self.app.tracing.client.get_trace(artifact["trace_id"])
+        self.assertEqual(trace.data.spans[0].inputs["event_ids"], ids)
+        sample = next(s for s in self.request("/api/samples")[1] if s["id"] == artifact["id"])
+        self.assertEqual(sample["metadata"]["event_ids"], ids)
+        self.assertEqual(sample["messages"][0]["metadata"]["event_ids"], ids)
+        self.assertEqual([e for e in self.app.state["events"] if e["id"] in ids], events)
+
+    def test_artifact_event_ids_reject_invalid_links_before_side_effects(self):
+        payload = {"pathway": "ideas", "session_id": "event-link-rejection", "stage": "attempt",
+                   "actor_kind": "agent_review", "goal": "Synthetic invalid linkage", "state": {}}
+        invalid_ids = ["unknown-event"]
+        for session, event_payload in (("other-session", {"pathway": "ideas"}),
+                                       (payload["session_id"], {"pathway": "music"}),
+                                       (payload["session_id"], {}), (payload["session_id"], None),
+                                       (payload["session_id"], ["ideas"])):
+            status, event = self.request("/api/events", {"session_id": session, "type": "synthetic.link-test",
+                                                         "payload": event_payload})
+            self.assertEqual(status, 201)
+            invalid_ids.append(event["id"])
+        before_records = json.loads(json.dumps(self.app.artifacts))
+        before_disk = self.app.artifacts_path.read_bytes() if self.app.artifacts_path.exists() else None
+        before_state = self.app.path.read_bytes()
+        invalid_lists = [None, "event-id", {}, [1], [True], [None], [[]], [""], [" "], ["x" * 129], ["x"] * 101]
+        invalid_lists.extend([event_id] for event_id in invalid_ids)
+        with patch.object(self.app.tracing, "start") as start, patch("server.atomic_json") as persist:
+            for event_ids in invalid_lists:
+                with self.subTest(event_ids=event_ids):
+                    status, _ = self.request("/api/artifacts", dict(payload, event_ids=event_ids))
+                    self.assertEqual(status, 400)
+            start.assert_not_called()
+            persist.assert_not_called()
+        self.assertEqual(self.app.artifacts, before_records)
+        self.assertEqual(self.app.path.read_bytes(), before_state)
+        self.assertEqual(self.app.artifacts_path.read_bytes() if self.app.artifacts_path.exists() else None, before_disk)
+
+    def test_artifact_event_ids_missing_and_empty_preserve_old_records(self):
+        payload = {"pathway": "movement", "session_id": "event-link-legacy", "stage": "attempt",
+                   "actor_kind": "agent_review", "goal": "Synthetic legacy artifact", "state": {}}
+        status, old = self.request("/api/artifacts", payload)
+        self.assertEqual(status, 201)
+        self.assertNotIn("event_ids", old)
+        old_trace = self.app.tracing.client.get_trace(old["trace_id"]).to_dict()
+        status, empty = self.request("/api/artifacts", dict(payload, event_ids=[], parent_id=old["id"]))
+        self.assertEqual(status, 201)
+        self.assertEqual(empty["event_ids"], [])
+        samples = {s["id"]: s for s in self.request("/api/samples")[1]}
+        self.assertEqual(samples[old["id"]]["metadata"]["event_ids"], [])
+        self.assertEqual(samples[empty["id"]]["metadata"]["event_ids"], [])
+        self.assertEqual(self.request("/api/artifacts/" + old["id"])[1], old)
+        self.assertEqual(App(self.temp.name).learning_artifact(old["id"]), old)
+        self.assertEqual(self.app.tracing.client.get_trace(old["trace_id"]).to_dict(), old_trace)
+
     def sidecar_payload(self, source_event_id):
         return {"source_system": "synthetic-unittest", "source_event_id": source_event_id,
                 "observed_at": "2026-09-01T12:00:00Z", "actor_kind": "agent_review",

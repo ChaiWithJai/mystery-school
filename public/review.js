@@ -31,6 +31,28 @@ function relatedReviews(sample, samples) {
   return result;
 }
 
+function relatedArtifactRecords(sample, samples) {
+  if (sample?.model !== 'learning artifact') return [];
+  const known = new Map();
+  for (const item of samples) if (typeof item?.id === 'string' && item.id && !known.has(item.id)) known.set(item.id, item);
+  const seen = new Set([sample.id]);
+  const result = [];
+  const add = (id, relation, artifactOnly = false) => {
+    if (typeof id !== 'string' || !id.trim() || seen.has(id)) return;
+    seen.add(id);
+    const target = known.get(id);
+    result.push({id, relation, sample: target && (!artifactOnly || target.model === 'learning artifact') ? target : null});
+  };
+  add(sample.metadata?.parent_id, 'Parent version', true);
+  for (const item of known.values()) {
+    if (item.model === 'learning artifact' && item.metadata?.parent_id === sample.id) add(item.id, 'Child version', true);
+  }
+  if (Array.isArray(sample.metadata?.event_ids)) {
+    for (const id of sample.metadata.event_ids) add(id, 'Recorded event');
+  }
+  return result;
+}
+
 (() => {
   'use strict';
 
@@ -350,10 +372,11 @@ function relatedReviews(sample, samples) {
     header.append(actions, el('p', 'read-hint', 'Select a passage to leave a free-text note. Saved notes appear in the margin. Corrections create a new version.'));
     const job = Array.isArray(state.app.jobs) ? state.app.jobs.find(item => item.id === sample.id) : null;
     if (job) header.append(renderExecutionFiles(job));
-    const related = relatedReviews(sample, state.samples);
+    const artifactLineage = sample.model === 'learning artifact';
+    const related = artifactLineage ? relatedArtifactRecords(sample, state.samples) : relatedReviews(sample, state.samples);
     if (related.length) {
-      const details = el('details', 'related-reviews');
-      details.append(el('summary', '', `Related reviews (${related.length})`));
+      const details = el('details', artifactLineage ? 'related-reviews related-records' : 'related-reviews');
+      details.append(el('summary', '', `${artifactLineage ? 'Related records' : 'Related reviews'} (${related.length})`));
       const list = el('ul');
       for (const item of related) {
         const row = el('li');
@@ -362,7 +385,7 @@ function relatedReviews(sample, samples) {
           const heading = $('#trajectory-header h1');
           if (heading) { heading.tabIndex = -1; heading.focus({preventScroll: true}); }
         }, 'related-review-link'));
-        else row.append(el('span', 'related-review-unavailable', `${item.relation}: ${item.id} / unavailable in loaded reviews`));
+        else row.append(el('span', 'related-review-unavailable', `${item.relation}: ${item.id} / unavailable in loaded ${artifactLineage ? 'records' : 'reviews'}`));
         list.append(row);
       }
       details.append(list);
