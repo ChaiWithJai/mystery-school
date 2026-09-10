@@ -6,7 +6,8 @@ export const RUNAWAY_REFERENCE = Object.freeze({
   tempo: 160, transposition: 4, kind: 'virtual_piano_arrangement',
 });
 let active;
-export function mountDemoSoundtrack(track = () => {}) {
+export function mountDemoSoundtrack(track = () => {}, {autoplay = true} = {}) {
+  if (new URLSearchParams(location.search).get('soundtrack') === 'off') return {leavePiano(){},stop(){}};
   if (active) return active;
   const root = document.createElement('aside');
   root.className = 'demo-soundtrack';
@@ -32,7 +33,7 @@ export function mountDemoSoundtrack(track = () => {}) {
   q('[data-reference]').href = RUNAWAY_REFERENCE.playerURL;
   let local = null, localURL = null, continuous = false, disposed = false;
   const emit = (type, payload = {}) => track('soundtrack.' + type, {source_kind: local ? 'user_selected_local_audio' : RUNAWAY_REFERENCE.kind, ...payload, learner_attempt: false});
-  const observer = new MutationObserver(() => { if (drawer?.classList.contains('hidden')) stop(); });
+  const observer = new MutationObserver(() => { if (drawer?.classList.contains('hidden')) {if(continuous)document.body.append(root);else stop();} });
   if (drawer) observer.observe(drawer, {attributes: true, attributeFilter: ['class']});
   function stop() {
     if (disposed) return;
@@ -44,22 +45,39 @@ export function mountDemoSoundtrack(track = () => {}) {
   q('[data-play]').onclick = () => { void local?.play(); };
   q('[data-stop]').onclick = stop;
   q('[data-keep]').onchange = event => {continuous = event.target.checked; local?.setContinuous(continuous); emit('continuous', {enabled: continuous});};
-  q('input[type=file]').onchange = event => {
-    const file = event.target.files?.[0];
-    if (!file || disposed) return;
+  function loadRecording(url, playNow) {
     const status = q('[role=status]'); status.hidden = false;
-    if (file.type && !file.type.startsWith('audio/')) {status.textContent = 'Choose an audio recording.'; return;}
-    local?.dispose(); if (localURL) URL.revokeObjectURL(localURL);
-    localURL = URL.createObjectURL(file); root.dataset.state = 'loading';
-    local = createLocalSoundtrack(new Audio(localURL), {onState(state) {
+    root.querySelector('audio')?.remove();
+    const audio = new Audio(url); audio.preload='auto'; audio.hidden=true;root.append(audio);
+    root.dataset.state = 'ready';status.textContent='Runaway / your local recording';
+    local = createLocalSoundtrack(audio, {onState(state) {
       if (disposed) return;
       root.dataset.state = state;
-      status.textContent = ({playing: continuous ? 'Local audio / playing across the demo' : 'Local audio / first seven seconds', 'opening-ended': 'Your turn. Press L.', ended: 'Recording finished.', blocked: 'Press Replay opening to turn the sound on.', error: 'This audio file could not play. Choose another file.', paused: 'Paused.'})[state];
+      status.textContent = ({playing: continuous ? 'Runaway / playing across the demo' : 'Runaway / first seven seconds', 'opening-ended': 'Your turn. Press L.', ended: 'Recording finished.', blocked: 'Press Play opening to turn the sound on.', error: 'Choose your local Runaway recording in audio options.', paused: 'Paused.'})[state];
       emit(state, {continuous});
     }});
     q('footer').hidden = false; q('details').open = false;
-    if (continuous) local.setContinuous(true); else void local.play();
+    if (playNow) {if (continuous) local.setContinuous(true); else void local.play();}
+  }
+  q('input[type=file]').onchange = event => {
+    const file = event.target.files?.[0];
+    if (!file || disposed) return;
+    if (file.type && !file.type.startsWith('audio/')) return;
+    local?.dispose(); if (localURL) URL.revokeObjectURL(localURL);
+    localURL=URL.createObjectURL(file);loadRecording(localURL,true);
   };
-  active = {leavePiano() {if (!continuous) stop();}, stop};
+  // A blob URL also supports seeking on the local server without HTTP Range support.
+  void fetch('/audio/local/runaway.mp3').then(response=>{
+    if(!response.ok)throw new Error('Local recording unavailable');
+    return response.blob();
+  }).then(blob=>{
+    if(disposed||local)return;
+    localURL=URL.createObjectURL(blob);loadRecording(localURL,autoplay);
+  }).catch(()=>{
+    if(disposed)return;
+    q('[role=status]').hidden=false;q('[role=status]').textContent='Choose your local Runaway recording in audio options.';
+  });
+  q('[data-play]').textContent='Play opening';
+  active = {play(restart=true){return local?.play(restart);},pause(){local?.pause();},leavePiano() {if (!continuous) stop();else document.body.append(root);}, stop};
   return active;
 }

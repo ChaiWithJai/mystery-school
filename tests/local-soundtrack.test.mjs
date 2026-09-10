@@ -56,6 +56,15 @@ test('disposal cancels clocks, detaches callbacks, and releases the media source
   assert.equal(media.loaded, true);
   assert.equal(media.paused, true);
 });
+test('presenter pause and resume preserve recording position and the remaining cutoff', async () => {
+  const {media, controller, pending} = fixture();
+  await controller.play();media.currentTime=3.25;controller.pause();
+  assert.equal(media.paused,true);assert.equal(pending.size,0);
+  await controller.play(false);
+  assert.equal(media.currentTime,3.25);assert.equal(media.paused,false);
+  assert.equal([...pending.values()][0].ms,3750);
+  controller.dispose();
+});
 test('autoplay refusal is reported, not mistaken for audible playback', async () => {
   const {media, controller, states} = fixture();
   media.play = () => Promise.reject(Object.assign(new Error('blocked'), {name:'NotAllowedError'}));

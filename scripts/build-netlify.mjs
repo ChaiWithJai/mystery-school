@@ -2,7 +2,7 @@ import {cp, mkdir, rm, writeFile, readFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 // The publish directory contains only public assets, never local data or credentials.
 await rm('dist', {recursive: true, force: true});
-await cp('public', 'dist', {recursive: true});
+await cp('public', 'dist', {recursive: true, filter: source => !source.replaceAll('\\', '/').startsWith('public/audio/local')});
 const index=await readFile('dist/index.html','utf8');
 await writeFile('dist/index.html',index.replace('</head>','<script type="module" src="/hosted-capabilities.js"></script></head>'));
 // A direct saved review URL also explains the capability boundary without
