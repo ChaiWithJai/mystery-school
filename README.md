@@ -1,8 +1,32 @@
 # Mystery School
 
-Mystery School is a local desktop app for Jai Bhagat's school on a computer.
-A learner can play music, try movement, and write about an idea in a rendered
-world. Saved work and model suggestions remain separate.
+Mystery School is a prototype of a sandbox that teachers build for their students.
+A good teacher can change the course of someone's life. A chatbot is not that
+teacher. The teacher knows the student, advocates for them, and decides what
+support to offer. AI helps build the experiences the teacher imagines.
+
+A student who struggles with a physics explanation may love boxing. The teacher
+can start there: try a movement, notice how distance changes over time, then
+name the relationship. The sandbox gives them something to explore together.
+It does not decide what a student is capable of.
+
+Jai's school on a computer demonstrates that direction through piano, boxing,
+and a writable book world. The teacher's work is to cultivate courage, passion,
+and imagination, especially when a student needs more time or another approach.
+Saved work and model suggestions remain separate.
+
+## The teacher's role
+
+The human teacher chooses the experience, listens to the student's account,
+reviews their attempts with them, and changes the approach. Care means staying
+with the student rather than treating a score as a verdict. The student keeps
+their own voice and can disagree, pause, or try another way.
+
+The current app is an authored local prototype. A teacher authoring workspace,
+student roster, access-controlled teacher review, and classroom deployment are
+not implemented. Traces are technical records, not diagnoses or automatic
+judgments about students. AI does not replace the teacher's relationship,
+responsibility, or judgment.
 
 All three pathways are required by
 [issue 2](https://github.com/ChaiWithJai/mystery-school/issues/2).
