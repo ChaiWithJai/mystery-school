@@ -1,9 +1,11 @@
 import {performanceNotes,noteName} from './piano-practice.js';
 import {mountPianoRoll} from './piano-roll.js';
+import {mountDemoSoundtrack} from './demo-soundtrack.js';
 import {RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel} from './runaway-opening.js';
 export const pianoScenePoint = midi => ({x:45+(midi-48)/48*1010,y:280-(midi-48)*5});
 export function mountPianoScene(container,adapter,track,onContinue){
   const piano=container.querySelector('.piano-practice');if(!piano)return null;
+  const soundtrack=mountDemoSoundtrack(track);
   const scene=document.createElement('section');scene.className='piano-scene';
   scene.innerHTML=`<div class="piano-scene__light" aria-hidden="true"></div><div class="piano-scene__invitation"><span>RUNAWAY</span><p>Listen. Find the first sound.</p><button class="piano-scene__listen" aria-label="Listen to the Runaway reference">▷ Listen</button></div><svg viewBox="0 0 1100 330" class="piano-scene__notes" role="img" aria-label="Your played notes, shown as light"><g data-take-lines></g><g data-held-lights></g></svg><div class="piano-scene__reference" hidden><button data-close-reference aria-label="Close song reference">×</button><div data-player></div><a href="https://www.youtube.com/watch?v=Bm5iA4Zupek" target="_blank" rel="noopener">Open the official video ↗</a></div>`;
   piano.prepend(scene);
@@ -48,5 +50,5 @@ export function mountPianoScene(container,adapter,track,onContinue){
   invitation.hidden=true;
   scene.querySelector('.piano-scene__notes').style.display='none';
   const sync=()=>{render();roll.setTarget(adapter.getState().practice_target);};
-  sync();return{render:sync,event(type,payload){event(type,payload);roll.event(type,payload);},dispose(){disposed=true;roll();rollStyles.remove();scene.remove();}};
+  sync();return{render:sync,event(type,payload){event(type,payload);roll.event(type,payload);},dispose(){disposed=true;soundtrack.leavePiano();roll();rollStyles.remove();scene.remove();}};
 }
