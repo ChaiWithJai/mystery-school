@@ -6,10 +6,10 @@ export const noteFrequency = midi => 440 * 2 ** ((midi - 69) / 12);
 
 export function pianoGeometry() {
   let white = 0;
-  return Array.from({ length: 37 }, (_, i) => {
+  return Array.from({ length: 49 }, (_, i) => {
     const midi = 48 + i;
     const black = BLACK.has(midi % 12);
-    const key = { midi, black, left: (black ? white - .31 : white) / 22 * 100, width: (black ? .62 : 1) / 22 * 100 };
+    const key = { midi, black, left: (black ? white - .31 : white) / 29 * 100, width: (black ? .62 : 1) / 29 * 100 };
     if (!black) white++;
     return key;
   });
@@ -24,7 +24,7 @@ export function normalizePianoState(value = {}) {
   const active = new Set();
   let previous = 0;
   const normalized = events.map(event => {
-    if (!event || !['on', 'off'].includes(event.type) || !Number.isInteger(event.midi) || event.midi < 48 || event.midi > 84 || !Number.isFinite(event.time) || event.time < previous || event.time > duration) throw new RangeError('Note events need ordered times within the take and pitches C3 to C6.');
+    if (!event || !['on', 'off'].includes(event.type) || !Number.isInteger(event.midi) || event.midi < 48 || event.midi > 96 || !Number.isFinite(event.time) || event.time < previous || event.time > duration) throw new RangeError('Note events need ordered times within the take and pitches C3 to C7.');
     if ((event.type === 'on') === active.has(event.midi)) throw new RangeError('Each note-on must be followed by its note-off before repeating.');
     if (event.type === 'on') active.add(event.midi); else active.delete(event.midi);
     previous = event.time;
@@ -76,7 +76,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   const root = document.createElement('section');
   root.className = 'piano-practice';
   root.innerHTML = `<header class="piano-practice__header"><h2>Piano</h2><div data-reference></div></header>
-    <div class="piano-practice__scroll"><div class="piano-practice__keyboard" role="group" aria-label="Piano C3 to C6. Hold a key to sustain; release to stop." tabindex="0"></div></div>
+    <div class="piano-practice__scroll"><div class="piano-practice__keyboard" role="group" aria-label="Piano C3 to C7. Hold a key to sustain; release to stop." tabindex="0"></div></div>
     <div class="piano-practice__transport"><button type="button" data-record>Record</button><button type="button" data-replay>Replay</button><button type="button" data-stop aria-label="Stop sound and finish recording">Stop</button><span data-status role="status" aria-live="polite"></span></div>
     <p data-error role="alert" hidden></p>
     <details class="piano-practice__options"><summary>Practice options</summary>
@@ -121,7 +121,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     notes.forEach((note, index) => {
       const row = document.createElement('div');
       row.className = 'piano-practice__note';
-      for (const [field, title, min, max, step] of [['midi', 'Pitch (MIDI)', 48, 84, 1], ['start', 'Entrance (s)', 0, 600, .01], ['end', 'Release (s)', 0, 600, .01]]) {
+      for (const [field, title, min, max, step] of [['midi', 'Pitch (MIDI)', 48, 96, 1], ['start', 'Entrance (s)', 0, 600, .01], ['end', 'Release (s)', 0, 600, .01]]) {
         const label = document.createElement('label');
         label.textContent = `${index + 1}. ${title}`;
         const input = document.createElement('input');

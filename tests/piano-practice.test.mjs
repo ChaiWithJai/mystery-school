@@ -4,15 +4,18 @@ import { pianoGeometry, normalizePianoState, performanceNotes, noteFrequency, no
 
 const take = { duration: 1.2, events: [{ type: 'on', midi: 60, time: .2 }, { type: 'off', midi: 60, time: .7 }, { type: 'on', midi: 63, time: .9 }, { type: 'off', midi: 63, time: 1.2 }] };
 
-test('chromatic C3-C6 has 22 whites and 15 blacks at the correct boundaries', () => {
+test('chromatic C3-C7 includes the written E6 opening register', () => {
   const keys = pianoGeometry();
-  assert.equal(keys.length, 37);
-  assert.equal(keys.filter(key => !key.black).length, 22);
-  assert.equal(keys.filter(key => key.black).length, 15);
-  assert.equal(keys[1].left, .69 / 22 * 100);
-  assert.equal(keys[5].left, 3 / 22 * 100);
-  assert.equal(keys.at(-1).midi, 84);
-  assert.equal(noteName(48), 'C3'); assert.equal(noteName(84), 'C6');
+  assert.equal(keys.length, 49);
+  assert.equal(keys.filter(key => !key.black).length, 29);
+  assert.equal(keys.filter(key => key.black).length, 20);
+  assert.equal(keys[1].left, .69 / 29 * 100);
+  assert.equal(keys[5].left, 3 / 29 * 100);
+  assert.equal(keys.at(-1).midi, 96);
+  assert.equal(noteName(48), 'C3'); assert.equal(noteName(96), 'C7');
+  assert.equal(noteName(keys.find(key => key.midi === 88).midi), 'E6');
+  assert.equal(normalizePianoState({duration:1,events:[{type:'on',midi:88,time:0},{type:'off',midi:88,time:1}]}).events[0].midi, 88);
+  assert.throws(() => normalizePianoState({events:[{type:'on',midi:97,time:0}]}));
   assert.equal(noteFrequency(69), 440);
 });
 
