@@ -1,10 +1,10 @@
 import {mountBoxingMirror} from './boxing-mirror.js';
-import {mountBoxingFoundationScene} from './boxing-foundation-scene.js';
+import {mountBoxingFoundationScene,resolveFoundationLesson} from './boxing-foundation-scene.js';
 import {BOXING_FOUNDATIONS} from './boxing-foundations.js';
 import {BOXING_LESSONS} from './boxing-curriculum.js';
 import {requestLocalCue} from './local-coach-client.js';
 
-export const BOXING_JOURNEY_LESSONS=[...BOXING_LESSONS];
+export const BOXING_JOURNEY_LESSONS=[...BOXING_LESSONS,resolveFoundationLesson({foundationId:'attention'})];
 for(const foundation of BOXING_FOUNDATIONS.foundations)for(const source of foundation.sources||[]){
   if(source.reviewStatus!=='reviewed_video'||!source.cue)continue;
   const id=source.id;
