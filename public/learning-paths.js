@@ -1,3 +1,5 @@
+import { mountLearningExperiment } from './learning-experiment.js';
+
 const PATHS={
   music:{name:'Maya',age:15,domain:'Music / calculus',goal:'Finish a song for my grandmother.',moment:'Maya can find a melody by ear. She has been playing the same unfinished phrase for her grandmother, who keeps asking to hear the ending.',voice:'I know how I want it to feel. I do not know how to make the first note gentler.',care:'We can stay with your song. Try the sound first. If its beginning feels too sudden, we can look at how quickly its loudness rises.',share:'Could the opening arrive more gently, while keeping the tune I recognize?',peer:'Grandmother',next:'What else could I change to make the ending feel like mine?',module:'./music-lab.js',mount:'mountMusicLab'},
   movement:{name:'Andre',age:19,domain:'Movement / physics',goal:'Understand a smooth reach so I can explain it to my training partner.',moment:'Andre watches his training partner move with control. He wants to understand what changes during a reach, but remembers being told he was behind in maths.',voice:'Can we start with the movement? I can show you what I mean before I know the words.',care:'Yes. Follow the marked point. Keep the distance the same and give the movement more time. We can name the relationship after you notice it.',share:'Can you show the same distance taking longer, and point to where the motion is fastest?',peer:'Training partner',next:'How would a different movement change the shape of the graph?',module:'./movement-lab.js',mount:'mountMovementLab'},
@@ -76,7 +78,8 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     openDrawer('learning',({music:'Give the melody a gentler beginning.',movement:'Feel what time changes.',ideas:'Make a thought your own.'})[pathway],person.name.toUpperCase()+' / THE LIVING SCHOOL');
     const token=++opening;
     document.querySelector('#drawer').classList.add('learning-drawer');
-    const cleanup=()=>{opening++;dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
+    let experimentDispose=null;
+    const cleanup=()=>{opening++;experimentDispose?.();dispose?.();dispose=null;document.querySelector('#drawer').classList.remove('learning-drawer');};
     onCleanup(cleanup);
     const fresh=!drafts[pathway];
     let draft=drafts[pathway]||={lab:{},explanation:'',question:'',parentId:null,stage:'try'};
@@ -131,7 +134,18 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
     q('[data-save]').onclick=e=>action(e.currentTarget,()=>save(draft.parentId?'revision':'attempt'));
     q('[data-share]').onclick=e=>action(e.currentTarget,async()=>{await save(draft.parentId?'revision':'attempt');await save('sharing_response','staged_peer_response',person.share);if(token===opening){draft.stage='share';keep();q('[data-response]').hidden=false;}});
     q('[data-next]').onclick=e=>action(e.currentTarget,async()=>{if(!draft.question.trim()){q('#path-question').focus();throw Error('Add the question you want to keep.');}await save('new_question',actorKind,draft.question);if(token===opening){draft.stage='next';keep();toast('Your next question is kept with this experiment.');}});
-    q('[data-imagine]').onclick=e=>action(e.currentTarget,async()=>{if(!draft.question.trim()){q('#path-question').focus();throw Error('Add the question you want to explore.');}const record=await save('new_question',actorKind,draft.question);if(token===opening)onImagine(record);});
+    q('[data-imagine]').onclick=()=>{
+      if(experimentDispose)return;
+      if(!draft.question.trim()){q('#path-question').focus();return;}
+      experimentDispose=mountLearningExperiment(q('.learning-next'),{
+        api,sessionId,actorKind,pathway,getQuestion:()=>draft.question,
+        getState:()=>structuredClone(draft.lab),
+        setState:value=>{if(typeof dispose?.setState!=='function')throw Error('This experiment cannot apply changes yet.');dispose.setState(value);},
+        save:()=>save('new_question',actorKind,draft.question),
+        track:(type,payload)=>events.track(type,payload)
+      });
+      q('[data-imagine]').hidden=true;
+    };
     try{const module=await import(person.module);if(token!==opening)return;validateVideo=module.validateYouTubeReference||null;sources=module.IDEAS_SOURCES||[{label:person.domain+' diagram',url:location.origin+'/'+person.module.slice(2),locator:'Implemented mathematical model; not a real-world measurement'}];q('[data-lab]').replaceChildren();dispose=module[person.mount](q('[data-lab]'),{initialState:draft.lab,onChange:value=>{draft.lab=structuredClone(value);keep();},onEvent:(type,payload)=>events.track('learning.'+pathway+'.action',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',type,payload})});ready=true;saveButtons.forEach(button=>{button.disabled=false;});}catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
     events.track('learning.path.open',{pathway,character:person.name,actor_kind:actorKind,scenario_kind:'fictional_composite',goal:person.goal});await history();
   }

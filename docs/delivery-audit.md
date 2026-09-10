@@ -4,6 +4,20 @@ September 10, 2026. Product checkpoint: c8cd7dc. Scope: all three pathways,
 the forest experience, Astra projection/correction, and inspectable provenance.
 Agent checks support demo behavior, not learner efficacy.
 
+## Alignment reopened
+
+Jai reopened product alignment after this audit. The tables below describe
+bounded implementation checks, not acceptance of the intended learning experience.
+The earlier claim that only final M4 acceptance remained is withdrawn.
+
+Kepler is the independent reviewer for the 75-minute window ending September 10,
+2026 at 18:50:08 UTC. Findings belong in `reviews/deep-review-20260910.md`.
+All three pathways remain required. The review must establish immediate play,
+measured local responsiveness, visible playable changes produced through Astra,
+preview/apply/undo, continued play during inference, honest pathway promises,
+and reproducible delivery. An unexpected learner request must change the
+experience, not merely its narration. These gates remain unverified here.
+
 ## Issue 2
 
 | Criterion | Current evidence |
@@ -52,10 +66,11 @@ Generated scenarios change the existing scene and create saved branches; they
 do not generate arbitrary new 3D geometry. Model usage is reported where supplied;
 total build cost and unavailable sidecar inference telemetry remain unknown.
 
-## Open gate
+## Earlier independent acceptance request
 
 M4 supplied independent earlier tests, probes, and the merged visual redesign.
 Main sent an explicit Buzz mention requesting its final acceptance ledger for
 the integrated c8cd7dc build and confirmation of the runnable M4 checkout.
 That final current-build acceptance is not yet observed. The overall goal remains
-open; passing local tests do not replace the named independent gate.
+open; passing local tests do not replace independent review or the reopened
+product gates above. M4 acceptance alone cannot close those product gaps.

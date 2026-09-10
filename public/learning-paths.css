@@ -1,5 +1,14 @@
 .drawer.learning-drawer{width:min(1100px,calc(100vw - 72px));max-height:calc(100vh - 48px);inset:24px 24px 24px auto;box-sizing:border-box;padding:28px 34px;overflow:auto}
 .learning-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:44px}
+.learning-experiment{margin-top:24px;padding-top:20px;border-top:1px solid #a7c09955}
+.learning-experiment label{display:flex;align-items:start;gap:12px;margin:20px 0}
+.learning-experiment input[type=checkbox]{width:auto;flex:none;margin-top:4px}
+.learning-experiment [data-preview]{padding:20px;border:1px solid #d8cf9277;border-radius:12px;margin-top:20px}
+.learning-experiment dt{color:#e6d6a7;margin-top:14px;text-transform:capitalize}
+.learning-experiment dd{margin:6px 0 16px;color:#dce8d2;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
+.learning-experiment [data-trace]{display:block;margin-top:18px;color:#cfddb9}
+.ideas-lab__model-comparison{max-width:650px;margin:24px auto;padding:24px;border:1px solid #d8cf9277;border-radius:14px;background:#14362f}
+.ideas-lab__model-comparison blockquote{margin:20px 0;padding-left:16px;border-left:2px solid #b9c998;color:#e4d8b2}
 .learning-person{border-right:1px solid var(--line);padding-right:26px;align-self:start;position:sticky;top:0}
 .learning-person h3,.learning-people h3{font-family:var(--serif);font-size:34px;font-weight:500;margin:12px 0}
 .learning-person p{font-size:13px;line-height:1.6}

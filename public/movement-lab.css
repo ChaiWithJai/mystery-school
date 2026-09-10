@@ -26,6 +26,9 @@
 .movement-lab__label { fill: #d0dfc6; font: 12px "Avenir Next", "Trebuchet MS", sans-serif; }
 .movement-lab__grid { stroke: #47745b60; stroke-width: 1; }
 .movement-lab__curve { stroke: #c6f2a0; stroke-width: 3; fill: none; filter: drop-shadow(0 0 4px #a7e78060); }
+.movement-lab__reference-curve, .movement-lab__reference-marker { stroke: #e0bc7c; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+.movement-lab select { width: 100%; min-height: 44px; color: #ecf5df; background: #123226; border: 1px solid #70927a; border-radius: 10px; padding: 8px 12px; font: inherit; }
+.movement-lab select:focus-visible { outline: 3px solid #f6d693; outline-offset: 4px; }
 .movement-lab__cursor { stroke: #e4c784; stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; }
 .movement-lab__dot { fill: #f1d791; stroke: #263f2c; stroke-width: 2; }
 .movement-lab__controls { padding: 4px 0; }

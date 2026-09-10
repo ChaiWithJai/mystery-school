@@ -12,7 +12,7 @@ test('parent artifact source references include a work, URL and section locator'
 });
 
 test('empty and malformed persisted state normalize to a complete JSON state', () => {
-  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '' };
+  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '', modelComparison: null };
   for (const value of [undefined, null, [], 2, 'draft', { interpretation: {}, revisedInterpretation: 10, helpOpen: 'true' }]) {
     assert.deepEqual(validateIdeasState(value), expected);
   }
@@ -91,6 +91,23 @@ function testContainer() {
   } };
   return { container: doc.createElement('main'), elements };
 }
+
+test('Astra comparison changes the activity without replacing learner words and restores exactly', () => {
+  const { container, elements } = testContainer();
+  const cleanup = mountIdeasLab(container, { initialState: { interpretation: '  My words.', revisedInterpretation: 'My uncertainty.' } });
+  const before = cleanup.getState();
+  const modelComparison = { scenario: 'A friend disagrees with a rule you support.', question: 'What would you choose, and what cannot you choose?', source_quote: IDEAS_SOURCE.excerpt, source_ref_index: 0 };
+  cleanup.setState({ ...before, modelComparison });
+  assert.equal(cleanup.getState().interpretation, before.interpretation);
+  assert.equal(cleanup.getState().revisedInterpretation, before.revisedInterpretation);
+  assert.ok(elements.some(element => element.textContent === modelComparison.scenario));
+  const applied = cleanup.getState();
+  assert.throws(() => cleanup.setState({ ...before, modelComparison: { ...modelComparison, source_quote: 'Invented quotation.' } }));
+  assert.deepEqual(cleanup.getState(), applied);
+  cleanup.setState(before);
+  assert.deepEqual(cleanup.getState(), before);
+  cleanup();
+});
 
 test('mount emits complete defaults once, uses two-argument events, and cleanup detaches', () => {
   const { container, elements } = testContainer();

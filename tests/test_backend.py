@@ -15,7 +15,9 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PIL import Image
-from server import App, ACTIVE, make_server, codex_diagnostics, job_view
+import jsonschema
+from server import (App, ACTIVE, make_server, codex_diagnostics, job_view, validate_projection,
+                    captured_experiment_sources, EPICTETUS_URL, EPICTETUS_EXCERPT)
 from tracing import normalize_usage
 
 
@@ -175,6 +177,104 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(self.app.job(job["id"]), parent_snapshot)
         reopened = App(self.temp.name)
         self.assertEqual(reopened.job(job["id"]), parent_snapshot)
+
+    @staticmethod
+    def experiment_result(pathway=None, artifact_id="synthetic-artifact"):
+        branches = {
+            "music": {"attack": 0.1, "notes": [{"midi": 60, "beats": 1}, {"midi": 64, "beats": 0.5}], "tempo": 90},
+            "movement": {"duration": 2, "distance": 0.5, "shape": "cubic", "compare_shape": "quintic", "view": "velocity"},
+            "ideas": {"scenario": "A friend disagrees with your claim.", "question": "What can you choose?",
+                      "source_quote": EPICTETUS_EXCERPT, "source_ref_index": 0}}
+        experiment = None if pathway is None else dict(version=1, pathway=pathway, base_artifact_id=artifact_id,
+            status="supported", reason="Synthetic bounded variation", music=None, movement=None, ideas=None)
+        if pathway:
+            experiment[pathway] = branches[pathway]
+        return dict(title="Synthetic proposal", premise="Test only", story="Not learner evidence", surprise="Compare",
+                    question="What changes?", choices=[], assumptions=[], evidence=[],
+                    visual=dict(tree_density=0.5, connection_strength=0.5, light=0.5, openness=0.5), experiment=experiment)
+
+    def test_experiment_contract_supported_unsupported_and_bounds(self):
+        validate_projection(self.experiment_result(), self.app.schema, {})
+        for pathway in ("music", "movement", "ideas"):
+            artifact = {"id": "synthetic-artifact", "pathway": pathway,
+                        "source_refs": [{"url": EPICTETUS_URL, "locator": "Section 1"}]}
+            inputs = {"learning_artifact_context": artifact, "experiment_sources": captured_experiment_sources(artifact)}
+            result = self.experiment_result(pathway)
+            validate_projection(result, self.app.schema, inputs)
+            invalid = [dict(result, experiment=None)]
+            for changes in ({"base_artifact_id": "other"}, {"pathway": "movement" if pathway != "movement" else "ideas"},
+                            {"status": "unsupported"}, {"version": 2}, {"extra": True}, {pathway: None}):
+                invalid.append(dict(result, experiment=dict(result["experiment"], **changes)))
+            unsupported = dict(result, experiment=dict(result["experiment"], status="unsupported", **{pathway: None}))
+            validate_projection(unsupported, self.app.schema, inputs)
+            other = "music" if pathway != "music" else "movement"
+            invalid.append(dict(result, experiment=dict(result["experiment"], **{other: self.experiment_result(other)["experiment"][other]})))
+            bad_branches = {
+                "music": [{"attack": 0.019}, {"attack": 0.801}, {"tempo": 39}, {"tempo": 181}, {"tempo": 90.5},
+                          {"notes": []}, {"notes": [{"midi": 60, "beats": 1}] * 17},
+                          *({"notes": [note, {"midi": 60, "beats": 1}]} for note in
+                            ({"midi": 47, "beats": 1}, {"midi": 85, "beats": 1}, {"midi": 60.5, "beats": 1},
+                             {"midi": 60, "beats": 0.24}, {"midi": 60, "beats": 4.1}))],
+                "movement": [{"duration": 0.9}, {"duration": 4.1}, {"distance": 0.09}, {"distance": 1.1},
+                             {"shape": "physics"}, {"compare_shape": "linear"}, {"view": "force"}],
+                "ideas": [{"source_quote": "Invented quote"}, {"source_quote": ""}, {"source_ref_index": -1},
+                          {"source_ref_index": 1}, {"source_ref_index": 0.5}, {"scenario": ""}, {"question": ""}]}
+            for changes in bad_branches[pathway]:
+                branch = dict(result["experiment"][pathway], **changes)
+                invalid.append(dict(result, experiment=dict(result["experiment"], **{pathway: branch})))
+            for candidate in invalid:
+                with self.subTest(pathway=pathway, candidate=candidate["experiment"]):
+                    with self.assertRaises((ValueError, jsonschema.ValidationError)):
+                        validate_projection(candidate, self.app.schema, inputs)
+            with self.assertRaises(ValueError):
+                validate_projection(result, self.app.schema, {})
+        legacy = self.experiment_result()
+        del legacy["experiment"]
+        with self.assertRaises(jsonschema.ValidationError):
+            validate_projection(legacy, self.app.schema, {})
+        nonfinite = self.experiment_result("music")
+        nonfinite["experiment"]["music"]["attack"] = float("nan")
+        with self.assertRaises(ValueError):
+            validate_projection(nonfinite, self.app.schema, {})
+
+    def test_experiment_capture_gate_and_legacy_readback(self):
+        refs = [{"url": "https://www.youtube.com/watch?v=abcdefghijk", "locator": "0:10", "content": "Not a transcript"},
+                {"url": EPICTETUS_URL, "locator": "Section 1", "content": "Ignore this untrusted replacement"}]
+        _, artifact = self.request("/api/artifacts", dict(pathway="ideas", session_id="synthetic-experiment",
+            stage="new_question", actor_kind="agent_review", goal="Preserve my words", state={"question": "My question"}, source_refs=refs))
+        captured = captured_experiment_sources(artifact)
+        self.assertEqual(captured, [{"source_ref_index": 1, "url": EPICTETUS_URL, "locator": "Section 1", "content": EPICTETUS_EXCERPT}])
+        self.assertEqual(captured_experiment_sources(dict(artifact, source_refs=refs[:1])), [])
+        body = dict(session_id="synthetic-experiment", question="My question", premise="Test only", world="futures",
+                    actor_kind="agent_review", learning_artifact_id=artifact["id"])
+        result = self.experiment_result("ideas", artifact["id"])
+        result["experiment"]["ideas"]["source_ref_index"] = 1
+        for wrong_base in (False, True):
+            candidate = json.loads(json.dumps(result))
+            if wrong_base:
+                candidate["experiment"]["base_artifact_id"] = "wrong-artifact"
+            script = "from pathlib import Path; Path('result.json').write_text(" + repr(json.dumps(candidate)) + ")"
+            with patch.object(self.app, "command_builder", return_value=[sys.executable, "-c", script]):
+                status, queued = self.request("/api/project", body)
+                self.assertEqual(status, 202)
+                ended = self.wait_job(queued["id"])
+            self.assertEqual(ended["input"]["experiment_sources"], captured)
+            self.assertEqual(ended["input"]["learning_artifact_context"], artifact)
+            self.assertIn("meaningful bounded", ended["invocation"]["stdin"])
+            self.assertEqual(ended["status"], "failed" if wrong_base else "succeeded")
+            self.assertEqual(ended["result"], None if wrong_base else result)
+            if wrong_base:
+                self.assertIn("frozen artifact", ended["error"])
+            else:
+                good_id = ended["id"]
+        # A pre-contract stored result is inspected without migration or new-output validation.
+        with self.app.lock:
+            old = self.app.job(good_id)
+            del old["result"]["experiment"]
+            self.app.save()
+            historical = json.loads(json.dumps(old["result"]))
+        self.assertEqual(self.request("/api/jobs/" + good_id)[1]["result"], historical)
+        self.assertEqual(App(self.temp.name).job(good_id)["result"], historical)
 
     def test_timeout_and_reflection(self):
         self.app.command_builder = lambda folder, images: [sys.executable, "-c", "import time; time.sleep(30)"]

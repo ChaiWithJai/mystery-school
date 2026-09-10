@@ -1,5 +1,7 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SHAPES = ['cubic', 'quintic'];
+const VIEWS = ['position', 'velocity', 'acceleration'];
+const VIEW_AXES = { position: { min: 0, max: 1, unit: 'm' }, velocity: { min: 0, max: 1.875, unit: 'm/s' }, acceleration: { min: -6, max: 6, unit: 'm/s^2' } };
 let instances = 0;
 
 /** Position (m), velocity (m/s), acceleration (m/s^2). Rest strictly outside [0,T]. */
@@ -36,17 +38,37 @@ export function normalizeMovementState(initialState = {}) {
     duration,
     distance: clamp(finiteOr(input.distance, 0.4), 0.1, 1),
     shape: SHAPES.includes(input.shape) ? input.shape : 'cubic',
+    compare_shape: SHAPES.includes(input.compare_shape) ? input.compare_shape : 'quintic',
+    view: VIEWS.includes(input.view) ? input.view : 'position',
     time: clamp(finiteOr(input.time, 0), 0, duration),
     playing: false,
     assistanceOpen: input.assistanceOpen === true,
   };
 }
 
+/** Strict model-proposal boundary. Never silently clamp or substitute a proposal. */
+export function validateMovementProposal(proposal) {
+  const keys = ['duration', 'distance', 'shape', 'compare_shape', 'view'];
+  if (!proposal || typeof proposal !== 'object' || Array.isArray(proposal) ||
+      Object.keys(proposal).some(key => !keys.includes(key)) ||
+      !Number.isFinite(proposal.duration) || proposal.duration < 1 || proposal.duration > 4 ||
+      !Number.isFinite(proposal.distance) || proposal.distance < .1 || proposal.distance > 1 ||
+      !SHAPES.includes(proposal.shape) || !SHAPES.includes(proposal.compare_shape) || !VIEWS.includes(proposal.view)) {
+    throw new RangeError('Movement proposal requires duration 1..4 s, distance .1..1 m, cubic/quintic shape and compare_shape, and position/velocity/acceleration view.');
+  }
+  return Object.fromEntries(keys.map(key => [key, proposal[key]]));
+}
+
+export function sampleMovementComparison(time, state) {
+  const inputs = validateMovementProposal(Object.fromEntries(['duration', 'distance', 'shape', 'compare_shape', 'view'].map(key => [key, state[key]])));
+  return { candidate: sampleMovement(time, inputs), reference: sampleMovement(time, { ...inputs, shape: inputs.compare_shape }), axis: { ...VIEW_AXES[inputs.view] } };
+}
+
 /**
  * onChange(fullState) receives a fresh JSON snapshot, including on mount.
  * onEvent(type, fullState) records actions, never individual animation frames.
  * State inputs: duration seconds (1..4), distance meters (.1..1), shape, time,
- * assistanceOpen. Load movement-lab.css in the host. Returns cleanup.
+ * assistanceOpen, compare_shape, view. Returns callable cleanup with getState/setState.
  */
 export function mountMovementLab(container, { initialState = {}, onChange = () => {}, onEvent = () => {} } = {}) {
   if (!container?.ownerDocument || typeof container.append !== 'function') throw new TypeError('A DOM container is required.');
@@ -102,14 +124,16 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   const diagramDesc = svg('desc', { id: `${id}-diagram-desc` });
   diagram.append(diagramDesc, svg('rect', {x: 60, y: 58, width: 400, height: 44, rx: 22, class: 'movement-lab__lane'}), svg('path', { d: 'M 60 80 H 460', class: 'movement-lab__track' }));
   const trail = svg('path', {d: 'M 60 80 H 60', class: 'movement-lab__trail'});
-  diagram.append(trail, svg('circle', {cx: 460, cy: 80, r: 28, class: 'movement-lab__target'}));
+  const target = svg('circle', {cx: 460, cy: 80, r: 28, class: 'movement-lab__target'});
+  diagram.append(trail, target);
   for (const x of [60, 160, 260, 360, 460]) diagram.append(svg('path', { d: `M ${x} 72 V 88`, class: 'movement-lab__tick' }));
   diagram.append(svg('text', { x: 60, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' }, '0 m'));
   const endLabel = svg('text', { x: 460, y: 125, class: 'movement-lab__label', 'text-anchor': 'middle' });
   diagram.append(endLabel);
   const hand = svg('g', { class: 'movement-lab__hand' });
+  const referenceHand = svg('circle', { r: 26, cy: 80, class: 'movement-lab__reference-marker' });
   hand.append(svg('circle', { r: 21 }), svg('path', { d: 'M -10 7 V -3 Q -10 -6 -7 -4 L -5 -1 V -12 Q -3 -16 -1 -12 V -4 V -15 Q 2 -18 4 -14 V -4 V -12 Q 7 -15 9 -11 V -2 Q 14 -8 15 -3 L 12 7 Q 8 14 0 14 Q -6 14 -10 7', class: 'movement-lab__hand-line' }));
-  diagram.append(hand);
+  diagram.append(referenceHand, hand);
   root.append(diagram);
 
   const controls = el('div', 'movement-lab__controls');
@@ -122,6 +146,7 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
     return { label, input };
   }
   const durationControl = range('Duration', 'duration', 1, 4, .1);
+  const distanceControl = range('Distance', 'distance', .1, 1, .05);
   const shapeField = el('fieldset', 'movement-lab__shapes');
   shapeField.append(el('legend', '', 'Trajectory shape'));
   const shapeInputs = [];
@@ -132,6 +157,14 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
     listen(input, 'change', () => { if (input.checked) edit({ shape: value }, 'movement.shape'); });
   }
   controls.append(shapeField);
+  function selectControl(labelText, suffix, values) {
+    const label = el('label', 'movement-lab__control-label', labelText);label.htmlFor = `${id}-${suffix}`;
+    const select = el('select');select.id = label.htmlFor;
+    for (const value of values) { const option = el('option', '', value);option.value = value;select.append(option); }
+    controls.append(label, select);return select;
+  }
+  const compareControl = selectControl('Dashed reference shape (same distance and duration)', 'compare-shape', SHAPES);
+  const viewControl = selectControl('Graph view', 'view', VIEWS);
   const scrub = range('Position in the replay', 'progress', 0, 100, .1);
   scrub.input.setAttribute('aria-describedby', `${id}-scrub-help`);
   const scrubHelp = el('p', 'movement-lab__note', 'Slide through elapsed time to inspect the marker position. Arrow keys make small steps.');
@@ -144,9 +177,9 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   root.append(controls);
 
   const graph = svg('svg', { viewBox: '0 0 520 270', class: 'movement-lab__graph', role: 'img', 'aria-labelledby': `${id}-graph-title ${id}-graph-desc` });
-  graph.append(svg('title', { id: `${id}-graph-title` }, 'Position against elapsed time'));
+  const graphTitle = svg('title', { id: `${id}-graph-title` });graph.append(graphTitle);
   const graphDesc = svg('desc', { id: `${id}-graph-desc` }); graph.append(graphDesc);
-  graph.append(svg('text', { x: 60, y: 24, class: 'movement-lab__label' }, 'Position (m)'));
+  const axisLabel = svg('text', { x: 60, y: 24, class: 'movement-lab__label' });graph.append(axisLabel);
   for (let i = 0; i <= 4; i++) {
     const x = 60 + i * 100;
     graph.append(svg('path', { d: `M ${x} 44 V 214`, class: 'movement-lab__grid' }));
@@ -154,11 +187,14 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   }
   graph.append(svg('text', { x: 460, y: 260, 'text-anchor': 'end', class: 'movement-lab__label' }, 'Time (s)'));
   const distanceTick = svg('text', { x: 49, y: 52, 'text-anchor': 'end', class: 'movement-lab__label' });
-  graph.append(distanceTick, svg('text', { x: 49, y: 218, 'text-anchor': 'end', class: 'movement-lab__label' }, '0'));
+  const minimumTick = svg('text', { x: 49, y: 218, 'text-anchor': 'end', class: 'movement-lab__label' });
+  const zeroLine = svg('path', { class: 'movement-lab__grid' });
+  graph.append(distanceTick, minimumTick, zeroLine);
   graph.append(svg('path', { d: 'M 60 44 V 214 H 460', class: 'movement-lab__axis' }));
   const curve = svg('path', { class: 'movement-lab__curve' });
+  const referenceCurve = svg('path', { class: 'movement-lab__reference-curve' });
   const cursor = svg('path', { class: 'movement-lab__cursor' });
-  const dot = svg('circle', { r: 5, class: 'movement-lab__dot' }); graph.append(curve, cursor, dot); root.append(graph);
+  const dot = svg('circle', { r: 5, class: 'movement-lab__dot' }); graph.append(referenceCurve, curve, cursor, dot); root.append(graph);
   const reading = el('p', 'movement-lab__reading'); root.append(reading);
   const status = el('p', 'movement-lab__status'); status.setAttribute('role', 'status'); root.append(status);
 
@@ -177,31 +213,37 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
   container.append(root);
 
   function paint() {
-    const sample = sampleMovement(state.time, state);
-    const x = 60 + 400 * sample.position / state.distance;
+    const comparison = sampleMovementComparison(state.time, state), sample = comparison.candidate;
+    const x = 60 + 400 * sample.position;
+    referenceHand.setAttribute('cx', 60 + 400 * comparison.reference.position);
+    target.setAttribute('cx', 60 + 400 * state.distance);
     hand.setAttribute('transform', `translate(${x} 80)`);
     trail.setAttribute('d', `M 60 80 H ${x}`);
-    endLabel.textContent = `${format(state.distance)} m`;
+    endLabel.textContent = '1 m';
     diagramDesc.textContent = `Modeled marker at ${format(sample.position)} meters after ${format(state.time)} seconds. Total reach ${format(state.distance)} meters.`;
     durationControl.input.value = String(state.duration);
     durationControl.label.textContent = `Duration: ${format(state.duration)} s`;
     durationControl.input.setAttribute('aria-valuetext', `${format(state.duration)} seconds`);
+    distanceControl.input.value = String(state.distance);distanceControl.label.textContent = `Distance: ${format(state.distance)} m`;
+    distanceControl.input.setAttribute('aria-valuetext', `${format(state.distance)} meters`);
+    compareControl.value = state.compare_shape;viewControl.value = state.view;
     shapeInputs.forEach(input => { input.checked = input.value === state.shape; });
     scrub.input.value = String(state.time / state.duration * 100);
     scrub.label.textContent = `Position in replay: ${format(state.time)} of ${format(state.duration)} s`;
     scrub.input.setAttribute('aria-valuetext', `${format(state.time)} seconds, position ${format(sample.position)} meters`);
-    let path = '';
-    for (let i = 0; i <= 100; i++) {
-      const t = 4 * i / 100;
-      const y = 214 - 166 * sampleMovement(t, state).position / state.distance;
-      path += `${i ? 'L' : 'M'}${60 + 100 * t} ${y} `;
-    }
-    curve.setAttribute('d', path);
-    const cx = 60 + 100 * state.time, cy = 214 - 166 * sample.position / state.distance;
-    cursor.setAttribute('d', `M ${cx} 214 V ${cy}`); dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
-    distanceTick.textContent = format(state.distance);
-    graphDesc.textContent = `Fixed time axis from zero to four seconds. ${state.shape} reach of ${format(state.distance)} meters over ${format(state.duration)} seconds, followed by rest. Current position ${format(sample.position)} meters.`;
-    reading.textContent = `Position ${format(sample.position)} m / Velocity ${format(sample.velocity)} m/s / Acceleration ${format(sample.acceleration)} m/s\u00b2`;
+    const {min,max,unit} = comparison.axis;
+    const yAt = value => 214 - 166 * (value - min) / (max - min);
+    // Explicit endpoint/rest samples show the acceleration jump instead of a sloping tail.
+    const times = [...new Set([...Array.from({length:101}, (_, i) => 4*i/100), state.duration, Math.min(4,state.duration+1e-7)])].sort((a,b)=>a-b);
+    function pathFor(shape) { return times.map((t,i)=>`${i?'L':'M'}${60+100*t} ${yAt(sampleMovement(t,{...state,shape})[state.view])}`).join(' '); }
+    curve.setAttribute('d', pathFor(state.shape));referenceCurve.setAttribute('d', pathFor(state.compare_shape));
+    const cx = 60 + 100 * state.time, cy = yAt(sample[state.view]);
+    cursor.setAttribute('d', `M ${cx} ${yAt(0)} V ${cy}`); dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+    distanceTick.textContent = format(max);minimumTick.textContent = format(min);
+    zeroLine.setAttribute('d', `M 60 ${yAt(0)} H 460`);
+    axisLabel.textContent = `${state.view} (${unit})`;graphTitle.textContent = `${state.view} comparison against elapsed time`;
+    graphDesc.textContent = `Shared fixed axes: time 0 to 4 seconds, ${state.view} ${min} to ${max} ${unit}. Solid candidate ${state.shape}; dashed reference ${state.compare_shape}. Both cover ${format(state.distance)} meters in ${format(state.duration)} seconds, followed by rest.`;
+    reading.textContent = `Solid candidate: ${state.shape} / Dashed reference: ${state.compare_shape}. At ${format(state.time)} s: ${state.view} ${format(sample[state.view])} / ${format(comparison.reference[state.view])} ${unit}. Candidate position ${format(sample.position)} m / velocity ${format(sample.velocity)} m/s / acceleration ${format(sample.acceleration)} m/s\u00b2.`;
     formula.textContent = state.shape === 'cubic'
       ? 'Cubic: x = D(3u^2 - 2u^3); v = (D/T)(6u - 6u^2); a = (D/T^2)(6 - 12u).'
       : 'Quintic: x = D(10u^3 - 15u^4 + 6u^5); v = (D/T)30u^2(1-u)^2; a = (D/T^2)60u(1-u)(1-2u).';
@@ -238,6 +280,9 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
     frame = win.requestAnimationFrame(tick);
   }
   listen(durationControl.input, 'input', () => edit({ duration: Number(durationControl.input.value), time: 0 }, 'movement.duration'));
+  listen(distanceControl.input, 'input', () => edit({ distance: Number(distanceControl.input.value) }, 'movement.distance'));
+  listen(compareControl, 'change', () => edit({ compare_shape: compareControl.value }, 'movement.compare_shape'));
+  listen(viewControl, 'change', () => edit({ view: viewControl.value }, 'movement.view'));
   listen(scrub.input, 'input', () => edit({ time: Number(scrub.input.value) / 100 * state.duration }, 'movement.scrub'));
   listen(play, 'click', () => start(false)); listen(replay, 'click', () => start(true));
   listen(stop, 'click', () => edit({}, 'movement.stop'));
@@ -249,5 +294,18 @@ export function mountMovementLab(container, { initialState = {}, onChange = () =
     if (state.playing && media.matches) edit({}, 'movement.stop'); else paint();
   });
   paint(); publish();
-  return function cleanup() { disposed = true; cancelFrame(); listeners.forEach(remove => remove()); root.remove(); };
+  function cleanup() { disposed = true; cancelFrame(); listeners.forEach(remove => remove()); root.remove(); }
+  cleanup.getState = () => snapshot();
+  cleanup.setState = fullState => {
+    if (disposed) throw new Error('Movement lab is disposed.');
+    validateMovementProposal(Object.fromEntries(['duration','distance','shape','compare_shape','view'].map(key=>[key,fullState?.[key]])));
+    if (fullState.time !== undefined && (!Number.isFinite(fullState.time) || fullState.time < 0)) throw new RangeError('Time must be finite and nonnegative.');
+    const next = normalizeMovementState(fullState);
+    cancelFrame();Object.assign(state,next);help.open = state.assistanceOpen;
+    if (fullState.playing === true && state.time < state.duration && !media?.matches) {
+      state.playing = true;startAt = null;startTime = state.time;lastPublish = -Infinity;frame = win.requestAnimationFrame(tick);
+    }
+    paint();status.textContent = 'Showing the applied movement state.';publish();return snapshot();
+  };
+  return cleanup;
 }

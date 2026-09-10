@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attackSlope, envelopeAt, envelopePoints, normalizeMusicState, mountMusicLab, NOTE_DURATION } from '../public/music-lab.js';
+import { attackSlope, envelopeAt, envelopePoints, normalizeMusicState, validateMusicState, musicSchedule, mountMusicLab, NOTE_DURATION } from '../public/music-lab.js';
 
 test('linear attack slope is 1 / attack in normalized amplitude per second', () => {
   assert.equal(attackSlope(.02), 50);
@@ -35,11 +35,11 @@ test('silence before and after a note; normalized amplitude stays bounded', () =
 });
 
 test('initial state preserves a fractional attack and derives no caller-supplied fields', () => {
-  assert.deepEqual(normalizeMusicState(), { attack: .02 });
+  assert.deepEqual(normalizeMusicState(), { attack: .02, tempo: 100, notes: [60, 64, 67, 72].map(midi => ({midi, beats: 2})) });
   const input = { attack: .125, slope: 999, mastery: true };
-  assert.deepEqual(normalizeMusicState(input), { attack: .125 });
+  assert.deepEqual(normalizeMusicState(input), {...normalizeMusicState(), attack: .125});
   assert.equal(input.slope, 999);
-  assert.deepEqual(JSON.parse(JSON.stringify(normalizeMusicState(input))), { attack: .125 });
+  assert.deepEqual(JSON.parse(JSON.stringify(normalizeMusicState(input))), {...normalizeMusicState(), attack: .125});
 });
 
 test('invalid attacks, times, and initial states fail explicitly', () => {
@@ -58,11 +58,38 @@ test('envelope point arrays are independent between callers', () => {
   assert.equal(envelopePoints(.2)[1].amplitude, 1);
 });
 
+test('playable keys follow edited pitch and rhythm without changing the saved phrase', async () => {
+  const {host, audio, find} = harness(); const events = [];
+  const cleanup = mountMusicLab(host, {onEvent: (type, metadata) => events.push({type, metadata})});
+  const state = normalizeMusicState({attack: .4, tempo: 120, notes: [{midi: 69, beats: 1}, {midi: 74, beats: 3}]});
+  cleanup.setState(state);
+  const phrase = find('music-lab__phrase'); const key = phrase.children[1];
+  await phrase.fire('click', {target: key});
+  assert.equal(audio.oscillators.length, 1);
+  assert.equal(events.at(-1).metadata.notes[0].midi, 74);
+  assert.equal(events.at(-1).metadata.notes[0].start, 0);
+  assert.equal(events.at(-1).metadata.duration_seconds, 1.375);
+  assert.equal(events.at(-1).metadata.attack, .4);
+  assert.equal(phrase.children[1], key);
+  assert.deepEqual(cleanup.getState(), state);
+  await find('music-lab__after').fire('click');
+  assert.equal(events.at(-1).metadata.notes.length, 2);
+  assert.equal(audio.oscillators[0].disconnected, true);
+  const slider = find('music-lab__slider'); slider.value = '.3';
+  await slider.fire('input'); await slider.fire('input');
+  assert.equal(events.at(-2).metadata.reason, 'edited');
+  assert.deepEqual(events.at(-1), {type: 'attack.change', metadata: {source_kind: 'synthesized_phrase', previous_attack: .4, attack: .3}});
+  assert.deepEqual(cleanup.getState().notes, state.notes);
+  assert.equal(cleanup.getState().tempo, 120);
+  cleanup();
+});
+
 function harness() {
   const audio = { contexts: [], gains: [], oscillators: [] };
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.listeners = new Map(); this.attributes = {}; this.ownerDocument = doc; }
+    constructor(tag) { this.tag = tag; this.children = []; this.dataset = {}; this.listeners = new Map(); this.attributes = {}; this.ownerDocument = doc; }
     append(...children) { for (const child of children) { child.parent = this; this.children.push(child); } }
+    replaceChildren(...children) { this.children = []; this.append(...children); }
     setAttribute(key, value) { this.attributes[key] = String(value); }
     addEventListener(name, callback) { if (!this.listeners.has(name)) this.listeners.set(name, new Set()); this.listeners.get(name).add(callback); }
     removeEventListener(name, callback) { this.listeners.get(name)?.delete(callback); }
@@ -87,7 +114,7 @@ test('mount publishes state without audio/events; before/after attacks and clean
   const sentinel = host.ownerDocument.createElement('aside'); host.append(sentinel);
   const changes = [], events = [];
   const cleanup = mountMusicLab(host, { initialState: { attack: .125 }, onChange: value => changes.push(value), onEvent: (type, metadata) => events.push({ type, metadata }) });
-  assert.equal(audio.contexts.length, 0); assert.deepEqual(changes, [{ attack: .125 }]); assert.equal(events.length, 0);
+  assert.equal(audio.contexts.length, 0); assert.deepEqual(changes, [normalizeMusicState({ attack: .125 })]); assert.equal(events.length, 0);
   assert.equal(find('music-lab__slider').value, '0.125');
   await find('music-lab__before').fire('click');
   assert.equal(audio.contexts.length, 1); assert.equal(audio.oscillators.length, 4);
@@ -112,10 +139,10 @@ test('guidance is optional, changes full serializable state, and rejection resto
   const { host, audio, find } = harness(); const changes = [], events = [];
   const cleanup = mountMusicLab(host, { initialState: { attack: .125 }, onChange: value => changes.push(value), onEvent: (type, metadata) => events.push({ type, ...metadata }) });
   await find('music-lab__try').fire('click');
-  assert.deepEqual(changes.at(-1), { attack: .35 }); assert.equal(events.at(-1).action, 'try');
+  assert.deepEqual(changes.at(-1), normalizeMusicState({ attack: .35 })); assert.equal(events.at(-1).action, 'try');
   const slider = find('music-lab__slider'); slider.value = '.4'; await slider.fire('input');
   await find('music-lab__reject').fire('click');
-  assert.deepEqual(changes.at(-1), { attack: .125 }); assert.equal(events.at(-1).action, 'reject');
+  assert.deepEqual(changes.at(-1), normalizeMusicState({ attack: .125 })); assert.equal(events.at(-1).action, 'reject');
   await find('music-lab__keep').fire('click'); assert.equal(events.at(-1).action, 'keep');
   assert.equal(audio.contexts.length, 0);
   const count = changes.length; slider.value = '.125'; await slider.fire('input'); assert.equal(changes.length, count);
@@ -126,7 +153,7 @@ test('default mount reports the real original attack; unsupported audio fails vi
   const { host, find } = harness(); const changes = [], events = [];
   delete host.ownerDocument.defaultView.AudioContext;
   const cleanup = mountMusicLab(host, { onChange: value => changes.push(value), onEvent: (...event) => events.push(event) });
-  assert.deepEqual(changes, [{ attack: .02 }]);
+  assert.deepEqual(changes, [normalizeMusicState()]);
   await find('music-lab__after').fire('click');
   assert.equal(find('music-lab__error').hidden, false);
   assert.match(find('music-lab__error').textContent, /does not support Web Audio/);
@@ -146,4 +173,104 @@ test('cleanup while audio permission is pending prevents delayed playback', asyn
   const pending = find('music-lab__after').fire('click');
   cleanup(); resume(); await pending;
   assert.equal(audio.oscillators.length, 0); assert.equal(audio.contexts[0].state, 'closed'); assert.equal(events.length, 0);
+});
+
+test('legacy phrase preserves original timing, pitch and independent state copies', () => {
+  const state = normalizeMusicState({attack: .2});
+  const schedule = musicSchedule(state);
+  schedule.notes.forEach((note, index) => {
+    assert.ok(Math.abs(note.start - index * 1.2) < 1e-12);
+    assert.ok(Math.abs(note.duration - 1.1) < 1e-12);
+  });
+  assert.equal(schedule.duration, 4.7);
+  assert.equal(schedule.peakGain, .05);
+  state.notes[0].midi = 84;
+  assert.equal(normalizeMusicState().notes[0].midi, 60);
+});
+
+test('saved pitch and beat values determine the playback schedule', () => {
+  const state = {attack: .2, tempo: 120, notes: [{midi: 69, beats: 1}, {midi: 72, beats: 3}, {midi: 48, beats: .5}]};
+  const schedule = musicSchedule(JSON.parse(JSON.stringify(state)));
+  assert.deepEqual(schedule.notes.map(note => note.start), [0, .5, 2]);
+  assert.equal(schedule.notes[0].frequency, 440);
+  assert.ok(Math.abs(schedule.notes[1].frequency - 523.2511306011972) < 1e-9);
+  assert.equal(schedule.notes[0].envelope[1].time, .2);
+  assert.equal(schedule.duration, 2.38);
+  assert.equal(musicSchedule({...state, tempo: 60}).notes[2].start, 4);
+});
+
+test('short rhythms keep attack slope and conservative gain during overlapping tails', () => {
+  const state = {attack: .8, tempo: 180, notes: Array.from({length: 16}, () => ({midi: 84, beats: .25}))};
+  const schedule = musicSchedule(state);
+  assert.ok(schedule.peakGain < .05);
+  for (const note of schedule.notes) {
+    assert.equal(note.duration, .98);
+    assert.equal(note.envelope[1].time, .8);
+    assert.equal(note.envelope[1].amplitude / note.envelope[1].time, 1.25);
+  }
+  assert.ok(schedule.duration > schedule.notes.at(-1).start);
+});
+
+test('full setter is atomic on invalid state, stops valid playback and returns defensive copies', async () => {
+  const {host, find, audio} = harness(); const changes = [];
+  const cleanup = mountMusicLab(host, {onChange: value => changes.push(value)});
+  const baseline = cleanup.getState();
+  await find('music-lab__after').fire('click');
+  const voice = audio.oscillators[0], stopTime = voice.stopTime;
+  const invalid = [
+    {attack: .2}, {...baseline, tempo: 39}, {...baseline, tempo: 180.1},
+    {...baseline, notes: []}, {...baseline, notes: [{midi: 60, beats: 2}]},
+    {...baseline, notes: Array.from({length: 17}, () => ({midi: 60, beats: 2}))},
+    ...[47, 85, 60.5, '60', NaN].map(midi => ({...baseline, notes: [{midi, beats: 1}, {midi: 60, beats: 1}]})),
+    ...[.24, 4.1, '1', Infinity].map(beats => ({...baseline, notes: [{midi: 60, beats}, {midi: 60, beats: 1}]})),
+    {...baseline, notes: new Array(2)},
+  ];
+  for (const value of invalid) {
+    assert.throws(() => cleanup.setState(value));
+    assert.deepEqual(cleanup.getState(), baseline);
+    assert.equal(changes.length, 1);
+    assert.equal(voice.stopTime, stopTime);
+    assert.equal(voice.disconnected, undefined);
+  }
+  const next = {attack: .4, tempo: 80, notes: [{midi: 48, beats: .25}, {midi: 84, beats: 4}]};
+  cleanup.setState(next);
+  assert.equal(voice.disconnected, true);
+  assert.deepEqual(changes.at(-1), next);
+  next.notes[0].midi = 60;
+  changes.at(-1).notes[0].midi = 61;
+  const copy = cleanup.getState(); copy.notes[0].midi = 62;
+  assert.equal(cleanup.getState().notes[0].midi, 48);
+  cleanup(); assert.throws(() => cleanup.setState(baseline), /closed/);
+});
+
+test('actual oscillator scheduling uses saved phrase while original comparison stays fixed', async () => {
+  const {host, find, audio} = harness(); const events = [];
+  const state = {attack: .2, tempo: 120, notes: [{midi: 69, beats: 1}, {midi: 48, beats: 2}]};
+  const cleanup = mountMusicLab(host, {initialState: state, onEvent: (type, data) => events.push({type, data})});
+  await find('music-lab__after').fire('click');
+  assert.equal(audio.oscillators.length, 2);
+  assert.equal(audio.oscillators[0].frequency.values[0][1], 440);
+  assert.equal(audio.oscillators[1].startTime, 1.53);
+  assert.deepEqual(events.at(-1).data.state, state);
+  await find('music-lab__before').fire('click');
+  assert.equal(audio.oscillators.length, 6);
+  assert.deepEqual(events.at(-1).data.state, normalizeMusicState());
+  assert.deepEqual(cleanup.getState(), state);
+  cleanup();
+});
+
+test('phrase editor changes ending and beats and enforces note count', async () => {
+  const {host, find} = harness();
+  const cleanup = mountMusicLab(host);
+  const rows = find('music-lab__note-rows');
+  const pitch = rows.children[3].children[0].children[0]; pitch.value = '74';
+  await rows.fire('change', {target: pitch});
+  const beats = rows.children[3].children[1].children[0]; beats.value = '3';
+  await rows.fire('change', {target: beats});
+  assert.deepEqual(cleanup.getState().notes[3], {midi: 74, beats: 3});
+  await find('music-lab__add-note').fire('click');
+  assert.equal(cleanup.getState().notes.length, 5);
+  await rows.fire('click', {target: rows.children[4].children[2]});
+  assert.equal(cleanup.getState().notes.length, 4);
+  cleanup();
 });

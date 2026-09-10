@@ -70,6 +70,9 @@ export function validateIdeasState(input = {}) {
     youtubeUrl: typeof value.youtubeUrl === 'string' ? value.youtubeUrl.slice(0, 2048) : '',
     youtubeTimestamp: typeof value.youtubeTimestamp === 'string' ? value.youtubeTimestamp.slice(0, 16) : '',
     youtubeNote: typeof value.youtubeNote === 'string' ? value.youtubeNote.slice(0, 4000) : '',
+    modelComparison: value.modelComparison && typeof value.modelComparison === 'object'
+      ? { scenario: String(value.modelComparison.scenario || ''), question: String(value.modelComparison.question || ''),
+        source_quote: String(value.modelComparison.source_quote || ''), source_ref_index: value.modelComparison.source_ref_index } : null,
   };
 }
 
@@ -129,7 +132,7 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     if (disposed) return;
     state = validateIdeasState({ ...state, ...patch });
     render();
-    onChange({ ...state });
+    onChange(structuredClone(state));
   }
 
   const root = node('section', 'ideas-lab');
@@ -278,6 +281,17 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   const editor = node('div', 'ideas-lab__editor');
   editor.append(source, first.section, revised.section, helpSection);
   root.append(editor, videoSection);
+  const comparison = node('section', 'ideas-lab__model-comparison');
+  const comparisonTitle = node('h4', 'ideas-lab__step', 'Try your reading in another situation');
+  const comparisonSource = node('blockquote');
+  const comparisonScenario = node('p');
+  const comparisonQuestion = node('p', 'ideas-lab__probe');
+  const comparisonTry = node('button', 'ideas-lab__button', 'Compare with my reading');
+  comparisonTry.type = 'button';
+  listen(comparisonTry, 'click', () => { selectOrb(2); revised.input.focus(); emit('model-comparison.try', { comparison: state.modelComparison }); });
+  comparison.append(comparisonTitle, node('small', '', 'Astra-proposed scenario, not a claim from the source'),
+    comparisonSource, comparisonScenario, comparisonQuestion, comparisonTry);
+  root.append(comparison);
   let activeOrb = state.revisedInterpretation ? 2 : 0;
   function selectOrb(index, notify = true) {
     activeOrb = index;
@@ -301,6 +315,10 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
   root.append(status);
 
   function render() {
+    comparison.hidden = !state.modelComparison;
+    comparisonSource.textContent = state.modelComparison?.source_quote || '';
+    comparisonScenario.textContent = state.modelComparison?.scenario || '';
+    comparisonQuestion.textContent = state.modelComparison?.question || '';
     const reference = validateYouTubeReference(state.youtubeUrl, state.youtubeTimestamp, state.youtubeNote);
     const hasReference = Boolean(state.youtubeUrl || state.youtubeTimestamp || state.youtubeNote);
     videoLink.hidden = !reference.valid;
@@ -328,12 +346,26 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
 
   render();
   container.append(root);
-  onChange({ ...state });
+  onChange(structuredClone(state));
   emit('open');
-  return () => {
+  const cleanup = () => {
     if (disposed) return;
     disposed = true;
     for (const remove of listeners) remove();
     root.remove();
   };
+  cleanup.getState = () => structuredClone(state);
+  cleanup.setState = value => {
+    if (disposed) throw Error('This experiment is closed.');
+    const next = validateIdeasState(value);
+    if (next.modelComparison && (!next.modelComparison.source_quote ||
+      !IDEAS_SOURCE.excerpt.includes(next.modelComparison.source_quote))) throw Error('Comparison must quote the available source excerpt.');
+    state = next;
+    first.input.value = state.interpretation;
+    revised.input.value = state.revisedInterpretation;
+    unchangedInput.checked = state.unchanged;
+    for (const key of Object.keys(videoFields)) videoFields[key].value = state[key];
+    render(); onChange(structuredClone(state)); emit('model-comparison.change');
+  };
+  return cleanup;
 }

@@ -4,14 +4,7 @@ export const NOTE_DURATION = 1.1;
 const RELEASE_START = 0.92;
 const ORIGINAL_ATTACK = MIN_ATTACK;
 const SUGGESTED_ATTACK = 0.35;
-const NOTE_SPACING = 1.2;
-const PHRASE = Object.freeze([
-  Object.freeze({ name: 'C4', frequency: 261.625565 }),
-  Object.freeze({ name: 'E4', frequency: 329.627557 }),
-  Object.freeze({ name: 'G4', frequency: 391.995436 }),
-  Object.freeze({ name: 'C5', frequency: 523.251131 }),
-]);
-const PHRASE_DURATION = Number(((PHRASE.length - 1) * NOTE_SPACING + NOTE_DURATION).toFixed(3));
+const DEFAULT_NOTES = Object.freeze([60, 64, 67, 72].map(midi => Object.freeze({midi, beats: 2})));
 let instanceCount = 0;
 
 function validateAttack(attack) {
@@ -25,10 +18,11 @@ function validateAttack(attack) {
 export function attackSlope(attack) { return 1 / validateAttack(attack); }
 
 /** Breakpoints of one note's amplitude envelope, not its oscillating waveform. */
-export function envelopePoints(attack) {
+export function envelopePoints(attack, duration = NOTE_DURATION) {
   validateAttack(attack);
+  if (!Number.isFinite(duration) || duration < attack + .18 - 1e-12) throw new RangeError('Note duration must allow attack and release.');
   return [{ time: 0, amplitude: 0 }, { time: attack, amplitude: 1 },
-    { time: RELEASE_START, amplitude: 1 }, { time: NOTE_DURATION, amplitude: 0 }];
+    { time: Math.max(attack, Number((duration - .18).toFixed(12))), amplitude: 1 }, { time: duration, amplitude: 0 }];
 }
 
 /** Normalized amplitude at a time in seconds; silence outside the note. */
@@ -45,17 +39,45 @@ export function normalizeMusicState(initialState = {}) {
   if (!initialState || typeof initialState !== 'object' || Array.isArray(initialState)) {
     throw new TypeError('Music state must be an object with an attack value.');
   }
-  return { attack: validateAttack(initialState.attack === undefined ? ORIGINAL_ATTACK : initialState.attack) };
+  const attack = validateAttack(initialState.attack === undefined ? ORIGINAL_ATTACK : initialState.attack);
+  const tempo = initialState.tempo === undefined ? 100 : initialState.tempo;
+  if (!Number.isInteger(tempo) || tempo < 40 || tempo > 180) throw new RangeError('Tempo must be an integer from 40 to 180 BPM.');
+  const notes = initialState.notes === undefined ? DEFAULT_NOTES : initialState.notes;
+  if (!Array.isArray(notes) || notes.length < 2 || notes.length > 16) throw new RangeError('A phrase needs 2 to 16 notes.');
+  return {attack, tempo, notes: Array.from(notes, note => {
+    if (!note || !Number.isInteger(note.midi) || note.midi < 48 || note.midi > 84 || !Number.isFinite(note.beats) || note.beats < .25 || note.beats > 4) throw new RangeError('Each note needs MIDI pitch 48 to 84 and 0.25 to 4 beats.');
+    return {midi: note.midi, beats: note.beats};
+  })};
+}
+
+export function validateMusicState(value) {
+  if (!value || ['attack', 'notes', 'tempo'].some(key => value[key] === undefined)) throw new TypeError('Full music state requires attack, notes and tempo.');
+  return normalizeMusicState(value);
+}
+
+export function musicSchedule(value) {
+  const state = validateMusicState(value);
+  let start = 0;
+  const notes = state.notes.map(note => {
+    const spacing = note.beats * 60 / state.tempo;
+    const duration = Math.max(spacing * 11 / 12, state.attack + .18);
+    const result = {...note, start, duration, frequency: 440 * 2 ** ((note.midi - 69) / 12), envelope: envelopePoints(state.attack, duration)};
+    start += spacing;
+    return result;
+  });
+  const duration = Math.max(...notes.map(note => note.start + note.duration));
+  const overlap = Math.max(...notes.map(note => notes.filter(other => other.start <= note.start && other.start + other.duration > note.start).length));
+  return {notes, duration: Number(duration.toFixed(12)), peakGain: .05 / overlap};
 }
 
 /**
  * Load music-lab.css in the host. No audio context or event is created on mount.
- * onChange({ attack }) receives full serializable state once on mount, then on change.
+ * onChange({ attack, notes, tempo }) receives full state on mount and each change.
  * onEvent(type, metadata) emits play, stop, or help; these describe actions, not learning.
  * cleanup is idempotent, stops sound, releases audio resources, and emits no event.
  */
 export function mountMusicLab(container, { initialState = {}, onChange = () => {}, onEvent = () => {} } = {}) {
-  const state = normalizeMusicState(initialState);
+  let state = normalizeMusicState(initialState);
   if (!container?.ownerDocument || typeof container.append !== 'function') throw new TypeError('A DOM container is required.');
   if (typeof onChange !== 'function' || typeof onEvent !== 'function') throw new TypeError('Music callbacks must be functions.');
   const doc = container.ownerDocument, win = doc.defaultView;
@@ -96,11 +118,14 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   storyContext.append(node('summary', '', 'The song behind this experiment'));
   root.append(title);
   storyContext.append(node('p', 'music-lab__voice', '"I want to finish a song for my grandmother. I hear how it should begin, but this entrance feels too sudden."'));
-  root.append(node('p', 'music-lab__intro', 'Hear the phrase. Shape its entrance.'));
-  storyContext.append(node('p', '', 'Keep the same four notes; change how gently each one begins.'));
+  root.append(node('p', 'music-lab__intro', 'Change a note, shape the rhythm, and hear your ending.'));
+  storyContext.append(node('p', '', 'Create a short musical variation for your grandmother. Compare it with the original four-note sketch, not a finished or recorded piano song.'));
 
   const phrase = node('div', 'music-lab__phrase'); phrase.setAttribute('aria-label', 'Phrase: C4, E4, G4, C5');
-  for (const note of PHRASE) phrase.append(node('span', '', note.name));
+  listen(phrase, 'click', event => {
+    const index = Number(event.target.dataset.noteIndex);
+    if (event.target.dataset.noteIndex !== undefined && Number.isInteger(index) && state.notes[index]) return play('after', index);
+  });
   root.append(phrase);
   const playback = node('div', 'music-lab__playback');
   const before = button('Hear original', () => play('before'), 'music-lab__before');
@@ -111,6 +136,27 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   audioStatus.setAttribute('role', 'status'); audioStatus.setAttribute('aria-live', 'polite');
   const audioError = node('p', 'music-lab__error'); audioError.setAttribute('role', 'alert'); audioError.hidden = true;
   root.append(audioStatus, audioError);
+  const editor = node('details', 'music-lab__phrase-editor');
+  editor.open = true;
+  editor.append(node('summary', '', 'Change pitches and rhythm'));
+  const tempoLabel = node('label', '', 'Tempo (beats per minute)');
+  const tempoInput = node('input', 'music-lab__tempo'); tempoInput.type = 'number'; tempoInput.min = '40'; tempoInput.max = '180'; tempoInput.step = '1';
+  tempoLabel.append(tempoInput); editor.append(tempoLabel);
+  const noteRows = node('div', 'music-lab__note-rows'); editor.append(noteRows);
+  const addNote = button('Add ending note', () => editState({...state, notes: [...state.notes, {midi: 60, beats: 2}]}), 'music-lab__add-note');
+  editor.append(addNote, node('p', 'music-lab__hint', '2 to 16 notes. MIDI 60 is C4. Beats set time until the next note; a long attack can overlap the next note.'));
+  const editError = node('p', 'music-lab__error'); editError.setAttribute('role', 'alert'); editError.hidden = true; editor.append(editError);
+  root.append(editor);
+  listen(tempoInput, 'change', () => editState({...state, tempo: Number(tempoInput.value)}));
+  listen(noteRows, 'change', event => {
+    const index = Number(event.target.dataset.index), key = event.target.dataset.key;
+    if (!Number.isInteger(index) || !['midi', 'beats'].includes(key)) return;
+    editState({...state, notes: state.notes.map((note, i) => i === index ? {...note, [key]: Number(event.target.value)} : note)});
+  });
+  listen(noteRows, 'click', event => {
+    const index = Number(event.target.dataset.remove);
+    if (event.target.dataset.remove !== undefined && Number.isInteger(index)) editState({...state, notes: state.notes.filter((_, i) => i !== index)});
+  });
   storyContext.append(node('p', 'music-lab__scope', 'A quiet synthesized sine-tone phrase, not a recorded piano. Your device controls the listening level.'));
 
   const controls = node('div', 'music-lab__controls');
@@ -133,7 +179,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
 
   const figure = node('figure', 'music-lab__figure');
   const graph = svg('svg', { viewBox: '0 0 460 250', role: 'img', 'aria-labelledby': `${prefix}-graph-title ${prefix}-graph-desc` });
-  graph.append(svg('title', { id: `${prefix}-graph-title` }, 'Amplitude envelope of one synthesized note'));
+  graph.append(svg('title', { id: `${prefix}-graph-title` }, 'Amplitude envelope of a 1.1-second reference note'));
   const graphDescription = svg('desc', { id: `${prefix}-graph-desc` }); graph.append(graphDescription);
   const x = time => 58 + time / NOTE_DURATION * 374, y = amplitude => 199 - amplitude * 143;
   for (const value of [0, .5, 1]) {
@@ -151,7 +197,7 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   const legend = node('figcaption', 'music-lab__legend');
   legend.append(node('span', 'music-lab__legend-before', 'Dashed: original (0.02 s)'), node('span', 'music-lab__legend-after', 'Solid: my version'));
   figure.append(legend); root.append(figure);
-  storyContext.append(node('p', 'music-lab__hint', 'This is the amplitude envelope of one note, not the sound wave. Note pitches and the 1.1-second note duration stay fixed.'));
+  storyContext.append(node('p', 'music-lab__hint', 'This graph isolates attack using a 1.1-second reference note, not a sound wave or every rhythmic note. Playback holds longer notes and extends short notes when the attack needs more time, then releases over 0.18 seconds.'));
   const observation = node('p', 'music-lab__observation'); root.append(observation);
 
   const help = node('details', 'music-lab__help');
@@ -184,11 +230,40 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
   container.append(root);
 
   function render() {
+    if (phrase.children.length !== state.notes.length) {
+      phrase.replaceChildren(...state.notes.map((note, index) => {
+        const key = node('button', 'music-lab__key'); key.type = 'button'; key.dataset.noteIndex = String(index); return key;
+      }));
+    }
+    [...phrase.children].forEach((key, index) => {
+      const note = state.notes[index];
+      key.textContent = `${noteName(note.midi)} / ${fmt(note.beats)}`;
+      key.setAttribute('aria-label', `Play ${noteName(note.midi)}, ${fmt(note.beats)} beats`);
+    });
+    phrase.setAttribute('aria-label', `Current phrase: ${state.notes.map(note => `${noteName(note.midi)}, ${note.beats} beats`).join('; ')}`);
+    tempoInput.value = String(state.tempo);
+    if (noteRows.children.length !== state.notes.length) {
+      noteRows.replaceChildren(...state.notes.map((note, index) => {
+        const row = node('div', 'music-lab__note-row');
+        for (const [key, title, min, max, step] of [['midi', 'Pitch (MIDI)', 48, 84, 1], ['beats', 'Beats', .25, 4, 'any']]) {
+          const label = node('label', '', `Note ${index + 1}: ${title}`);
+          const input = node('input'); input.type = 'number'; input.min = String(min); input.max = String(max); input.step = String(step); input.dataset.index = String(index); input.dataset.key = key;
+          label.append(input); row.append(label);
+        }
+        const remove = node('button', '', 'Remove'); remove.type = 'button'; remove.dataset.remove = String(index); remove.setAttribute('aria-label', `Remove note ${index + 1}`); row.append(remove); return row;
+      }));
+    }
+    [...noteRows.children].forEach((row, index) => {
+      row.children[0].children[0].value = String(state.notes[index].midi);
+      row.children[1].children[0].value = String(state.notes[index].beats);
+      row.children[2].disabled = state.notes.length <= 2;
+    });
+    addNote.disabled = state.notes.length >= 16;
     slider.value = String(state.attack); output.value = `${fmt(state.attack)} s`;
     slider.setAttribute('aria-valuetext', `${fmt(state.attack)} seconds of attack`);
     currentPath.setAttribute('d', pathData(state.attack)); peak.setAttribute('cx', x(state.attack)); peak.setAttribute('cy', y(1));
-    graphDescription.textContent = `Time is in seconds and amplitude is normalized from 0 to 1. Your envelope rises linearly to 1 in ${fmt(state.attack)} seconds, holds until 0.92 seconds, then returns to zero at 1.1 seconds. The dashed original rises in 0.02 seconds.`;
-    observation.textContent = state.attack === ORIGINAL_ATTACK ? 'Your version matches the original entrance. Move the control, then listen for what you want to change.' : `Your entrance now takes ${fmt(state.attack)} s instead of 0.02 s. Hear both versions and decide which belongs in the song.`;
+    graphDescription.textContent = `A 1.1-second reference note isolates attack; rhythm can change playback note lengths. Time is in seconds and amplitude is normalized from 0 to 1. The reference rises linearly to 1 in ${fmt(state.attack)} seconds, holds until 0.92 seconds, then returns to zero at 1.1 seconds. The dashed original rises in 0.02 seconds.`;
+    observation.textContent = `${state.notes.length} notes at ${state.tempo} BPM; attack ${fmt(state.attack)} s. Hear both versions and decide which ending belongs in your song. To compare only attack, keep pitches, beats and tempo unchanged.`;
     slope.textContent = `Linear attack slope = 1 / attack. Here: 1 / ${fmt(state.attack)} = ${fmt(attackSlope(state.attack))} normalized amplitude per second.`;
     before.disabled = starting; after.disabled = starting; stop.disabled = !starting && !playing;
     before.setAttribute('aria-pressed', String(playing?.version === 'before'));
@@ -197,8 +272,23 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
 
   function changeAttack(attack) {
     if (disposed || validateAttack(attack) === state.attack) return;
+    const previous = state.attack;
     if (playing || starting) stopPlayback('edited');
-    state.attack = attack; render(); onChange({ attack: state.attack });
+    setState({...state, attack});
+    emit('attack.change', { previous_attack: previous, attack: state.attack });
+  }
+
+  function noteName(midi) { return ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][midi % 12] + (Math.floor(midi / 12) - 1); }
+  function getState() { return normalizeMusicState(state); }
+  function setState(nextState) {
+    if (disposed) throw new Error('This music lab is closed.');
+    const next = validateMusicState(nextState);
+    if (playing || starting) stopPlayback('edited');
+    state = next; editError.hidden = true; render(); onChange(getState());
+  }
+  function editState(next) {
+    try { setState(next); emit('change', {state: getState()}); }
+    catch (error) { editError.hidden = false; editError.textContent = error.message; }
   }
 
   function releaseVoices() {
@@ -218,17 +308,25 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
     const wasStarting = starting;
     generation++; starting = false; playing = null; releaseVoices();
     if (!disposed) {
-      audioStatus.textContent = reason === 'ended' ? 'Phrase finished. What do you want to keep or change?' : reason === 'edited' ? 'Playback stopped so the next listen matches your new attack.' : 'Stopped. Nothing is playing.';
+      audioStatus.textContent = reason === 'ended' ? 'Phrase finished. What do you want to keep or change?' : reason === 'edited' ? 'Playback stopped so the next listen matches your new phrase.' : 'Stopped. Nothing is playing.';
       render();
     }
     if (notify && (prior || wasStarting)) emit('stop', { reason, version: prior?.version ?? null, attack: prior?.attack ?? state.attack });
   }
 
-  async function play(version) {
+  async function play(version, noteIndex = null) {
     if (disposed) return;
     if (playing || starting) stopPlayback('replaced');
     const token = ++generation;
-    const attack = version === 'before' ? ORIGINAL_ATTACK : state.attack;
+    const playbackState = version === 'before' ? normalizeMusicState() : getState();
+    const {attack} = playbackState;
+    const schedule = musicSchedule(playbackState);
+    if (noteIndex !== null) {
+      const note = schedule.notes[noteIndex];
+      schedule.notes = [{...note, start: 0}];
+      schedule.duration = note.duration;
+      schedule.peakGain = .05;
+    }
     starting = true; audioError.hidden = true; audioError.textContent = ''; audioStatus.textContent = 'Opening audio...'; render();
     try {
       if (!context || context.state === 'closed') {
@@ -240,29 +338,31 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
       if (disposed || token !== generation) return;
       if (context.state !== 'running') throw new Error('The browser has not enabled audio. Try pressing Hear again.');
       const startTime = context.currentTime + .03;
-      master = context.createGain(); master.gain.value = .05; master.connect(context.destination);
-      PHRASE.forEach((note, index) => {
-        const start = startTime + index * NOTE_SPACING;
+      master = context.createGain(); master.gain.value = schedule.peakGain; master.connect(context.destination);
+      const lastEnd = Math.max(...schedule.notes.map(note => note.start + note.duration));
+      let endAssigned = false;
+      schedule.notes.forEach(note => {
+        const start = startTime + note.start;
         const oscillator = context.createOscillator(), gain = context.createGain();
         voices.push({ oscillator, gain });
         oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(note.frequency, start);
-        const points = envelopePoints(attack);
+        const points = note.envelope;
         gain.gain.setValueAtTime(points[0].amplitude, start);
         for (const point of points.slice(1)) gain.gain.linearRampToValueAtTime(point.amplitude, start + point.time);
         oscillator.connect(gain); gain.connect(master);
-        oscillator.start(start); oscillator.stop(start + NOTE_DURATION + .01);
-        if (index === PHRASE.length - 1) oscillator.onended = () => { if (!disposed && token === generation) stopPlayback('ended'); };
+        oscillator.start(start); oscillator.stop(start + note.duration + .01);
+        if (!endAssigned && note.start + note.duration === lastEnd) { endAssigned = true; oscillator.onended = () => { if (!disposed && token === generation) stopPlayback('ended'); }; }
       });
       starting = false; playing = { version, attack };
-      audioStatus.textContent = `Playing ${version === 'before' ? 'the original' : 'your version'} with ${fmt(attack)} s attack. Same four notes, different entrance.`;
+      audioStatus.textContent = noteIndex !== null ? `Playing ${noteName(playbackState.notes[noteIndex].midi)} at ${playbackState.tempo} BPM, ${fmt(attack)} s attack.` : `Playing ${version === 'before' ? 'the original sketch' : 'your saved phrase settings'}: ${schedule.notes.length} notes at ${playbackState.tempo} BPM, ${fmt(attack)} s attack.`;
       render();
       // Detect a suspended context without pretending the phrase finished audibly.
       timer = win.setTimeout(() => {
         if (token === generation && playing && context.state !== 'running') {
           stopPlayback('interrupted'); audioError.hidden = false; audioError.textContent = 'The browser interrupted audio. Press Hear to try again.';
         }
-      }, (PHRASE_DURATION + .3) * 1000);
-      emit('play', { version, attack, duration_seconds: PHRASE_DURATION, oscillator: 'sine', notes: PHRASE.map(note => ({ ...note })), peak_gain: .05 });
+      }, (schedule.duration + .3) * 1000);
+      emit('play', { version, attack, state: playbackState, duration_seconds: schedule.duration, oscillator: 'sine', notes: schedule.notes, peak_gain: schedule.peakGain });
     } catch (error) {
       if (disposed || token !== generation) return;
       stopPlayback('error', false); audioError.hidden = false;
@@ -271,13 +371,16 @@ export function mountMusicLab(container, { initialState = {}, onChange = () => {
     }
   }
 
-  render(); onChange({ attack: state.attack });
-  return function cleanup() {
+  render(); onChange(getState());
+  function cleanup() {
     if (disposed) return;
     disposed = true; stopPlayback('cleanup', false); listeners.forEach(remove => remove()); root.remove();
     if (context && context.state !== 'closed') {
       try { Promise.resolve(context.close()).catch(() => {}); } catch { /* Audio resources may already have been released by the browser. */ }
     }
     context = null;
-  };
+  }
+  cleanup.setState = setState;
+  cleanup.getState = getState;
+  return cleanup;
 }

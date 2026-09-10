@@ -1,0 +1,150 @@
+import { validateExperimentProposal, proposedLabState } from './experiment-proposal.js';
+
+const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Requests keep their immutable base while the learner continues using the lab.
+export function mountLearningExperiment(container, { api, sessionId, actorKind, pathway,
+  getState, setState, save, track, getQuestion }) {
+  let disposed = false, busy = false, currentJob = null, timer = null, revision = 0;
+  let candidate = null, before = null, applied = null, baseState = null;
+  let candidateJobId = null, appliedJobId = null;
+  const root = document.createElement('section');
+  root.className = 'learning-experiment';
+  root.innerHTML = `<h3>Try your next idea</h3>
+    <p>Astra can propose a change to this experiment. Keep exploring while it works.</p>
+    <label><input type="checkbox" data-consent> Send my question, this saved experiment and its source excerpts to Astra.</label>
+    <button type="button" class="primary" data-request>Ask Astra for a change</button>
+    <button type="button" class="text-button" data-cancel hidden>Cancel request</button>
+    <p role="status" data-progress></p>
+    <section data-preview hidden><h4>Proposed change</h4><p data-reason></p>
+      <dl data-difference></dl><p>Your experiment has not changed. Apply only if you want to try this.</p>
+      <button type="button" class="primary" data-apply>Try this change</button>
+      <button type="button" class="text-button" data-dismiss>Leave it aside</button></section>
+    <button type="button" class="text-button" data-undo hidden>Undo this change</button>
+    <a data-trace hidden target="_blank" rel="noopener">Inspect Astra's response and trace</a>`;
+  container.append(root);
+  const q = selector => root.querySelector(selector);
+  const status = text => { if (!disposed) q('[data-progress]').textContent = text; };
+  const emit = (type, payload = {}) => track('learning.experiment.' + type,
+    { pathway, actor_kind: actorKind, job_id: currentJob?.id || null, ...payload });
+  function available() {
+    if (disposed) return;
+    q('[data-request]').disabled = busy || !q('[data-consent]').checked;
+    q('[data-cancel]').hidden = !busy || !currentJob;
+  }
+  q('[data-consent]').onchange = available;
+  function difference(oldState, nextState) {
+    const list = q('[data-difference]');
+    list.replaceChildren();
+    for (const key of Object.keys(nextState)) {
+      if (same(oldState[key], nextState[key])) continue;
+      const term = document.createElement('dt'), detail = document.createElement('dd');
+      term.textContent = key.replace(/_/g, ' ');
+      detail.textContent = `${JSON.stringify(oldState[key] ?? null)} → ${JSON.stringify(nextState[key])}`;
+      list.append(term, detail);
+    }
+  }
+  function receive(job, artifact, capturedState) {
+    let result = job.result;
+    if (typeof result === 'string') result = JSON.parse(result);
+    if (!result?.experiment) throw Error('This response contains a story, not a playable change. Nothing was applied.');
+    const groundedArtifact = { ...artifact, experiment_sources: job.input?.experiment_sources || [] };
+    const proposal = validateExperimentProposal(result.experiment, groundedArtifact);
+    q('[data-trace]').href = '/review.html?sample=' + encodeURIComponent(job.id);
+    q('[data-trace]').hidden = false;
+    if (proposal.status === 'unsupported') {
+      status('Astra cannot make this change with the current controls: ' + proposal.reason);
+      emit('unsupported', { base_artifact_id: artifact.id, reason: proposal.reason });
+      return;
+    }
+    candidate = proposedLabState(proposal, groundedArtifact, capturedState);
+    candidateJobId = job.id;
+    baseState = structuredClone(capturedState);
+    q('[data-reason]').textContent = proposal.reason;
+    difference(baseState, candidate);
+    q('[data-preview]').hidden = false;
+    status('A change is ready to review. Your current experiment is untouched.');
+    emit('preview', { base_artifact_id: artifact.id, proposal, before: baseState, candidate });
+  }
+  async function inspect(id, artifact, capturedState, token) {
+    try {
+      const job = await api('/api/jobs/' + encodeURIComponent(id));
+      if (disposed || token !== revision) return;
+      currentJob = job;
+      if (ACTIVE.has(job.status)) {
+        status('Astra is considering your question. You can still play and edit above.');
+        timer = setTimeout(() => inspect(id, artifact, capturedState, token), 1800);
+        return;
+      }
+      busy = false; available();
+      if (!['completed', 'succeeded', 'success'].includes(job.status)) {
+        status('Request ' + job.status + '. Your experiment is unchanged.');
+        return;
+      }
+      receive(job, artifact, capturedState);
+    } catch (error) {
+      if (!disposed && token === revision) {
+        busy = false; available(); status(error.message + ' No change was applied.');
+      }
+    }
+  }
+  q('[data-request]').onclick = async () => {
+    if (busy || !q('[data-consent]').checked) return;
+    const question = getQuestion().trim();
+    if (!question) return status('Write the question you want to try above.');
+    busy = true; currentJob = null; candidate = null;
+    q('[data-preview]').hidden = true;
+    const token = ++revision;
+    available(); status('Keeping the starting version for this request...');
+    try {
+      const artifact = await save();
+      if (disposed || token !== revision) return;
+      const capturedState = structuredClone(artifact.state.lab);
+      const request = { session_id: sessionId, actor_kind: actorKind, world: 'questions',
+        question, premise: 'Propose a bounded, playable change for this saved experiment. Preserve my words and sources. Explain unsupported requests honestly.',
+        learning_artifact_id: artifact.id, reference_ids: [], reflection_ids: [] };
+      await emit('confirm', { request, confirmation: 'explicit_selection' });
+      if (disposed || token !== revision) return;
+      const job = await api('/api/project', request);
+      if (disposed || token !== revision) return;
+      currentJob = job; available();
+      inspect(job.id, artifact, capturedState, token);
+    } catch (error) {
+      if (!disposed && token === revision) { busy = false; available(); status(error.message); }
+    }
+  };
+  q('[data-cancel]').onclick = async () => {
+    try { await api('/api/jobs/' + encodeURIComponent(currentJob.id) + '/cancel', {}); status('Cancellation requested. Your experiment stays available.'); }
+    catch (error) { status(error.message); }
+  };
+  q('[data-apply]').onclick = () => {
+    if (!candidate) return;
+    const current = getState();
+    if (!same(current, baseState)) return status('You changed the experiment since this request. Keep those edits. Ask again from the new version.');
+    const previous = structuredClone(current);
+    try { setState(structuredClone(candidate)); }
+    catch (error) { return status('Could not apply this change: ' + error.message); }
+    before = previous;
+    appliedJobId = candidateJobId;
+    applied = structuredClone(getState());
+    q('[data-preview]').hidden = true; q('[data-undo]').hidden = false;
+    status('Change applied. Play with it, undo it, or keep a version in your notebook.');
+    emit('apply', { job_id: appliedJobId, before, after: applied });
+  };
+  q('[data-undo]').onclick = () => {
+    if (!before) return;
+    if (!same(getState(), applied)) return status('You edited this version after applying it. Undo will not discard those edits.');
+    try { setState(structuredClone(before)); }
+    catch (error) { return status('Could not restore this change: ' + error.message); }
+    emit('undo', { job_id: appliedJobId, before: applied, after: getState() });
+    before = null; applied = null; q('[data-undo]').hidden = true;
+    status('Your previous experiment is restored. Saved versions remain unchanged.');
+  };
+  q('[data-dismiss]').onclick = () => {
+    candidate = null; q('[data-preview]').hidden = true;
+    emit('dismiss'); status('Left aside. Your experiment is unchanged.');
+  };
+  available();
+  return () => { disposed = true; revision++; clearTimeout(timer); root.remove(); };
+}

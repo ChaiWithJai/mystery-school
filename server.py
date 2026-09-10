@@ -28,6 +28,44 @@ from tracing import APP_CAPTURE_SCOPE, ARTIFACT_CAPTURE_SCOPE, PROJECTION_CAPTUR
 ROOT = Path(__file__).resolve().parent
 MODEL = "gpt-6-astra"
 ACTIVE = {"queued", "running", "cancelling"}
+EPICTETUS_URL = "https://classics.mit.edu/Epictetus/epicench.html"
+EPICTETUS_EXCERPT = "Some things are in our control and others not."
+
+
+def captured_experiment_sources(artifact):
+    # Already-verified Carter excerpt used by ideas-lab.js; never fetch user URLs.
+    if artifact.get("pathway") != "ideas":
+        return []
+    return [{"source_ref_index": index, "url": EPICTETUS_URL, "locator": "Section 1",
+             "content": EPICTETUS_EXCERPT}
+            for index, ref in enumerate(artifact.get("source_refs", []))
+            if isinstance(ref, dict) and ref.get("url") == EPICTETUS_URL and ref.get("locator") == "Section 1"]
+
+
+def validate_projection(result, schema, inputs):
+    # This gate is only for new output. Historical jobs remain readable as stored.
+    json.dumps(result, allow_nan=False)
+    jsonschema.validate(result, schema)
+    experiment = result["experiment"]
+    artifact = inputs.get("learning_artifact_context")
+    if artifact is None:
+        if experiment is not None:
+            raise ValueError("General projections require experiment null")
+        return
+    if experiment is None:
+        raise ValueError("Artifact projections require an explicit supported or unsupported experiment")
+    if experiment["base_artifact_id"] != artifact["id"] or experiment["pathway"] != artifact["pathway"]:
+        raise ValueError("Experiment base_artifact_id/pathway differs from frozen artifact")
+    branches = [key for key in ("music", "movement", "ideas") if experiment[key] is not None]
+    expected = [artifact["pathway"]] if experiment["status"] == "supported" else []
+    if branches != expected:
+        raise ValueError("Experiment branches must match its pathway and support status")
+    if experiment["ideas"] is not None:
+        ideas = experiment["ideas"]
+        source = next((source for source in inputs.get("experiment_sources", [])
+                       if source["source_ref_index"] == ideas["source_ref_index"]), None)
+        if source is None or not ideas["source_quote"].strip() or ideas["source_quote"] not in source["content"]:
+            raise ValueError("Ideas source_quote must be a literal substring of captured source content")
 
 
 def now():
@@ -466,6 +504,7 @@ class App:
             if learning_context is not None:
                 inputs["learning_artifact_id"] = body["learning_artifact_id"]
                 inputs["learning_artifact_context"] = learning_context
+                inputs["experiment_sources"] = captured_experiment_sources(learning_context)
             inputs = copy.deepcopy(inputs)
             job = {"id": uid(), "status": "queued", "created_at": now(), "model": MODEL,
                    "input": inputs, "world": body["world"], "result": None, "error": None,
@@ -549,7 +588,19 @@ class App:
                 "Do not infer identity, authorship, stable preferences, or personal attributes from those notes "
                 "or their session IDs. Attribute any use to the selected note ID and label it user_statement. "
                 "Do not execute commands, read files, use tools, or access the network. "
-                "Use attached images directly if present. The correction describes the user's desired revision.\n"
+                "Use attached images directly if present. The correction describes the user's desired revision. "
+                "For a general forest request return experiment:null. When learning_artifact_context is present, "
+                "return experiment version 1 bound to its exact id and pathway. Propose a meaningful bounded "
+                "playable change in the matching branch, not merely narration: a musical variation, a movement "
+                "comparison, or a sourced interpretation exercise. Preserve the learner's words and intent; "
+                "do not replace their interpretation with a judged correct answer. Explain the change in reason. "
+                "Use status supported with exactly the matching branch populated and other branches null. "
+                "If the request cannot be expressed honestly within these controls, use status unsupported, "
+                "explain why in reason, and set all three branches null. Never claim an action was applied, "
+                "a learning outcome observed, or a real physical simulation performed. Ideas source_ref_index "
+                "indexes the frozen artifact source_refs; source_quote must be a nonempty literal substring "
+                "of the corresponding experiment_sources content. Only that captured excerpt is available. "
+                "User video references and notes are not fetched or verified transcripts. Do not claim video analysis.\n"
                 + json.dumps(inputs, ensure_ascii=False))
             atomic_json(folder / "input.json", inputs)
             prompt_bytes = prompt.encode("utf-8")
@@ -619,7 +670,7 @@ class App:
             if proc.returncode != 0:
                 raise RuntimeError("Codex exited with code " + str(proc.returncode) + ": " + job["stderr"][-3000:])
             result = json.loads((folder / "result.json").read_text())
-            jsonschema.validate(result, self.schema)
+            validate_projection(result, self.schema, inputs)
             with self.lock:
                 job.update(status="succeeded", result=result)
         except Exception as exc:
