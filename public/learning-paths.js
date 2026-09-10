@@ -189,7 +189,7 @@ export function createLearningPaths({openDrawer,body,onCleanup,api,sessionId,tra
       });
       if(pathway==='music'){
         musicScene=mountMusicScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}));
-        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');if(token!==opening)return;tourCleanup?.();events.track('learning.tour.open',{actor_kind:actorKind,from:'music'});tourCleanup=showLearningWorldTour({onContinue:()=>{if(token!==opening)return;events.track('learning.tour.continue',{actor_kind:actorKind,to:'movement'});open('movement');},onCancel:()=>events.track('learning.tour.cancel',{actor_kind:actorKind})});});
+        pianoScene=mountPianoScene(q('[data-lab]'),dispose,(type,payload)=>events.track('learning.music.action',{pathway,actor_kind:actorKind,type,payload}),async()=>{await save(draft.parentId?'revision':'attempt');if(token!==opening)return;tourCleanup?.();events.track('learning.tour.open',{pathway,actor_kind:actorKind,from:'music'});tourCleanup=showLearningWorldTour({onContinue:()=>{if(token!==opening)return;events.track('learning.tour.continue',{pathway,actor_kind:actorKind,to:'movement'});open('movement');},onCancel:()=>events.track('learning.tour.cancel',{pathway,actor_kind:actorKind})});});
       }
       ready=true;saveButtons.forEach(button=>{button.disabled=false;});
     }catch(e){if(token===opening)q('[data-lab]').textContent='This experiment could not open: '+e.message;}
