@@ -59,7 +59,8 @@ export function mountPianoRoll(container, { keyboard = container.querySelector('
   function layout() {
     const rect = keyboard.getBoundingClientRect();
     stageWidth = rect.width;
-    const top = Math.max(8, rect.top - 300);
+    const titleBottom = container.querySelector('.piano-scene__title')?.getBoundingClientRect?.().bottom || 0;
+    const top = Math.max(8, rect.top - 300, titleBottom ? titleBottom + 24 : 0);
     stageHeight = Math.max(1, rect.top - top - 100);
     root.style.left = `${rect.left}px`; root.style.top = `${top}px`; root.style.width = `${rect.width}px`;
     svg.style.height = `${stageHeight}px`; svg.setAttribute('viewBox', `0 0 ${Math.max(1, stageWidth)} ${stageHeight}`);

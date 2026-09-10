@@ -30,3 +30,12 @@ is made. Browser events describe scheduled playback, not a microphone recording
 of the speaker output. The exercise still covers the published first two
 strikes, not the complete Virtual Piano arrangement. The unchanged backend
 reports build `6485c6ccd23d33bb`; frontend changes were served live.
+
+## Desktop spacing correction
+
+At 1280 by 720, the fixed note-lane offset overlapped the song title.
+The lane now leaves at least 24 pixels below the measured title. Browser
+checks at 1280 by 720, 1440 by 900, and 1920 by 1080 found no title/control
+overlap. The E6 center hit the piano key at each size, and the continuation
+button remained inside the viewport. A regression test covers the title
+clearance and the idle/playing visibility of Stop.
