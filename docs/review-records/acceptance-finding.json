@@ -1,0 +1,41 @@
+{
+  "source_system": "mystery-school-main-review",
+  "source_event_id": "acceptance-attribution-ed29f6c",
+  "observed_at": "2026-09-10T16:54:13Z",
+  "actor_kind": "agent_review",
+  "actor_id": "main-builder-declared",
+  "actor_role": "integration_reviewer",
+  "reviewed_sha": "ed29f6c64b6f50b6dd6d57863496c0ba70ba71a0",
+  "session_id": "issue-1-acceptance-audit",
+  "task_id": "acceptance-attribution",
+  "capture_method": "imported",
+  "input": {
+    "question": "Does accepting an agent suggestion preserve its author and separately identify the accepting reviewer?",
+    "requirement": "Issue 1 acceptance retains both identities and timestamps."
+  },
+  "output": {
+    "finding": "decideSuggestions preserves the suggestion author in the annotation but only queues suggestion ID and status. It does not capture the acceptor identity or a separate decision timestamp.",
+    "scope": "Source inspection, not a human action or participant outcome. A specialist first reported this gap; the main builder inspected the source before recording it."
+  },
+  "events": [
+    {
+      "type": "source_inspection",
+      "command": "git show ed29f6c:public/review.js",
+      "function": "decideSuggestions",
+      "observed": "enqueue({ type: 'suggestion', id: suggestion.id, status }) omits decision attribution."
+    }
+  ],
+  "decision": "Accepted for implementation. Add an explicitly declared decision actor and timestamp without changing the suggestion author. Verification is pending in this source record.",
+  "checks": [
+    {"name": "separate_acceptance_identity", "status": "failed", "method": "source_inspection"}
+  ],
+  "source_refs": [
+    {"url": "https://github.com/ChaiWithJai/mystery-school/blob/ed29f6c64b6f50b6dd6d57863496c0ba70ba71a0/public/review.js#L568", "label": "Inspected decision function"},
+    {"url": "https://github.com/ChaiWithJai/mystery-school/issues/1", "label": "Acceptance requirement"}
+  ],
+  "model": null,
+  "usage": null,
+  "cost_usd": null,
+  "invocation_id": null,
+  "timing": {"source_time_kind": "recorded_source_audit", "original_specialist_invocation": "unavailable"}
+}

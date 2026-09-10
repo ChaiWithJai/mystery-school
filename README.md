@@ -110,7 +110,7 @@ not prove authentication or model access.
   each world and last only until the page reloads.
 - Learning outcomes and transfer are not yet evaluated with participants.
 - The verified host reports Apple M5 Pro. M4 compatibility remains untested.
-- The latest verified suite checkpoint is 49 JavaScript tests and 14 backend
+- The latest verified suite checkpoint is 58 JavaScript tests and 17 backend
   tests passing. Separate saved artifact-to-Astra checks pass for all three paths.
   Their jobs, traces, sources, and reported usage are listed in the verification doc.
 - The [learner pilot](docs/learner-pilot.md) is prepared, not conducted.
@@ -140,6 +140,12 @@ learner understanding or model accuracy.
 return the same record for an identical envelope; changed content returns 409.
 `GET /api/sidecar-records` and `GET /api/sidecar-records/ID` expose the records.
 They also appear in Trajectory Studio with imported provenance.
+
+Accepting or dismissing a suggestion records a separately declared decision
+actor, producer and timestamp. The original author stays unchanged. The UI
+labels declarations as unauthenticated. Historical decisions without attribution
+remain unknown. General model requests also retain declared actor provenance;
+missing historical fields are not backfilled as human actions.
 
 `node scripts/import_sidecar_probes.mjs` imports the pinned, published Git probe
 documents and checks identical retries. Unlike the verification scripts above,

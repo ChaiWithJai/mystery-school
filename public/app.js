@@ -70,6 +70,7 @@ async function startProjection(){
   if(prediction)premise+=`\nLearner prediction (not an established fact): ${prediction}`;
   if(!question||!premise)return toast('Give your projection a question and a premise.');
   const request={session_id:sessionId,question,premise,world:WORLDS[selected].id,
+    actor_kind:new URLSearchParams(location.search).get('actor')==='agent_review'?'agent_review':'user_action',
     ...(projectionArtifact?{learning_artifact_id:projectionArtifact.id}:{}),
     reference_ids:!projectionArtifact&&$('#use-references')?.checked?state.references.map(r=>r.id):[],
     reflection_ids:$('#use-notebook')?.checked?state.reflections.slice(-20).map(r=>r.id):[],

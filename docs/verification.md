@@ -9,8 +9,8 @@ September 10, 2026. Tests ran on Apple M5 Pro. M4 remains untested.
 | Draft preservation | Neo: edit all three Imagine fields, close, visit References, reopen; compare another world | Memory lasts until reload. |
 | Explicit selection | Neo: projection disabled before confirmation and enabled after it | Selection is not evidence of understanding. |
 | Learner request | Neo: the opening request appears unchanged in Imagine | Speech and sketch interpretation require a facilitator. |
-| Backend | Latest reported checkpoint: 14 unittest tests pass, superseding the earlier eight-test checkpoint | Mock subprocesses test failure and persistence paths, not live model quality. |
-| JavaScript | Final integration checkpoint: 43 tests pass | Deterministic tests are not participant learning evidence. |
+| Backend | Latest checkpoint: 17 unittest tests pass | Mock subprocesses test failure and persistence paths, not live model quality. |
+| JavaScript | Latest checkpoint: 58 tests pass | Deterministic tests are not participant learning evidence. |
 | Actual model correction | `verify_demo.mjs` passes for the saved parent and child | QA annotation, not participant feedback. |
 | Exact request capture | `verify_capture.mjs` passes for the bike walkthrough | Capture begins with new jobs; older prompts cannot be reconstructed as fact. |
 | Saved music to Astra | `verify_learning_projection.mjs 14e0de07-b8ea-4083-a395-e89dd2741841` independently passed using GET requests | Checks record integrity, not model understanding or learner outcomes. |
@@ -109,7 +109,7 @@ original text offsets retained for annotations.
 
 - Deterministic music, movement, and interpretation interactions now support
   manipulation and saved revisions. Whether they help learners remains untested.
-- Run the kite and basketball probes from Buzz as synthetic cases and record failures.
+- Kite and basketball probes ran as synthetic cases; see `open-ended-probes.md`.
 - Test a fresh problem without model guidance. Do not count clicks as learning.
 - Verify the full experience on the user's M4.
 - Verify another person's ability to inspect and continue a saved version.

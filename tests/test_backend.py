@@ -359,6 +359,52 @@ class BackendTests(unittest.TestCase):
                 "checks": [{"name": "synthetic-only", "outcome": "proposed"}],
                 "source_refs": [{"url": "https://example.org/synthetic", "sample_id": "synthetic-source"}]}
 
+    def test_suggestion_decision_preserves_separate_authorship(self):
+        _, event = self.request("/api/events", {"session_id": "synthetic-decision", "type": "synthetic.review", "payload": {}})
+        original = {"id": "synthetic-agent-suggestion", "sample_id": event["id"], "quote": "", "note": "Synthetic proposal",
+                    "status": "pending", "actor_kind": "agent_review", "producer": "synthetic-agent",
+                    "created_at": "2026-09-01T10:00:00Z"}
+        legacy = {"id": "synthetic-legacy-suggestion", "sample_id": event["id"], "quote": "", "note": "Unknown author",
+                  "status": "pending"}
+        before = self.request("/api/suggestions")[1]
+        try:
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": [original, legacy]}), (200, [original, legacy]))
+            decision = {"actor_kind": "human", "producer": "synthetic-declared-human", "decided_at": "2026-09-02T12:30:00+02:00"}
+            accepted = dict(original, status="accepted", decision=decision)
+            # A decision-only older client may omit author fields, but cannot erase them.
+            request = {k: v for k, v in accepted.items() if k not in ("actor_kind", "producer", "created_at")}
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": [request, legacy]}), (200, [accepted, legacy]))
+            self.assertEqual(self.request("/api/suggestions")[1], [accepted, legacy])
+            self.assertEqual(App(self.temp.name).review["suggestions"], [accepted, legacy])
+            self.assertEqual(json.loads((self.app.review_dir / "suggestions.json").read_text()), [accepted, legacy])
+            self.assertNotEqual(accepted["actor_kind"], accepted["decision"]["actor_kind"])
+            self.assertNotEqual(accepted["created_at"], accepted["decision"]["decided_at"])
+            # An old batch writer omitting decision cannot silently remove attribution.
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": [dict(original, status="accepted"), legacy]})[1], [accepted, legacy])
+            for change in ({"actor_kind": "human"}, {"producer": "different-author"}, {"created_at": decision["decided_at"]}):
+                self.assertEqual(self.request("/api/suggestions", {"suggestions": [dict(accepted, **change), legacy]})[0], 409)
+                self.assertEqual(self.request("/api/suggestions")[1], [accepted, legacy])
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": [accepted, dict(legacy, actor_kind="human")]})[0], 409)
+            unknown_accepted = dict(legacy, status="accepted")
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": [accepted, unknown_accepted]})[1], [accepted, unknown_accepted])
+            self.assertNotIn("decision", self.request("/api/suggestions")[1][1])
+        finally:
+            self.request("/api/suggestions", {"suggestions": before})
+
+    def test_suggestion_invalid_decision_rejects_whole_batch(self):
+        _, event = self.request("/api/events", {"session_id": "synthetic-decision", "type": "synthetic.review", "payload": {}})
+        before = self.request("/api/suggestions")[1]
+        proposal = {"id": "synthetic-validation-suggestion", "sample_id": event["id"], "quote": "", "note": "Synthetic",
+                    "status": "accepted"}
+        valid = {"actor_kind": "agent_review", "producer": "synthetic-QA", "decided_at": "2026-09-02T12:00:00Z"}
+        for invalid in (None, {}, {**valid, "actor_kind": "robot"}, {**valid, "producer": " "},
+                        {**valid, "producer": "x" * 201}, {**valid, "decided_at": "2026-09-02T12:00:00"},
+                        {**valid, "decided_at": 123}, {**valid, "extra": "unknown"}):
+            self.assertEqual(self.request("/api/suggestions", {"suggestions": before + [dict(proposal, decision=invalid)]})[0], 400)
+            self.assertEqual(self.request("/api/suggestions")[1], before)
+        self.assertEqual(self.request("/api/suggestions", {"suggestions": [proposal, proposal]})[0], 400)
+        self.assertEqual(self.request("/api/suggestions")[1], before)
+
     def test_sidecar_roundtrip_idempotency_lineage_and_usage(self):
         payload = self.sidecar_payload("roundtrip")
         status, record = self.request("/api/sidecar-records", payload)
@@ -463,6 +509,46 @@ class BackendTests(unittest.TestCase):
         sample = next(s for s in self.request("/api/samples")[1] if s["id"] == job["id"])
         self.assertEqual(sample["metadata"]["learning_artifact_id"], artifact["id"])
         self.assertEqual(App(self.temp.name).job(job["id"])["input"]["learning_artifact_context"], artifact)
+
+    def test_projection_actor_capture_validation_and_historical_unknown(self):
+        payload = {"session_id": "synthetic-actor", "question": "Synthetic actor capture", "premise": "Not learner evidence",
+                   "world": "futures"}
+        self.app.command_builder = lambda folder, images: [sys.executable, "-c", "import sys; sys.stdin.read(); sys.exit(2)"]
+        count = len(self.app.state["jobs"])
+        for actor in ("human", "robot", None, 42, []):
+            self.assertEqual(self.request("/api/project", dict(payload, actor_kind=actor))[0], 400)
+        self.assertEqual(len(self.app.state["jobs"]), count)
+        records = []
+        for actor in ("agent_review", "user_action", "unspecified"):
+            body = dict(payload, actor_kind=actor)
+            if records:
+                body.update(parent_job_id=records[0]["id"], correction="Explicit current actor, not parent identity")
+            status, queued = self.request("/api/project", body)
+            self.assertEqual(status, 202)
+            record = self.wait_job(queued["id"])
+            records.append(record)
+            self.assertEqual(record["input"]["actor_kind"], actor)
+            prompt = json.loads(record["invocation"]["stdin"].split("\n", 1)[1])
+            self.assertEqual(prompt["actor_kind"], actor)
+            trace = self.app.tracing.client.get_trace(record["trace_id"])
+            self.assertEqual(trace.data.spans[0].inputs["actor_kind"], actor)
+            sample = next(s for s in self.request("/api/samples")[1] if s["id"] == record["id"])
+            self.assertEqual(sample["actor_kind"], actor)
+            self.assertEqual(sample["metadata"]["actor_kind"], actor)
+            self.assertIn("not verified human", sample["metadata"]["actor_scope"])
+        _, queued = self.request("/api/project", payload)
+        omitted = self.wait_job(queued["id"])
+        self.assertEqual(omitted["input"]["actor_kind"], "unspecified")
+        # Simulate a genuinely historical stored job without adding inferred provenance.
+        with self.app.lock:
+            historical = self.app.job(omitted["id"])
+            del historical["input"]["actor_kind"]
+            self.app.save()
+            snapshot = json.loads(json.dumps(historical))
+        sample = next(s for s in self.request("/api/samples")[1] if s["id"] == omitted["id"])
+        self.assertEqual(sample["metadata"]["actor_kind"], "unspecified")
+        self.assertEqual(self.app.job(omitted["id"]), snapshot)
+        self.assertEqual(App(self.temp.name).job(omitted["id"]), snapshot)
 
 
 if __name__ == "__main__":

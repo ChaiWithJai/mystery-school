@@ -1,3 +1,14 @@
+function suggestionDecision(suggestion, status, declaration, decidedAt) {
+  if (suggestion.status !== 'pending') throw new Error('This suggestion has already been decided.');
+  if (!['accepted', 'dismissed'].includes(status)) throw new Error('Choose accept or dismiss.');
+  if (!['human', 'agent_review', 'unspecified'].includes(declaration.actor_kind)) throw new Error('Declare the decision actor.');
+  const producer = typeof declaration.producer === 'string' ? declaration.producer.trim() : '';
+  if (!producer || producer.length > 200) throw new Error('Enter a producer of 1 to 200 characters.');
+  if (typeof decidedAt !== 'string' || !Number.isFinite(Date.parse(decidedAt)) || new Date(decidedAt).toISOString() !== decidedAt) throw new Error('Decision timestamp must be ISO UTC.');
+  if (status === 'accepted' && !suggestion.note?.trim()) throw new Error('A suggestion needs note text before acceptance.');
+  return {...suggestion, status, decision: {actor_kind: declaration.actor_kind, producer, decided_at: decidedAt}};
+}
+
 (() => {
   'use strict';
 
@@ -92,7 +103,7 @@
     for (const operation of state.queue) {
       if (operation.type === 'annotation') notes.set(operation.annotation.id, operation.annotation);
       if (operation.type === 'delete') notes.delete(operation.id);
-      if (operation.type === 'suggestion' && proposals.has(operation.id)) proposals.set(operation.id, { ...proposals.get(operation.id), status: operation.status });
+      if (operation.type === 'suggestion' && proposals.has(operation.id)) proposals.set(operation.id, { ...proposals.get(operation.id), status: operation.status, ...(operation.decision ? {decision: operation.decision} : {}) });
     }
     return { annotations: [...notes.values()], suggestions: [...proposals.values()] };
   }
@@ -109,7 +120,7 @@
         if (operation.type === 'suggestion') {
           const latest = asList(await api('/api/suggestions'), 'suggestions');
           if (!latest.some(item => item.id === operation.id)) throw new Error('Suggestion no longer available');
-          await api('/api/suggestions', { suggestions: latest.map(item => item.id === operation.id ? { ...item, status: operation.status } : item) });
+          await api('/api/suggestions', { suggestions: latest.map(item => item.id === operation.id ? { ...item, status: operation.status, ...(operation.decision ? {decision: operation.decision} : {}) } : item) });
         }
         state.queue = state.queue.filter(item => item.revision !== operation.revision);
         mutationVersion++;
@@ -203,6 +214,14 @@
     const label = { human: 'Human (declared)', agent_review: 'Agent review', unspecified: 'Unspecified' }[actorKind(note)];
     group.append(el('span', 'note-tag', `${label}${note.actor_kind == null ? ' / historical provenance absent' : ''}`),
       el('span', 'note-tag', `Producer: ${note.producer || 'unspecified'}`));
+    if (note.created_at) group.append(el('span', 'note-tag', `Authored: ${note.created_at}`));
+    const suggestion = note.id?.startsWith('accepted-') ? state.suggestions.find(item => `accepted-${item.id}` === note.id) : note;
+    if (suggestion && ['accepted', 'dismissed'].includes(suggestion.status)) {
+      const decision = suggestion.decision;
+      group.append(el('span', 'note-tag decision-provenance', decision
+        ? `${suggestion.status} / ${decision.actor_kind} (declared, not authenticated) / ${decision.producer} / ${decision.decided_at}`
+        : `${suggestion.status} / decision actor and time unknown (legacy record)`));
+    }
     return group;
   }
   function pending() { return state.suggestions.filter(item => item.status === 'pending'); }
@@ -566,22 +585,37 @@
   }
 
   function decideSuggestions(ids, status) {
+    const dialog = $('#decision-editor');
+    dialog.dataset.ids = JSON.stringify(ids);
+    dialog.dataset.status = status;
+    $('#decision-title').textContent = `${status === 'accepted' ? 'Accept' : 'Dismiss'} ${ids.length} suggestion${ids.length === 1 ? '' : 's'}`;
+    $('#decision-form').reset();
+    $('#decision-error').textContent = '';
+    dialog.showModal();
+    $('#decision-actor').focus();
+  }
+
+  function applySuggestionDecisions(ids, status, declaration) {
     const requested = state.suggestions.filter(item => ids.includes(item.id) && item.status === 'pending');
     const targets = requested.filter(item => status !== 'accepted' || item.note?.trim());
     if (targets.length !== requested.length) notice('empty-suggestion', 'A suggestion without note text cannot be accepted. It remains pending and may be dismissed.', true);
-    for (const suggestion of targets) {
+    const decidedAt = new Date().toISOString();
+    const decisions = targets.map(suggestion => suggestionDecision(suggestion, status, declaration, decidedAt));
+    for (const suggestion of decisions) {
       if (status === 'accepted') {
         const sample = state.samples.find(item => item.id === suggestion.sample_id);
         const anchor = resolveAnchor(sample, suggestion);
         const annotation = { id: `accepted-${suggestion.id}`, sample_id: suggestion.sample_id, quote: suggestion.quote || '', note: suggestion.note || '',
-          actor_kind: actorKind(suggestion), producer: suggestion.producer || 'unspecified', created_at: new Date().toISOString() };
+          actor_kind: actorKind(suggestion), producer: suggestion.producer || 'unspecified', ...(suggestion.created_at ? {created_at: suggestion.created_at} : {}) };
         if (anchor) Object.assign(annotation, { message_id: messages(sample)[anchor.index].id, start: anchor.start, end: anchor.end });
         else if (suggestion.message_id) annotation.message_id = suggestion.message_id;
         if (!state.annotations.some(item => item.id === annotation.id)) { state.annotations.push(annotation); enqueue({ type: 'annotation', annotation }); }
       }
-      suggestion.status = status; enqueue({ type: 'suggestion', id: suggestion.id, status }); state.selected.delete(suggestion.id);
+      state.suggestions = state.suggestions.map(item => item.id === suggestion.id ? suggestion : item);
+      enqueue({ type: 'suggestion', id: suggestion.id, status, decision: suggestion.decision }); state.selected.delete(suggestion.id);
     }
-    render(); track('suggestions_decided', { suggestion_ids: targets.map(item => item.id), status });
+    render();
+    if (decisions.length) track('suggestions_decided', { suggestion_ids: decisions.map(item => item.id), status, decision: decisions[0].decision });
   }
 
   const palette = ['#769379', '#b1996a', '#7d969d', '#a18c7d', '#8d93a5', '#a1a979', '#849c91', '#ac96a0'];
@@ -664,16 +698,19 @@
     $('#suggestion-controls').hidden = !proposals.length;
     $('#suggestion-list').replaceChildren();
     if (!proposals.length) $('#suggestion-list').append(el('p', 'compact-empty', state.errors.suggestions ? 'Suggestions could not be loaded.' : 'No suggestions waiting for review. Suggestions will appear here when the agent proposes them.'));
-    for (const suggestion of proposals) {
+    for (const suggestion of state.suggestions) {
       const row = el('div', 'suggestion-row');
       const check = el('input'); check.type = 'checkbox'; check.checked = state.selected.has(suggestion.id); check.setAttribute('aria-label', `Select suggestion: ${suggestion.note || suggestion.id}`);
       check.addEventListener('change', () => { if (check.checked) state.selected.add(suggestion.id); else state.selected.delete(suggestion.id); updateSuggestionControls(); });
+      check.hidden = suggestion.status !== 'pending'; check.disabled = suggestion.status !== 'pending';
       const content = button('', () => openSample(suggestion.sample_id, suggestion.id), 'suggestion-jump');
       const pattern = state.patterns.find(item => item.id === suggestion.pattern_id);
       content.append(el('strong', '', pattern?.label || 'Ungrouped suggestion'), el('small', '', sampleTitle(state.samples.find(sample => sample.id === suggestion.sample_id))));
       if (suggestion.quote) content.append(el('blockquote', '', suggestion.quote)); content.append(el('p', '', suggestion.note || 'No note text provided.'));
       const actions = el('div', 'note-actions'); actions.append(button('Accept', () => decideSuggestions([suggestion.id], 'accepted')), button('Dismiss', () => decideSuggestions([suggestion.id], 'dismissed')));
-      row.append(check, content, actions); $('#suggestion-list').append(row);
+      actions.hidden = suggestion.status !== 'pending';
+      const description = el('div'); description.append(content, provenanceBadges(suggestion));
+      row.append(check, description, actions); $('#suggestion-list').append(row);
     }
     updateSuggestionControls();
   }
@@ -718,6 +755,16 @@
   });
   $('#discard-draft').addEventListener('click', () => { state.draft = null; persist(); });
   $('#select-all-suggestions').addEventListener('change', event => { state.selected = new Set(event.target.checked ? pending().map(item => item.id) : []); renderProgress(); });
+  $('#decision-cancel').addEventListener('click', () => $('#decision-editor').close());
+  $('#decision-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const dialog = $('#decision-editor');
+    try {
+      if (!$('#decision-confirm').checked) throw new Error('Confirm your declared decision identity.');
+      applySuggestionDecisions(JSON.parse(dialog.dataset.ids), dialog.dataset.status, {actor_kind: $('#decision-actor').value, producer: $('#decision-producer').value});
+      dialog.close();
+    } catch (error) { $('#decision-error').textContent = error.message; }
+  });
   $('#accept-selected').addEventListener('click', () => decideSuggestions([...state.selected], 'accepted'));
   $('#dismiss-selected').addEventListener('click', () => decideSuggestions([...state.selected], 'dismissed'));
   $('#backup').addEventListener('click', () => {

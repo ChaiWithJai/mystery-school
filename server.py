@@ -417,6 +417,9 @@ class App:
                     raise APIError(400, field + " must be a nonempty string")
             if "world" not in body:
                 raise APIError(400, "world is required")
+            actor_kind = body.get("actor_kind", "unspecified")
+            if actor_kind not in ("agent_review", "user_action", "unspecified"):
+                raise APIError(400, "actor_kind must be agent_review, user_action, or unspecified")
             ids = body.get("reference_ids", [])
             if not isinstance(ids, list) or len(ids) > 8 or any(not isinstance(i, str) for i in ids):
                 raise APIError(400, "reference_ids must contain at most 8 IDs")
@@ -442,6 +445,7 @@ class App:
                     raise APIError(400, "A corrected projection needs correction text")
             self.session(body.get("session_id"))
             inputs = {k: body[k] for k in ("session_id", "question", "premise", "world", "reference_ids", "reflection_ids", "parent_job_id", "correction") if k in body}
+            inputs["actor_kind"] = actor_kind
             if reflection_ids:
                 inputs["notebook_context"] = [copy.deepcopy(notes[i]) for i in reflection_ids]
             if learning_context is not None:
@@ -662,7 +666,10 @@ class App:
                                 "cost_usd": job.get("cost_usd"), "capture_scope": job_view(job)["capture_scope"],
                                 "parent_job_id": job.get("parent_job_id"),
                                 "learning_artifact_id": job["input"].get("learning_artifact_id"),
-                                "metadata": {"learning_artifact_id": job["input"].get("learning_artifact_id")}})
+                                "actor_kind": job["input"].get("actor_kind", "unspecified"),
+                                "metadata": {"learning_artifact_id": job["input"].get("learning_artifact_id"),
+                                             "actor_kind": job["input"].get("actor_kind", "unspecified"),
+                                             "actor_scope": "Declared request actor only; user_action is a visitor interaction, not verified human identity or learning evidence"}})
             for artifact in self.artifacts:
                 metadata = {k: artifact[k] for k in ("pathway", "stage", "actor_kind")}
                 metadata["parent_id"] = artifact.get("parent_id")
@@ -751,6 +758,9 @@ class App:
                 values = body.get(name)
                 if not isinstance(values, list) or any(not isinstance(v, dict) for v in values):
                     raise APIError(400, name + " must be a list of objects")
+                values = copy.deepcopy(values)
+                previous_suggestions = {v["id"]: v for v in self.review["suggestions"]}
+                seen = set()
                 for value in values:
                     if not isinstance(value.get("id"), str):
                         raise APIError(400, "Each record needs an id")
@@ -758,6 +768,38 @@ class App:
                         raise APIError(400, "Pattern requires label and annotation_ids")
                     if name == "suggestions" and (value.get("sample_id") not in samples or value.get("status") not in ("pending", "accepted", "dismissed") or not isinstance(value.get("note"), str) or not isinstance(value.get("quote"), str)):
                         raise APIError(400, "Invalid suggestion")
+                    if name == "suggestions":
+                        if value["id"] in seen:
+                            raise APIError(400, "Duplicate suggestion ID in batch")
+                        seen.add(value["id"])
+                        previous = previous_suggestions.get(value["id"])
+                        if previous is not None:
+                            # Acceptance attributes the decision, never the original author.
+                            for field in ("actor_kind", "producer", "created_at"):
+                                if field in value and (field not in previous or value[field] != previous[field]):
+                                    raise APIError(409, "Existing suggestion authorship cannot be rewritten: " + field)
+                                if field in previous:
+                                    value[field] = copy.deepcopy(previous[field])
+                            if "decision" not in value and "decision" in previous:
+                                value["decision"] = copy.deepcopy(previous["decision"])
+                        if "decision" in value:
+                            decision = value["decision"]
+                            if not isinstance(decision, dict) or set(decision) != {"actor_kind", "producer", "decided_at"}:
+                                raise APIError(400, "decision requires actor_kind, producer and decided_at only")
+                            if decision["actor_kind"] not in ("human", "agent_review", "unspecified"):
+                                raise APIError(400, "Invalid decision actor_kind")
+                            producer = decision["producer"]
+                            if not isinstance(producer, str) or not producer.strip() or len(producer) > 200:
+                                raise APIError(400, "Decision producer must be nonempty text of at most 200 characters")
+                            timestamp = decision["decided_at"]
+                            try:
+                                if not isinstance(timestamp, str) or len(timestamp) > 100:
+                                    raise ValueError()
+                                parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                                if parsed.utcoffset() is None:
+                                    raise ValueError()
+                            except ValueError:
+                                raise APIError(400, "decided_at must be an ISO timestamp with timezone")
                 self.review[name] = copy.deepcopy(values)
             self.save_review(name)
             return self.samples() if name == "samples" else copy.deepcopy(self.review[name])

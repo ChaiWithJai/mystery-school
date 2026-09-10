@@ -51,6 +51,18 @@
   <dialog id="note-editor" class="note-editor" aria-labelledby="note-editor-title">
     <form id="note-form"><div class="editor-heading"><h2 id="note-editor-title">Leave a field note</h2><button id="close-editor" type="button" class="icon-button" aria-label="Close note editor">&times;</button></div><blockquote id="selected-quote"></blockquote><label for="note-text">What did you notice?</label><textarea id="note-text" rows="4" placeholder="Describe the issue or a better direction..." required></textarea><label for="note-actor">Note actor</label><select id="note-actor"><option value="unspecified" selected>Unspecified</option><option value="human">Human (explicit declaration)</option><option value="agent_review">Agent review</option></select><label for="note-producer">Producer</label><input id="note-producer" type="text" maxlength="200" value="unspecified" placeholder="unspecified" autocomplete="off"><p class="fine-print">Declare who produced this note. A selection does not verify identity.</p><div class="editor-footer"><span>Enter to save. Shift + Enter for a new line.<br>Draft backed up on this device.</span><button id="save-note" type="submit">Save note</button></div></form>
   </dialog>
+  <dialog id="decision-editor" class="decision-editor" aria-labelledby="decision-title" aria-describedby="decision-help">
+    <form id="decision-form">
+      <h2 id="decision-title">Declare a decision</h2>
+      <p id="decision-help">Declare who is making this decision. This is not authentication or evidence of learning. The suggestion's original author remains unchanged.</p>
+      <label for="decision-actor">Decision actor</label>
+      <select id="decision-actor"><option value="unspecified" selected>Unspecified</option><option value="agent_review">Agent review</option><option value="human">Human (explicit declaration)</option></select>
+      <label for="decision-producer">Decision producer</label><input id="decision-producer" required maxlength="200" autocomplete="off" placeholder="Declared name or agent identifier">
+      <label class="decision-confirm"><input id="decision-confirm" type="checkbox" required> I explicitly confirm this decision identity, including if unspecified.</label>
+      <p id="decision-error" role="alert"></p>
+      <div class="editor-footer"><button id="decision-cancel" type="button" class="quiet">Cancel</button><button type="submit">Record decision</button></div>
+    </form>
+  </dialog>
   <noscript><p class="noscript">Trajectory review needs JavaScript to load records and save your notes.</p></noscript>
 </body>
 </html>

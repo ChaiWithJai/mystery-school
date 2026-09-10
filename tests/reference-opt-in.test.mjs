@@ -22,6 +22,7 @@ function harness({artifact=false,count=2}={}){
     correction:null,currentJob:null,WORLDS:[{id:'futures',question:'Synthetic question'}],drafts:new Map(),
     state:{references:Array.from({length:count},(_,i)=>({id:'image-'+i})),reflections:[]},
     sessionId:'synthetic-test',visual:{},world:null,esc:String,toast:assert.fail,
+    URLSearchParams,location:{search:''},
     openDrawer(){},renderJob(){},pollJob(){},localStorage:{setItem(){}},
     document:{createElement:element,querySelectorAll:()=>[]},
     api:async(path,body)=>{requests.push({path,body});return {id:'synthetic-job',status:'queued'};},
@@ -81,4 +82,20 @@ test('artifact request excludes images even if a checked control is unexpectedly
   ctx.$=selector=>selector==='#use-references'?{checked:true}:original(selector);
   await ctx.startProjection();
   assert.deepEqual(Array.from(requests[0].body.reference_ids),[]);
+});
+
+test('request actor comes from current URL, not correction or artifact authorship',async()=>{
+  for(const search of ['', '?actor=agent_review', '?actor=human']){
+    const {ctx,requests}=harness({artifact:true});
+    ctx.location.search=search;
+    ctx.projectionArtifact.actor_kind='agent_review';
+    ctx.correction={id:'historical-parent',note:'Synthetic correction',actor_kind:'agent_review'};
+    let release;
+    ctx.track=()=>new Promise(resolve=>{release=resolve;});
+    const pending=ctx.startProjection();
+    ctx.location.search=search?'':'?actor=agent_review';
+    release();await pending;
+    assert.equal(requests[0].body.actor_kind,search==='?actor=agent_review'?'agent_review':'user_action');
+    assert.equal(requests[0].body.parent_job_id,'historical-parent');
+  }
 });
