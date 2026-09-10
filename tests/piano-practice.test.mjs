@@ -1,8 +1,54 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pianoGeometry, normalizePianoState, performanceNotes, noteFrequency, noteName, mountPianoPractice } from '../public/piano-practice.js';
+import { pianoGeometry, normalizePianoState, performanceNotes, noteFrequency, noteName, mountPianoPractice, physicalPianoKey } from '../public/piano-practice.js';
 
 const take = { duration: 1.2, events: [{ type: 'on', midi: 60, time: .2 }, { type: 'off', midi: 60, time: .7 }, { type: 'on', midi: 63, time: .9 }, { type: 'off', midi: 63, time: 1.2 }] };
+
+test('physical map is deterministic and excludes typing, modifiers and composition', () => {
+  assert.equal(physicalPianoKey({code:'KeyL',key:'x'},'runaway').midi,88);
+  assert.equal(physicalPianoKey({code:'KeyL',key:'l'}).midi,74);
+  for(const modifier of ['ctrlKey','altKey','metaKey','shiftKey','isComposing','defaultPrevented']) assert.equal(physicalPianoKey({code:'KeyL',[modifier]:true},'runaway'),null);
+  assert.equal(physicalPianoKey({code:'KeyL',target:{closest:()=>({})}},'runaway'),null);
+  assert.equal(physicalPianoKey({code:'KeyL',target:{isContentEditable:true}},'runaway'),null);
+});
+
+test('Runaway L plays from Close-panel focus; release ignores new modifiers and cleanup detaches', async t => {
+  const h=harness(t);const api=mountPianoPractice(h.host,{keyboardMap:'runaway',autoCapture:true});
+  const close={closest:selector=>selector==='#drawer'?{}:selector.startsWith('button')?{}:null};
+  await h.win.fire('keydown',{code:'KeyL',key:'l',target:close});
+  assert.equal(api.getState().events.at(-1).midi,88);
+  assert.equal(h.audio.oscillators[0].frequency.values[0][0],noteFrequency(88));
+  await h.win.fire('keyup',{code:'KeyL',key:'L',shiftKey:true});
+  assert.equal(api.getState().events.at(-1).type,'off');
+  const e6=h.find('.piano-practice__keyboard').children[40];
+  assert.equal(e6.attributes['aria-keyshortcuts'],'l');
+  api();await h.win.fire('keydown',{code:'KeyL',key:'l'});assert.equal(h.audio.oscillators.length,1);
+});
+
+test('released first tap survives delayed audio resume and ended taps do not accumulate gain penalties', async t => {
+  const h=harness(t);const Base=globalThis.AudioContext;let unlock;
+  globalThis.AudioContext=class extends Base {constructor(){super();this.state='suspended';}resume(){return new Promise(resolve=>{unlock=()=>{this.state='running';resolve();};});}};
+  const api=mountPianoPractice(h.host,{keyboardMap:'runaway',autoCapture:true});
+  await h.win.fire('keydown',{code:'KeyL',key:'l'});
+  await h.win.fire('keyup',{code:'KeyL',key:'l'});
+  assert.equal(h.audio.oscillators.length,0);
+  const recorded=JSON.stringify(api.getState().events);unlock();await Promise.resolve();await Promise.resolve();
+  assert.equal(h.audio.oscillators.length,1);assert.equal(h.audio.oscillators[0].stopped,true);
+  assert.equal(JSON.stringify(api.getState().events),recorded);
+  h.audio.oscillators[0].onended();
+  await h.win.fire('keydown',{code:'KeyL',key:'l'});
+  assert.equal(h.audio.gains[0].gain.values[1][0],.04);
+  assert.equal(h.audio.gains[1].gain.values[1][0],.04);
+  api();
+});
+
+test('sequential replay notes use identical gain instead of cumulative scheduled count', async t => {
+  const h=harness(t);const api=mountPianoPractice(h.host);
+  await api.demonstrate(take);
+  assert.equal(h.audio.gains[0].gain.values[1][0],.04);
+  assert.equal(h.audio.gains[1].gain.values[1][0],.04);
+  api();
+});
 
 test('chromatic C3-C7 includes the written E6 opening register', () => {
   const keys = pianoGeometry();
@@ -125,10 +171,10 @@ test('pointer hold/release records real ordered timestamps and replay schedules 
 test('computer repeat does not retrigger, global release and blur end held keys', async t => {
   const h=harness(t);const api=mountPianoPractice(h.host);t.after(api);
   const keyboard=h.find('.piano-practice__keyboard');
-  await keyboard.fire('keydown',{key:'a',repeat:false});
-  await keyboard.fire('keydown',{key:'a',repeat:true});assert.equal(h.audio.oscillators.length,1);
+  await h.win.fire('keydown',{key:'a',repeat:false});
+  await h.win.fire('keydown',{key:'a',repeat:true});assert.equal(h.audio.oscillators.length,1);
   await h.win.fire('keyup',{key:'a'});assert.equal(h.audio.oscillators[0].stopped,true);
-  await keyboard.fire('keydown',{key:'w',repeat:false});await h.win.fire('blur');assert.equal(h.audio.oscillators[1].stopped,true);
+  await h.win.fire('keydown',{key:'w',repeat:false});await h.win.fire('blur');assert.equal(h.audio.oscillators[1].stopped,true);
   api();
 });
 
