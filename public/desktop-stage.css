@@ -47,7 +47,7 @@
     width: 100%;
     margin: 0;
     padding: 16px;
-    max-height: calc(100dvh - 405px);
+    max-height: calc(100dvh - 450px);
     overflow: auto;
     scrollbar-width: thin;
     scrollbar-color: #8da988 #122e29;
