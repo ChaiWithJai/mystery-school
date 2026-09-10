@@ -32,6 +32,7 @@ export function createLocalSoundtrack(audio, { onState = () => {}, schedule = se
   }
   return {
     play,
+    pause() { if (!disposed) { generation++; clear(); audio.pause(); onState('paused'); } },
     setContinuous(value) {
       if (disposed) return;
       continuous = Boolean(value);

@@ -1,15 +1,17 @@
 import {demoBeatAt,renderFinale} from './demo-finale.js';
+import {mountDemoSoundtrack} from './demo-soundtrack.js';
 const $=s=>document.querySelector(s),frames=new Map(),stage=$('#demo-stage');
 const portraitURL=new URLSearchParams(location.search).get('portrait')||'/assets/jai-portrait.jpg';
 let started=false,paused=false,elapsed=0,last=0,scene='',raf=0;
-function opening(offset=0){frames.get('music').contentDocument?.querySelector('.piano-practice')?.dispatchEvent(new CustomEvent('presenter-opening',{detail:{offset}}));}
-function stopOpening(){frames.get('music').contentDocument?.querySelector('.piano-practice [data-stop]')?.click();}
+const soundtrack=mountDemoSoundtrack(()=>{},{autoplay:false});
+function opening(){void soundtrack.play();}
+function stopOpening(){soundtrack.pause();}
 for(const path of ['music','movement','ideas']){
-  const frame=document.createElement('iframe');frame.title=path+' / live school';frame.src=`/?path=${path}&actor=agent_review`;frame.hidden=true;frame.allow='autoplay; camera';stage.append(frame);frames.set(path,frame);
+  const frame=document.createElement('iframe');frame.title=path+' / live school';frame.src=`/?path=${path}&actor=agent_review&soundtrack=off`;frame.hidden=true;frame.allow='autoplay; camera';stage.append(frame);frames.set(path,frame);
 }
 function show(seconds){
   const beat=demoBeatAt(seconds);
-  if(beat.id!==scene){if(scene==='music')stopOpening();scene=beat.id;for(const [id,frame]of frames)frame.hidden=id!==scene;$('.demo-slide').hidden=frames.has(scene);$('.demo-slide').dataset.scene=scene;if(!frames.has(scene))renderFinale($('.demo-slide'),scene,portraitURL);}
+  if(beat.id!==scene){scene=beat.id;for(const [id,frame]of frames)frame.hidden=id!==scene;$('.demo-slide').hidden=frames.has(scene);$('.demo-slide').dataset.scene=scene;if(!frames.has(scene))renderFinale($('.demo-slide'),scene,portraitURL);}
   $('.demo-time').textContent=`${Math.floor(Math.min(seconds,60))} / 60 s`;
   $('.demo-progress').style.transform=`scaleX(${Math.min(seconds/60,1)})`;
 }
@@ -22,7 +24,7 @@ $('#demo-start').onclick=()=>{
 $('#demo-pause').onclick=()=>{
   if(elapsed>=60){$('#demo-start').click();$('#demo-pause').textContent='Pause';return;}
   paused=!paused;$('#demo-pause').textContent=paused?'Resume':'Pause';
-  if(paused){cancelAnimationFrame(raf);stopOpening();}else{if(elapsed<7)opening(elapsed);last=performance.now();raf=requestAnimationFrame(tick);}
+  if(paused){cancelAnimationFrame(raf);stopOpening();}else{void soundtrack.play(false);last=performance.now();raf=requestAnimationFrame(tick);}
 };
 // Preparation is event-driven; a missing scene keeps Start disabled, not a fake readiness claim.
 await Promise.all([...frames.values()].map(frame=>new Promise(resolve=>{
