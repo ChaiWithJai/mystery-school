@@ -37,7 +37,7 @@ def main():
         # Disable executable discovery even when the host is signed in to Codex.
         environment = dict(os.environ, ASTRAL_CODEX_BIN=str(scratch / "no-model-executable"),
                            MLFLOW_TRACKING_URI="sqlite:///" + str(scratch / "data/mlflow.db"))
-        with (scratch / "server.log").open("w+") as log:
+        with (scratch / "server.log").open("w+b") as log:
             process = subprocess.Popen([sys.executable, "server.py", "--port", str(args.port),
                                         "--data-dir", str(scratch / "data")],
                                        cwd=ROOT, env=environment, stdout=log, stderr=log)
@@ -83,8 +83,8 @@ def main():
                 log.flush()
                 log.seek(0, 2)
                 log.seek(max(0, log.tell() - 8000))
-                tail = log.read()
-                raise RuntimeError(f"{error}\nServer log (last 8000 characters):\n{tail}") from error
+                tail = log.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"{error}\nServer log (last 8000 bytes):\n{tail}") from error
             finally:
                 process.terminate()
                 try:
