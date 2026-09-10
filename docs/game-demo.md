@@ -11,8 +11,9 @@ and provenance. Existing artifacts and model confirmation remain available.
 
 ## Demonstrate the actual loop
 
-1. Open `/` in a fresh tab and choose Runaway. Listen opens the official artist
-   video reference on demand. Hold piano keys, record a short attempt, stop and
+1. Open `/` in a fresh tab and choose Runaway. Hear it plays a two-strike E6
+   exercise from the published arrangement, separately from the learner's take.
+   Source links remain optional. Hold piano keys, record a short attempt, stop and
    replay. The light follows emitted note events; the small timeline represents
    recorded notes. **Keep this. Into the ring** saves the performance first.
 2. Predict a position, try the exchange, then inspect the jab frame. A stationary
@@ -31,18 +32,22 @@ interaction is not evidence of musical accuracy, boxing proficiency or learning.
 
 ## Grounding and current limits
 
-- [Runaway artist video](https://www.youtube.com/watch?v=Bm5iA4Zupek) is an external
-  reference, not bundled audio, a verified transcription or an automatic grader.
-  The current piano supports actual attempts; a complete song-teaching curriculum
-  and calibrated listening feedback remain open.
+- The [published arrangement](https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069)
+  supports a bounded E6 two-strike exercise at 80 BPM, with 1.5 seconds between
+  strikes. The app compares the first two actual note pitches and onset spacing;
+  it does not grade full-song accuracy. See maincar's inspected-source record in
+  `docs/reviews/runaway-source-20260910.md`. The original recording remains an
+  optional external reference. Chromium reported its YouTube embed unavailable,
+  so the demo opening uses local synthesis rather than that unreliable embed.
 - [England Boxing's handbook](https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf),
   printed pages 66–68 and 94–95, informs the stance/guard/footwork and coached
   non-contact practice framing. The one-dimensional game does not reproduce
   Terence Crawford's full technique or measure a person's body. Its geometry is
   a simplified model, with no impact-force or physical reaction-time claims.
 - Boxing round parameters are separate from the older meter-based physics lab.
-  Until a typed proposal supports `boxing_round.params`, an Astra movement
-  proposal changes the optional physics experiment, not the new boxing game.
+  Maincar commit `b3f4c6f` adds bounded typed proposals for
+  `boxing_round.params` while preserving attempts. Earlier agent walkthroughs
+  below predate that integration and do not prove a live model-controlled round.
 - The classics activity preserves Jai's supplied learning circle. Jiang-specific
   materials were not found in the available project context; this implementation
   must not be attributed to Jiang. The rainy-street scene is authored for the
@@ -72,6 +77,14 @@ probes established retreat-only does not count as returning, while retreat and
 return does. The replay scrubber read −4.5 simulation units / 0.30 seconds =
 −15.0 simulation units/s from the recorded trace. These are software/model
 observations, not participant results.
+
+After reconciliation with maincar `01c241e`, the opening uses the shared
+`demonstrate` / `analyzeOpening` implementation. Chromium teacher playback left
+the learner event array empty. The learner recorded E6 twice; feedback reported
+the actual 2.17-second interval and the 1.50-second target. No page exceptions
+occurred. All 146 JavaScript tests passed. The unavailable embedded artist
+video has been replaced by an optional external artist link. Speaker fidelity and original-recording alignment
+remain unverified; this is an arrangement exercise, not a recording transcription.
 
 ![Cinematic entry](game-demo-images/opening.png)
 ![Actual piano](game-demo-images/music.png)
