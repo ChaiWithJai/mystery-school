@@ -9,3 +9,9 @@ MediaPipe Tasks Vision is pinned to 0.10.14. Bundle and SIMD/non-SIMD WASM fetch
 Camera starts only after Start camera. Local video files remain blob URLs, not uploads. Disposal stops camera tracks, terminates inference worker, cancels animation, pauses source/learner videos, revokes blob URL. Pending camera permission resolves safely after disposal by stopping acquired tracks. Artifacts contain learner reflection, selected lesson, mode, and at most 60 typed detector estimates; no raw frames, landmarks, file path, or power score. Source lesson and artifact provenance are the host's responsibility.
 
 This is visual self-observation plus heuristic pose estimates. PR5's synthetic detector scores are not evidence of physical boxing accuracy, force, mastery, injury prevention, or resemblance to Crawford. Low-visibility poses suppress estimates. The local camera continues as a mirror if model loading fails. The learner can notice and reflect without accepting a detector label as coaching truth.
+
+## Executed verification
+
+- Two Node tests passed: bounded sanitized state and exclusion of raw frames/power/invalid modes.
+- Chromium local worker loaded the vendored MediaPipe model and processed an actual blank 640×480 ImageBitmap, returning `{type:'landmarks',landmarks:null}`. This proves the model/worker execution path, not boxing accuracy.
+- Chromium displayed an explicitly synthetic canvas MediaStream and disposal changed its track state to `ended`; no page errors. That static canvas stream did not establish a continuous pose/video frame loop. Physical camera permission in automated headless Chromium stayed pending on this Mac. Real camera cadence and learner movement still need live verification.
