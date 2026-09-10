@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mountLearningExperiment, experimentDefinition, describeExperimentValue } from '../public/learning-experiment.js';
-import { validateIdeasState } from '../public/ideas-lab.js';
+import { mountLearningExperiment, experimentDefinition, describeExperimentValue, savedExperimentContext } from '../public/learning-experiment.js';
+import { validateIdeasState, IDEAS_SOURCE, IDEAS_SOURCES, ideasComparisonIdentity } from '../public/ideas-lab.js';
+import { RUNAWAY_OPENING_SOURCE } from '../public/runaway-opening.js';
 
 test('legacy ideas artifact matches its mounted defaults without discarding changed words', () => {
   const legacy = {version:1, sourceId:'epictetus-enchiridion-1', interpretation:'My words', revisedInterpretation:'My revision'};
@@ -32,7 +33,7 @@ function element() {
     replaceChildren(...children) { this.children = children; }, remove() { this.removed = true; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
-function harness({ delay = false, delayTelemetry = false, pathway = 'music', boxing = false } = {}) {
+function harness({ delay = false, delayTelemetry = false, pathway = 'music', boxing = false, practiceTarget = false, fullContext = false } = {}) {
   const nodes = new Map();
   const root = { ...element(), querySelector(selector) {
     if (!nodes.has(selector)) nodes.set(selector, element());
@@ -43,19 +44,31 @@ function harness({ delay = false, delayTelemetry = false, pathway = 'music', box
   globalThis.document = { createElement() { if (first) { first = false; return root; } return element(); } };
   const initial = pathway === 'movement'
     ? { duration: 2, distance: .4, shape: 'cubic', compare_shape: 'quintic', view: 'position', time: 0, playing: false }
+    : pathway === 'ideas' ? validateIdeasState({interpretation:'My original words.'})
     : { attack: .02, notes: [{ midi: 60, beats: 1 }, { midi: 64, beats: 1 }], tempo: 100 };
   if (boxing) initial.boxing_round = {params:{cue:1.15,gap:14},prediction:39,attempts:[],question:'How do I make room?'};
   let state = structuredClone(initial), release, releaseTelemetry, dispatched = 0;
   let question = 'Change the ending.';
+  let explanation='',sourceRefs=[];
   const artifact = { id: 'base', pathway, state: { lab: structuredClone(initial), question } };
   const proposal = { version: 1, pathway, base_artifact_id: 'base', status: 'supported', reason: 'Try a comparison.',
     music: pathway === 'music' ? { ...initial, notes: [{ midi: 60, beats: 1 }, { midi: 67, beats: 2 }] } : null,
     movement: pathway === 'movement' ? { duration: 2, distance: .4, shape: 'cubic', compare_shape: 'quintic', view: 'acceleration' } : null, ideas: null };
   if (boxing) proposal.movement.boxing_params = {cue:1.5,gap:20};
+  if (practiceTarget) {
+    proposal.music={...initial,practice_target:{exercise_id:RUNAWAY_OPENING_SOURCE.id,quarter_bpm:60}};
+    artifact.source_refs=[{url:RUNAWAY_OPENING_SOURCE.url,locator:RUNAWAY_OPENING_SOURCE.locator,source_kind:'notation_exercise'}];
+  }
+  const experimentSources=pathway==='ideas'?[{source_ref_index:0,url:IDEAS_SOURCE.url,locator:'Section 1',content:IDEAS_SOURCE.excerpt}]:[];
+  if(pathway==='ideas'){
+    artifact.source_refs=structuredClone(IDEAS_SOURCES);
+    proposal.ideas={source_ref_index:0,source_quote:IDEAS_SOURCE.excerpt,scenario:'Two people disagree in the rain.',question:'What will you do?',decision_scene:{kind:'shared_shelter',choices:[{id:'a',label:'Offer shelter',consequence:'You share shelter without agreement.',shelter:'shared'},{id:'b',label:'Keep it',consequence:'You stay apart.',shelter:'self'}]}};
+  }
   const events = [];
   const dispose = mountLearningExperiment(element(), {
     sessionId: 'test', actorKind: 'agent_review', pathway,
     getQuestion: () => question, getState: () => structuredClone(state),
+    ...(fullContext?{getContext:()=>({question,explanation,source_refs:sourceRefs})}:{}),
     setState: value => { state = structuredClone(value); }, save: async () => structuredClone(artifact),
     track: async (type, payload) => { events.push({ type, payload }); if(delayTelemetry && type === 'learning.experiment.confirm') await new Promise(resolve => { releaseTelemetry = resolve; }); },
     api: async path => {
@@ -65,12 +78,14 @@ function harness({ delay = false, delayTelemetry = false, pathway = 'music', box
         if (delay) await new Promise(resolve => { release = resolve; });
         return { id: 'synthetic-job', status: 'queued' };
       }
-      return { id: 'synthetic-job', status: 'completed', input: { learning_artifact_id: 'base' }, result: { experiment: proposal } };
+      return { id: 'synthetic-job', status: 'completed', input: { learning_artifact_id: 'base',experiment_sources:experimentSources }, result: { experiment: proposal } };
     }
   });
   return { nodes, events, initial, proposal, get state() { return state; }, edit(value) { state = value; },
     get dispatched() { return dispatched; }, releaseTelemetry: () => releaseTelemetry(),
     changeQuestion(value) { question = value; dispose.contextChanged(); },
+    changeExplanation(value) { explanation=value;dispose.contextChanged(); },
+    changeSources(value) { sourceRefs=value;dispose.contextChanged(); },
     resume: id => dispose.resume('synthetic-job', id),
     async request() { nodes.get('[data-consent]').checked = true; await nodes.get('[data-request]').onclick(); await settle(); },
     release: () => release(), close() { dispose(); globalThis.document = previous; } };
@@ -113,6 +128,87 @@ test('undo does not discard edits made after applying a proposal', async () => {
     assert.equal(h.state.tempo, 120);
     assert.match(h.nodes.get('[data-progress]').textContent, /will not discard/);
   } finally { h.close(); }
+});
+
+test('playing during inference and after apply survives music undo', async () => {
+  const h=harness({delay:true});
+  try{
+    const pending=h.request();await settle();
+    const practice={duration:1,reference:null,events:[{type:'on',midi:88,time:0},{type:'off',midi:88,time:1}]};
+    h.edit({...h.state,practice});
+    h.release();await pending;
+    h.nodes.get('[data-apply]').onclick();
+    assert.deepEqual(h.state.notes,h.proposal.music.notes);
+    assert.deepEqual(h.state.practice,practice);
+    const continued={...practice,duration:3,events:[...practice.events,{type:'on',midi:88,time:2},{type:'off',midi:88,time:3}]};
+    h.edit({...h.state,practice:continued});
+    h.nodes.get('[data-undo]').onclick();
+    assert.deepEqual(h.state.notes,h.initial.notes);
+    assert.deepEqual(h.state.practice,continued);
+  }finally{h.close();}
+});
+
+test('changing a music reference is substantive even when note capture is not', () => {
+  const a={practice:{events:[],duration:0,reference:null}};
+  const b={practice:{events:[],duration:0,reference:{title:'Different song',url:'https://example.com/song'}}};
+  assert.notDeepEqual(experimentDefinition('music',a),experimentDefinition('music',b));
+});
+
+test('recorded resume rejects changed explanation and source context without dispatch', async () => {
+  for(const change of ['explanation','sources']){
+    const h=harness({fullContext:true});
+    try{
+      if(change==='explanation')h.changeExplanation('My intention changed.');
+      else h.changeSources([{url:'https://example.com/different'}]);
+      await h.resume('base');
+      h.nodes.get('[data-apply]').onclick();
+      assert.deepEqual(h.state,h.initial);
+      assert.match(h.nodes.get('[data-progress]').textContent,/context differs/);
+      assert.equal(h.dispatched,0);
+    }finally{h.close();}
+  }
+});
+
+test('saved context uses frozen video drafts and refuses unknown context rather than adopting it', () => {
+  const artifact={state:{question:' Why? ',explanation:'Before',lab:{youtubeUrl:'draft',youtubeTimestamp:'12',youtubeNote:'My note'}},source_refs:[]};
+  assert.deepEqual(savedExperimentContext(artifact,{question:'different',reference_draft:[]}),{question:'Why?',reference_draft:['draft','12','My note']});
+  assert.throws(()=>savedExperimentContext(artifact,{unknown:'new'}),/cannot be verified/);
+});
+
+test('foreground practice target applies and undoes without discarding continued piano play', async () => {
+  const h=harness({delay:true,practiceTarget:true});
+  try{
+    const pending=h.request();await settle();
+    const practice={duration:1,reference:null,events:[{type:'on',midi:88,time:0},{type:'off',midi:88,time:1}]};
+    h.edit({...h.state,practice});h.release();await pending;
+    h.nodes.get('[data-apply]').onclick();
+    assert.equal(h.state.practice_target.quarter_bpm,60);
+    assert.deepEqual(h.state.practice,practice);
+    assert.deepEqual(h.state.notes,h.initial.notes);
+    h.nodes.get('[data-undo]').onclick();
+    assert.equal(h.state.practice_target,undefined);
+    assert.deepEqual(h.state.practice,practice);
+  }finally{h.close();}
+});
+
+test('story play and model decisions survive apply and undo without writing learner interpretations', async () => {
+  const h=harness({delay:true,pathway:'ideas'});
+  try{
+    const pending=h.request();await settle();
+    h.edit({...h.state,storyChoice:'offer_shelter'});h.release();await pending;
+    h.nodes.get('[data-apply]').onclick();
+    assert.equal(h.state.modelComparison.decision_scene.kind,'shared_shelter');
+    assert.equal(h.state.storyChoice,'offer_shelter');
+    const identity=ideasComparisonIdentity(h.state.modelComparison);
+    h.edit({...h.state,decisionResponses:{[identity]:'neither'}});
+    h.nodes.get('[data-undo]').onclick();
+    assert.equal(h.state.modelComparison,null);
+    assert.equal(h.state.decisionResponses[identity],'neither');
+    assert.equal(h.state.storyChoice,'offer_shelter');
+    assert.equal(h.state.interpretation,'My original words.');
+    h.nodes.get('[data-apply]').onclick();
+    assert.equal(h.state.decisionResponses[identity],'neither');
+  }finally{h.close();}
 });
 
 test('movement can play during inference, apply, play again and undo settings', async () => {

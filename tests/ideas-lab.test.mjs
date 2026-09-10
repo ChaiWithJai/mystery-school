@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { IDEAS_SOURCE, IDEAS_SOURCES, validateIdeasState, validateYouTubeReference, deriveConceptMap, mountIdeasLab } from '../public/ideas-lab.js';
+import { IDEAS_SOURCE, IDEAS_SOURCES, validateIdeasState, validateYouTubeReference, deriveConceptMap, mountIdeasLab, validateDecisionScene, ideasComparisonIdentity } from '../public/ideas-lab.js';
 
 test('parent artifact source references include a work, URL and section locator', () => {
   assert.deepEqual(IDEAS_SOURCES, [{
@@ -12,7 +12,7 @@ test('parent artifact source references include a work, URL and section locator'
 });
 
 test('empty and malformed persisted state normalize to a complete JSON state', () => {
-  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, storyChoice: null, comparisonChoice: null, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '', modelComparison: null };
+  const expected = { version: 1, sourceId: 'epictetus-enchiridion-1', interpretation: '', revisedInterpretation: '', helpOpen: false, helpSeen: false, sourceOpened: false, unchanged: false, storyChoice: null, comparisonChoice: null, youtubeUrl: '', youtubeTimestamp: '', youtubeNote: '', modelComparison: null, decisionResponses: {} };
   for (const value of [undefined, null, [], 2, 'draft', { interpretation: {}, revisedInterpretation: 10, helpOpen: 'true' }]) {
     assert.deepEqual(validateIdeasState(value), expected);
   }
@@ -238,4 +238,109 @@ test('reference drafts persist while incomplete, are bounded, and remain separat
   assert.equal(changes.at(-1).youtubeNote, '  My note\n');
   assert.equal(changes.at(-1).interpretation, 'My belief');
   cleanup();
+});
+
+const decisionComparison = (scenario = 'A stranger waits in the rain.') => ({
+  scenario, question: 'What would you choose?', source_quote: IDEAS_SOURCE.excerpt, source_ref_index: 0,
+  decision_scene: { kind: 'shared_shelter', choices: [
+    { id: 'a', label: 'Make room', consequence: 'In this imagined scene, the umbrella covers both people.', shelter: 'shared' },
+    { id: 'b', label: 'Keep your shelter', consequence: 'In this imagined scene, you keep the umbrella over yourself.', shelter: 'self' },
+  ] },
+});
+
+test('decision scenes enforce exact choice IDs, text bounds, and both shelter states', () => {
+  const scene = decisionComparison().decision_scene;
+  assert.deepEqual(validateDecisionScene(scene), scene);
+  assert.equal(validateDecisionScene(null), null);
+  for (const invalid of [
+    {}, { ...scene, kind: 'other' }, { ...scene, choices: [] },
+    { ...scene, choices: [...scene.choices, scene.choices[0]] },
+    { ...scene, choices: scene.choices.toReversed() },
+    ...['label', 'consequence', 'shelter', 'id'].map(key => ({ ...scene, choices: [{ ...scene.choices[0], [key]: '' }, scene.choices[1]] })),
+    { ...scene, choices: [{ ...scene.choices[0], label: 'x'.repeat(81) }, scene.choices[1]] },
+    { ...scene, choices: [{ ...scene.choices[0], consequence: 'x'.repeat(241) }, scene.choices[1]] },
+    { ...scene, choices: [{ ...scene.choices[0], shelter: 'self' }, scene.choices[1]] },
+  ]) assert.throws(() => validateDecisionScene(invalid));
+  assert.doesNotThrow(() => validateDecisionScene({ ...scene, choices: [{ ...scene.choices[0], label: 'x'.repeat(80), consequence: 'x'.repeat(240) }, scene.choices[1]] }));
+});
+
+test('decision response map is bounded, detached, serializable and scoped to full comparison content', () => {
+  const responses = Object.fromEntries(Array.from({ length: 14 }, (_, index) => [ideasComparisonIdentity(decisionComparison(`Scene ${index}`)), 'a']));
+  const state = validateIdeasState({ modelComparison: decisionComparison(), decisionResponses: responses });
+  assert.equal(Object.keys(state.decisionResponses).length, 12);
+  assert.equal(Object.hasOwn(state.decisionResponses, ideasComparisonIdentity(decisionComparison('Scene 0'))), false);
+  assert.deepEqual(validateIdeasState(JSON.parse(JSON.stringify(state))), state);
+  state.modelComparison.decision_scene.choices[0].label = 'Changed';
+  assert.notEqual(ideasComparisonIdentity(state.modelComparison), ideasComparisonIdentity(decisionComparison()));
+  assert.deepEqual(validateIdeasState({ decisionResponses: { broken: 'a', [ideasComparisonIdentity(decisionComparison())]: 'invented' } }).decisionResponses, {});
+  for (const patch of [{ question: 'Different?' }, { source_ref_index: 1 }, { source_quote: 'Some things' }]) {
+    assert.notEqual(ideasComparisonIdentity({ ...decisionComparison(), ...patch }), ideasComparisonIdentity(decisionComparison()));
+  }
+});
+
+test('apply foregrounds actual model choices; choices and neither never write learner words', () => {
+  const { container, elements } = testContainer();
+  const changes = [], events = [];
+  const lab = mountIdeasLab(container, { initialState: { interpretation: ' First. ', revisedInterpretation: ' Still mine. ', storyChoice: 'offer_shelter', unchanged: true }, onChange: s => changes.push(s), onEvent: (type, payload) => events.push({ type, payload }) });
+  const baseline = lab.getState(), modelComparison = decisionComparison();
+  const identity = ideasComparisonIdentity(modelComparison);
+  lab.setState({ ...baseline, modelComparison });
+  const story = elements.find(e => e.className === 'ideas-lab__story');
+  assert.equal(story.hidden, false);
+  assert.equal(elements.find(e => e.className === 'ideas-lab__chain').hidden, true);
+  assert.equal(elements.find(e => e.className === 'ideas-lab__editor').hidden, true);
+  assert.equal(elements.find(e => e.className === 'ideas-lab__story-caption').textContent, modelComparison.scenario);
+  const buttons = elements.find(e => e.className === 'ideas-lab__decision-choices').children;
+  assert.deepEqual(buttons.map(b => b.textContent), modelComparison.decision_scene.choices.map(c => c.label));
+  buttons[0].fire('click');
+  assert.equal(story.attributes['data-shared'], 'true');
+  assert.equal(lab.getState().decisionResponses[identity], 'a');
+  assert.match(elements.find(e => e.className === 'ideas-lab__decision-consequence').textContent, /umbrella covers both/);
+  buttons[1].fire('click');
+  assert.equal(story.attributes['data-shared'], 'false');
+  assert.equal(lab.getState().decisionResponses[identity], 'b');
+  elements.find(e => e.textContent === 'Neither fits').fire('click');
+  assert.equal(lab.getState().decisionResponses[identity], 'neither');
+  for (const key of ['interpretation', 'revisedInterpretation', 'unchanged', 'storyChoice', 'comparisonChoice']) assert.deepEqual(lab.getState()[key], baseline[key]);
+  assert.equal(events.at(-1).type, 'model-comparison.decision');
+  events.at(-1).payload.state.decisionResponses[identity] = 'a';
+  assert.equal(lab.getState().decisionResponses[identity], 'neither');
+  assert.equal(changes.at(-1).decisionResponses[identity], 'neither');
+  lab();
+});
+
+test('comparison A/B apply and undo with latest response map restores each exact scene selection', () => {
+  const { container, elements } = testContainer();
+  const a = decisionComparison(), b = decisionComparison('A different rainy evening.');
+  const lab = mountIdeasLab(container, { initialState: { modelComparison: a, interpretation: 'My words.' } });
+  const buttons = elements.find(e => e.className === 'ideas-lab__decision-choices').children;
+  const story = elements.find(e => e.className === 'ideas-lab__story');
+  buttons[0].fire('click'); const savedA = lab.getState();
+  lab.setState({ ...savedA, modelComparison: b });
+  assert.equal(story.attributes['data-shared'], 'false');
+  assert.equal(buttons[0].attributes['aria-pressed'], 'false');
+  buttons[1].fire('click'); const savedB = lab.getState();
+  lab.setState({ ...savedA, decisionResponses: savedB.decisionResponses });
+  assert.equal(story.attributes['data-shared'], 'true');
+  assert.equal(buttons[0].attributes['aria-pressed'], 'true');
+  lab.setState(savedB);
+  assert.equal(buttons[1].attributes['aria-pressed'], 'true');
+  const reopened = testContainer(); const restored = mountIdeasLab(reopened.container, { initialState: JSON.parse(JSON.stringify(savedB)) });
+  assert.equal(reopened.elements.find(e => e.className === 'ideas-lab__story').hidden, false);
+  assert.deepEqual(restored.getState(), savedB);
+  const invalid = structuredClone(savedB); invalid.modelComparison.decision_scene.choices[0].label = '';
+  assert.throws(() => lab.setState(invalid)); assert.deepEqual(lab.getState(), savedB);
+  lab(); restored();
+});
+
+test('historical text-only comparisons remain readable without claiming a playable model scene', () => {
+  const { container, elements } = testContainer();
+  const { decision_scene, ...historical } = decisionComparison();
+  const lab = mountIdeasLab(container, { initialState: { modelComparison: historical } });
+  assert.equal(elements.find(e => e.className === 'ideas-lab__decision').hidden, true);
+  assert.equal(elements.find(e => e.textContent === 'Open the imagined choices').hidden, true);
+  assert.ok(elements.some(e => e.textContent.startsWith('Historical text-only comparison.')));
+  assert.ok(elements.some(e => e.textContent === historical.scenario));
+  assert.equal(ideasComparisonIdentity(historical), null);
+  lab();
 });

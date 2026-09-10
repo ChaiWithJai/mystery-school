@@ -6,6 +6,13 @@ import { boxingParams } from './boxing-game.js';
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const MOVEMENT_SETTINGS = ['duration', 'distance', 'shape', 'compare_shape', 'view'];
+export function savedExperimentContext(artifact, current) {
+  const state=artifact.state,lab=state.lab;
+  const frozen={question:state.question.trim(),explanation:state.explanation||'',source_refs:artifact.source_refs||[],
+    reference_draft:[lab.youtubeUrl||'',lab.youtubeTimestamp||'',lab.youtubeNote||'']};
+  if(Object.keys(current).some(key=>!Object.hasOwn(frozen,key)))throw Error('This saved proposal has context that cannot be verified. Ask again from this version.');
+  return Object.fromEntries(Object.keys(current).map(key=>[key,structuredClone(frozen[key])]));
+}
 export function describeExperimentValue(key, value) {
   if (value === null || value === undefined) return 'None yet';
   if (key === 'notes') return value.map(note => {
@@ -13,6 +20,7 @@ export function describeExperimentValue(key, value) {
     return `${name}${Math.floor(note.midi / 12) - 1} for ${note.beats} ${note.beats === 1 ? 'beat' : 'beats'}`;
   }).join(', then ');
   if (key === 'tempo') return `${value} beats per minute`;
+  if (key === 'practice_target') return `Runaway opening practice at ${value.quarter_bpm} beats per minute`;
   if (key === 'attack') return `${value} seconds to full volume`;
   if (key === 'duration') return `${value} seconds`;
   if (key === 'distance') return `${value} metres`;
@@ -21,15 +29,22 @@ export function describeExperimentValue(key, value) {
   return typeof value === 'object' ? 'Saved experiment details' : String(value);
 }
 export function experimentDefinition(pathway, state) {
-  if (pathway === 'music') return normalizeSongState(state);
+  if (pathway === 'music') {
+    const {practice, ...settings} = normalizeSongState(state);
+    return {...settings, practice_reference:practice.reference};
+  }
   if (pathway === 'ideas') {
-    const { helpOpen, helpSeen, sourceOpened, ...content } = validateIdeasState(state);
+    const { helpOpen, helpSeen, sourceOpened, storyChoice, decisionResponses, ...content } = validateIdeasState(state);
     return structuredClone(content);
   }
   return pathway === 'movement' ? {...Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])),
     boxing_round:{params:boxingParams(state.boxing_round?.params)}} : structuredClone(state);
 }
 function restoreDefinition(pathway, target, current) {
+  if (pathway === 'music') {
+    const {practice, ...settings} = structuredClone(target);
+    return {...settings, ...(current.practice ? {practice:structuredClone(current.practice)} : {})};
+  }
   if (pathway === 'ideas') return { ...current, ...experimentDefinition(pathway, target) };
   if (pathway !== 'movement') return structuredClone(target);
   const definition = experimentDefinition(pathway, target);
@@ -77,7 +92,7 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
     for (const key of Object.keys(nextState)) {
       if (same(oldState[key], nextState[key])) continue;
       const term = document.createElement('dt'), detail = document.createElement('dd');
-      term.textContent = ({notes:'Your phrase',attack:'How each note begins',tempo:'Pace',modelComparison:'A situation to think through',compare_shape:'Reference movement',shape:'Your movement',view:'What the graph shows'})[key] || key.replace(/_/g, ' ');
+      term.textContent = ({notes:'Your phrase',attack:'How each note begins',tempo:'Pace',practice_target:'Your opening exercise',modelComparison:'A situation to think through',compare_shape:'Reference movement',shape:'Your movement',view:'What the graph shows'})[key] || key.replace(/_/g, ' ');
       detail.textContent = `Before: ${describeExperimentValue(key, oldState[key])}. After: ${describeExperimentValue(key, nextState[key])}.`;
       list.append(term, detail);
     }
@@ -205,7 +220,8 @@ export function mountLearningExperiment(container, { api, sessionId, actorKind, 
       if (!same(experimentDefinition(pathway, artifact.state.lab), experimentDefinition(pathway, getState()))) throw Error('The experiment differs from the saved proposal starting point.');
       if (!['completed', 'succeeded', 'success'].includes(job.status)) throw Error('This recorded proposal is not complete. Inspect its trace for status.');
       currentJob = job;
-      requestContext = structuredClone(getContext());
+      requestContext = savedExperimentContext(artifact,getContext());
+      if(!same(getContext(),requestContext))throw Error('Your explanation or source context differs from the saved request. Ask again from your current intention.');
       receive(job, artifact, artifact.state.lab);
       emit('resume', { base_artifact_id: artifactId, replay_kind: 'stored_output', model_called: false });
     } catch (error) { status(error.message); }

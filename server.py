@@ -30,9 +30,20 @@ MODEL = "gpt-6-astra"
 ACTIVE = {"queued", "running", "cancelling"}
 EPICTETUS_URL = "https://classics.mit.edu/Epictetus/epicench.html"
 EPICTETUS_EXCERPT = "Some things are in our control and others not."
+PRACTICE_EXERCISE_ID = "runaway-mn0103069-opening-two-strikes"
+PRACTICE_URL = "https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069"
+PRACTICE_LOCATOR = "Original E-major arrangement, page 1, first two right-hand strikes including the tied continuation"
 
 
 def captured_experiment_sources(artifact):
+    if artifact.get("pathway") == "music":
+        return [{"source_ref_index": index, "url": PRACTICE_URL, "source_id": "MusicnotesMN0103069",
+                 "exercise_id": PRACTICE_EXERCISE_ID, "target_pitch": "E6", "target_midi": 88,
+                 "quarter_bpm": 80, "onsets": [0.75, 2.25], "basis": "authored_notation_derived_exercise"}
+                for index, ref in enumerate(artifact.get("source_refs", []))
+                if isinstance(ref, dict) and ref.get("url") == PRACTICE_URL
+                and ((ref.get("locator") == PRACTICE_LOCATOR and ref.get("source_kind") == "notation_exercise")
+                     or ref.get("exercise_id") == PRACTICE_EXERCISE_ID)]
     # Already-verified Carter excerpt used by ideas-lab.js; never fetch user URLs.
     if artifact.get("pathway") != "ideas":
         return []
@@ -60,6 +71,13 @@ def validate_projection(result, schema, inputs):
     expected = [artifact["pathway"]] if experiment["status"] == "supported" else []
     if branches != expected:
         raise ValueError("Experiment branches must match its pathway and support status")
+    if experiment["music"] is not None and experiment["music"]["practice_target"] is not None:
+        if not captured_experiment_sources(artifact):
+            raise ValueError("practice_target requires the verified notation exercise in frozen source_refs")
+        state = artifact.get("state")
+        lab = state.get("lab") if isinstance(state, dict) else None
+        if not isinstance(lab, dict) or any(experiment["music"][key] != lab.get(key) for key in ("attack", "notes", "tempo")):
+            raise ValueError("practice_target must preserve frozen variation attack, notes, and tempo")
     if experiment["movement"] is not None and experiment["movement"].get("boxing_params") is not None:
         state = artifact.get("state")
         lab = state.get("lab") if isinstance(state, dict) else None
@@ -71,6 +89,10 @@ def validate_projection(result, schema, inputs):
                        if source["source_ref_index"] == ideas["source_ref_index"]), None)
         if source is None or not ideas["source_quote"].strip() or ideas["source_quote"] not in source["content"]:
             raise ValueError("Ideas source_quote must be a literal substring of captured source content")
+        scene = ideas["decision_scene"]
+        if scene is not None:
+            if {choice["id"] for choice in scene["choices"]} != {"a", "b"} or {choice["shelter"] for choice in scene["choices"]} != {"shared", "self"}:
+                raise ValueError("decision_scene requires distinct a/b choices and both shared/self shelter states")
 
 
 def now():
@@ -610,7 +632,18 @@ class App:
                 "artifact state.lab.boxing_round exists. cue is seconds (0.65 to 1.65); gap is simulation units "
                 "(10 to 22), not physical distance or impact-force. It applies only timing/gap and preserves "
                 "attempts, prediction, and question. Retain the other required movement fields for compatibility; "
-                "never invent a boxing game for an unrelated baseline.\n"
+                "never invent a boxing game for an unrelated baseline. "
+                "Music practice_target is required-nullable, separate from learner practice recordings. "
+                "For the captured MusicnotesMN0103069 exercise only, propose exercise_id "
+                "runaway-mn0103069-opening-two-strikes and quarter_bpm 40..80. The notation target is E6/MIDI88, "
+                "quarter BPM80, two onsets at .75 and 2.25 seconds at that tempo; not verified recording timing. "
+                "For a non-null practice_target preserve frozen lab attack, notes, and tempo exactly: target tempo "
+                "does not alter the variation. Preserve practice attempts; store target separately as lab.practice_target. "
+                "Ideas decision_scene is required-nullable. For shared_shelter provide exactly two choices with "
+                "distinct ids a and b, one shared and one self shelter state. Label consequences as model-imagined "
+                "possibilities, never factual predictions, observed outcomes, or correct moral answers. Preserve "
+                "the literal captured quote/source index binding. Use unsupported with all branches null when "
+                "source identity or required baseline is unavailable; do not fabricate it.\n"
                 + json.dumps(inputs, ensure_ascii=False))
             atomic_json(folder / "input.json", inputs)
             prompt_bytes = prompt.encode("utf-8")
