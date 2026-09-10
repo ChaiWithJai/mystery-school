@@ -325,6 +325,20 @@ function suggestionDecision(suggestion, status, declaration, decidedAt) {
     }
     else actions.append(el('span', 'correction-help', 'Corrections are available for model jobs.'));
     if (sample.parent_job_id) { const parent = button('View previous version', () => openSample(sample.parent_job_id), 'text-button'); actions.append(parent); }
+    const findingParents = [...new Set(sample.parent_finding_ids || sample.metadata?.parent_finding_ids || [])];
+    for (const [index, parentId] of findingParents.entries()) {
+      const label = findingParents.length === 1 ? 'View originating review' : `View originating review ${index + 1}`;
+      const parent = button(label, () => openSample(parentId), 'text-button');
+      parent.title = `Review ${parentId}`;
+      actions.append(parent);
+    }
+    const verifications = state.samples.filter(item => (item.parent_finding_ids || item.metadata?.parent_finding_ids || []).includes(sample.id));
+    for (const [index, verification] of verifications.entries()) {
+      const label = verifications.length === 1 ? 'View follow-up verification' : `View follow-up verification ${index + 1}`;
+      const next = button(label, () => openSample(verification.id), 'text-button');
+      next.title = sampleTitle(verification);
+      actions.append(next);
+    }
     header.append(actions, el('p', 'read-hint', 'Select a passage to leave a free-text note. Saved notes appear in the margin. Corrections create a new version.'));
     const job = Array.isArray(state.app.jobs) ? state.app.jobs.find(item => item.id === sample.id) : null;
     if (job) header.append(renderExecutionFiles(job));
