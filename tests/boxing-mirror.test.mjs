@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cleanMirrorState} from '../public/boxing-mirror.js';
+import {createBoxingMemory} from '../public/learning-memory.js';
+import {normalizeStoryWorldState} from '../public/story-world.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 test('mirror artifacts retain observations and estimated events, never raw frames',()=>{const s=cleanMirrorState({reflection:'I noticed my return',frames:[{private:true}],attempts:[{t:200,type:'JAB',hand:'L',power:99,landmarks:[1]},{t:NaN,type:'HOOK'}]});assert.equal(s.reflection,'I noticed my return');assert.deepEqual(s.attempts,[{t:200,type:'JAB',hand:'L',estimated:true,captureId:null,lessonId:null,sourceMode:null,detectorTime:null,mediaTime:null,seekSegment:null}]);assert.equal('frames' in s,false);});
@@ -16,6 +18,22 @@ test('JSON restore preserves each lesson draft and immutable observation history
 import {mirrorPosition} from '../public/boxing-mirror.js';
 test('body trail uses actual visible normalized hip/ankle positions and rejects missing hips',()=>{const p=[];p[23]={x:.2,y:.6,visibility:.9};p[24]={x:.4,y:.8,visibility:.9};p[27]={x:.1,y:.95,visibility:.8};p[28]={x:.5,y:1,visibility:.1};const sample=mirrorPosition(p,125);assert.ok(Math.abs(sample.x-.3)<1e-9);assert.equal(sample.y,.7);assert.deepEqual(sample.ankles,[{side:'L',x:.1,y:.95}]);p[23].visibility=.2;assert.equal(mirrorPosition(p,130),null);assert.equal(mirrorPosition(null,0),null);});
 test('practice duration and local image trace survive restore without implying mastery',()=>{const s=cleanMirrorState({practiceRounds:[{id:'r1',lessonId:'guard',status:'elapsed',durationMs:40020,points:[{t:100,x:.4,y:.5,ankles:[]}],mastered:true}]});assert.equal(s.practiceRounds[0].status,'elapsed');assert.equal(s.practiceRounds[0].durationMs,40020);assert.equal(s.practiceRounds[0].coordinateSpace,'normalized_image');assert.equal(s.practiceRounds[0].depthMeasured,false);assert.equal('mastered' in s.practiceRounds[0],false);});
+test('long reflection survives saved mirror and knowledge memory without truncation',()=>{
+  const reflection='  My observation.\n'.repeat(200)+'Keep this ending.  ';
+  const mirror=cleanMirrorState({reflection});
+  assert.equal(mirror.reflection,reflection);
+  const saved=JSON.parse(JSON.stringify({id:'long-observation',pathway:'movement',actor_kind:'user_action',state:{lab:{boxing_mirror:mirror}}}));
+  const memory=createBoxingMemory(saved);
+  assert.equal(memory.observation.text,reflection);
+  const world=normalizeStoryWorldState({memories:[memory],learnerStory:'My existing story.'});
+  assert.equal(world.memories[0].observation.text,reflection);
+  assert.equal(world.learnerStory,'My existing story.');
+});
+
+test('invalid reflection values never become invented observation text',()=>{
+  for(const reflection of [undefined,null,42,true,{},['words']])assert.equal(cleanMirrorState({reflection}).reflection,'');
+});
+
 const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 function harness({bitmapFailure=false,transferFailure=false}={}) {
   class Element {
@@ -62,6 +80,20 @@ test('capture estimates preserve immutable identity and separate media time acro
   assert.deepEqual(h.view.getState().attempts[0],first);assert.deepEqual(cleanMirrorState(h.view.getState()).attempts[0],JSON.parse(JSON.stringify(first)));h.view.dispose();
 });
 
+test('mirror textarea and restoration retain the complete long observation',()=>{
+  const h=harness();
+  try{
+    const input=h.root.querySelector('textarea');
+    const reflection='Observation '.repeat(300)+'The last words matter.';
+    input.value=reflection;input.oninput();
+    const saved=JSON.parse(JSON.stringify(h.view.getState()));
+    assert.equal(saved.reflection,reflection);
+    h.view.setState(saved);
+    assert.equal(input.value,reflection);
+    assert.equal(h.view.getState().reflection,reflection);
+  }finally{h.view.dispose();}
+});
+
 test('results in flight before seek are discarded',async()=>{
   const h=harness();await h.begin();await h.ready();h.video.onseeking();h.result();assert.equal(h.view.getState().attempts.length,0);h.view.dispose();
 });
@@ -96,4 +128,13 @@ test('kept lesson observation retains frame provenance and the practice session 
  const saved=keepMirrorObservation(state,lesson,{id:'proof'});const event=saved.observations[0].attempts[0];
  assert.equal(event.sessionId,'s1');assert.equal(event.captureId,'capture1');assert.equal(event.lessonId,'guard');assert.equal(event.mediaTime,1.5);assert.equal(event.seekSegment,2);
  assert.deepEqual(cleanMirrorState(JSON.parse(JSON.stringify(saved))).observations[0].attempts[0],event);
+});
+
+
+test('lesson drafts and kept observation history preserve full learner text including whitespace',()=>{
+ const s=ready(),reflection='  My extended observation.\n'.repeat(200)+'Keep this ending.  ';
+ s.lessonProgress.guard.reflection=reflection;s.reflection=reflection;
+ const kept=keepMirrorObservation(s,lesson,{id:'long-history'});
+ assert.equal(kept.reflection,reflection);assert.equal(kept.lessonProgress.guard.reflection,reflection);assert.equal(kept.observations[0].reflection,reflection);
+ const restored=cleanMirrorState(JSON.parse(JSON.stringify(kept)));assert.equal(restored.observations[0].reflection,reflection);
 });

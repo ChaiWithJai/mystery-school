@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeStoryWorldState, stepStoryCamera, storyWorldShelter, isUnderStoryShelter, chooseStoryWorld, mountStoryWorld, STORY_WORLD_SOURCE, displayedStoryChoice } from '../public/story-world.js';
 import { ideasComparisonIdentity } from '../public/ideas-lab.js';
+import { normalizeStoryMemories, storyMemoryLinks } from '../public/story-world.js';
+import { createBoxingMemory } from '../public/learning-memory.js';
 
 const comparison = (scenario = 'Two people disagree in the rain.') => ({ scenario, question: 'What will you write?', source_quote: STORY_WORLD_SOURCE.excerpt, source_ref_index: 0,
   decision_scene: { kind: 'shared_shelter', choices: [
@@ -54,6 +56,7 @@ test('diagonal input does not increase speed and camera cannot cross world edge 
   assert.ok(Math.abs(Math.hypot(diagonal.x, diagonal.z) - .16) < 1e-8);
   assert.equal(stepStoryCamera({ ...camera, x: 16.99 }, { right: 1 }, .05).x, 16.99);
   assert.equal(stepStoryCamera(camera, { forward: 1 }, .05, [{ x: 0, z: -.6, radius: .3 }]).z, 0);
+  assert.ok(stepStoryCamera(camera, { forward: 1 }, .05, [{ x: 0, z: -.6, radius: .3, enabled: false }]).z < 0);
   const slide = stepStoryCamera(camera, { forward: 1, right: 1 }, .05, [{ x: 0, z: -.6, radius: .3 }]);
   assert.ok(slide.x > 0); assert.equal(slide.z, 0);
 });
@@ -107,4 +110,60 @@ test('invalid source/model scenes reject; historical text is not promoted to pla
 test('mount rejects an invalid host or callbacks rather than claiming a rendered world', () => {
   assert.throws(() => mountStoryWorld(null), TypeError);
   assert.throws(() => mountStoryWorld({ ownerDocument: {}, append() {} }, { onChange: null }), TypeError);
+});
+
+const memoryRecord = (id = 'agent-qa-artifact', observation = '  I felt unsure.\nThis is my report, not a measurement.  ') => createBoxingMemory({
+  id, pathway: 'movement', actor_kind: 'agent_review', trace_id: 'tr-agent-qa',
+  source_refs: [{ label: 'Source', url: 'https://example.test/source', locator: 'Section 1' }],
+  state: { lab: { boxing_mirror: { reflection: observation, lessonId: 'basic', attempts: [{ t: 1, type: 'JAB' }] } } },
+});
+
+test('compact memories preserve exact reports, helper provenance, and detached snapshots', () => {
+  const input = memoryRecord();
+  const state = normalizeStoryWorldState({ memories: [input], learnerStory: 'My story.', learnerIntent: 'My question.', camera: { x: 2, z: 3, yaw: 1, pitch: .2 }, writerOpen: true });
+  assert.deepEqual(state.memories, [input]);
+  assert.equal(state.memoryArtifactId, input.source_artifact_id);
+  assert.equal(state.memoriesOpen, false); assert.equal(state.writerOpen, true);
+  assert.equal(state.learnerStory, 'My story.'); assert.deepEqual(state.camera, { x: 2, z: 3, yaw: 1, pitch: .2 });
+  const copy = structuredClone(state); copy.memories[0].observation.text = 'Changed';
+  assert.equal(state.memories[0].observation.text, input.observation.text);
+  assert.deepEqual(normalizeStoryWorldState(JSON.parse(JSON.stringify(state))), state);
+});
+
+test('appendMemory semantics retain first artifact deposit, latest sixty, and selected existing record', () => {
+  const first = memoryRecord('first', 'First exact report.');
+  assert.deepEqual(normalizeStoryMemories([first, memoryRecord('first', 'Replacement')]), [first]);
+  const memories = Array.from({ length: 65 }, (_, i) => memoryRecord(`id-${i}`));
+  const state = normalizeStoryWorldState({ memories, memoryArtifactId: 'id-20', memoriesOpen: true });
+  assert.equal(state.memories.length, 60); assert.equal(state.memories[0].source_artifact_id, 'id-5');
+  assert.equal(state.memoryArtifactId, 'id-20'); assert.equal(state.memoriesOpen, true);
+  assert.equal(normalizeStoryWorldState({ memories, memoryArtifactId: 'missing' }).memoryArtifactId, 'id-64');
+  assert.equal(normalizeStoryWorldState({ memories: [], memoriesOpen: true }).memoriesOpen, false);
+});
+
+test('memory ingestion drops malformed reports and unrecognized fields without claiming verification', () => {
+  const good = structuredClone(memoryRecord()); good.secret = 'not copied'; good.observation.label = 'Verified!'; good.observation.score = 100;
+  const memories = normalizeStoryMemories([null, {}, { ...good, observation: { kind: 'measured', text: 'Not a self-report' } }, { ...good, source_artifact_id: '' }, good]);
+  assert.equal(memories.length, 1); assert.equal('secret' in memories[0], false); assert.equal('score' in memories[0].observation, false);
+  assert.equal(memories[0].observation.label, good.observation.label);
+  assert.equal(memories[0].observation.text, good.observation.text);
+  assert.deepEqual(normalizeStoryMemories('bad'), []);
+});
+
+test('memory links stay local and encode IDs rather than interpreting untrusted text as URLs', () => {
+  const record = memoryRecord('a/?actor=user_action#<script>');
+  const links = storyMemoryLinks(record);
+  assert.equal(links.artifact, '/?path=movement&artifact=a%2F%3Factor%3Duser_action%23%3Cscript%3E&actor=agent_review');
+  assert.equal(links.trace, '/review.html?sample=a%2F%3Factor%3Duser_action%23%3Cscript%3E');
+  assert.equal(storyMemoryLinks({ ...record, source_trace_id: null }).trace, null);
+  assert.equal(storyMemoryLinks({ ...record, actor_kind: 'user_action' }).artifact.includes('&actor=agent_review'), false);
+});
+
+test('memory enrichment and shelter changes do not overwrite writing or camera', () => {
+  const original = normalizeStoryWorldState({ learnerIntent: 'Exact intent', learnerStory: 'Exact story\n', modelComparison: comparison(), camera: { x: 1, z: 2, yaw: 0, pitch: 0 } });
+  const enriched = normalizeStoryWorldState({ ...original, memories: [memoryRecord()] });
+  const chosen = chooseStoryWorld(enriched, 'a');
+  assert.deepEqual(chosen.memories, enriched.memories);
+  assert.deepEqual(chosen.camera, original.camera);
+  assert.equal(chosen.learnerIntent, original.learnerIntent); assert.equal(chosen.learnerStory, original.learnerStory);
 });

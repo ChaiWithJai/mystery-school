@@ -1,6 +1,15 @@
 const BLACK = new Set([1, 3, 6, 8, 10]);
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export const COMPUTER_KEYS = Object.freeze({ a: 60, w: 61, s: 62, e: 63, d: 64, f: 65, t: 66, g: 67, y: 68, h: 69, u: 70, j: 71, k: 72, o: 73, l: 74, p: 75, ';': 76 });
+export const PHYSICAL_KEYS = Object.freeze(Object.fromEntries(Object.entries(COMPUTER_KEYS).map(([key,midi]) => [key === ';' ? 'Semicolon' : `Key${key.toUpperCase()}`, midi])));
+const mountedPianos = [];
+export function physicalPianoKey(event, keyboardMap = 'standard') {
+  if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.isComposing) return null;
+  const origin = event.composedPath?.()[0] || event.target;
+  if (origin?.isContentEditable || origin?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="combobox"],[role="slider"]')) return null;
+  const code = event.code || (event.key === ';' ? 'Semicolon' : `Key${String(event.key || '').toUpperCase()}`);
+  return Object.hasOwn(PHYSICAL_KEYS, code) ? { midi: keyboardMap === 'runaway' && code === 'KeyL' ? 88 : PHYSICAL_KEYS[code], source: `physical:${code}` } : null;
+}
 export const noteName = midi => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
 export const noteFrequency = midi => 440 * 2 ** ((midi - 69) / 12);
 
@@ -58,7 +67,8 @@ export function performanceNotes(value) {
   return notes;
 }
 
-export function mountPianoPractice(container, { initialState = {}, onChange = () => {}, onEvent = () => {}, autoCapture = false } = {}) {
+export function mountPianoPractice(container, { initialState = {}, onChange = () => {}, onEvent = () => {}, autoCapture = false, keyboardMap = 'standard' } = {}) {
+  if (!['standard', 'runaway'].includes(keyboardMap)) throw new TypeError('Unknown piano keyboard map.');
   let state = normalizePianoState(initialState);
   let disposed = false;
   let context;
@@ -76,6 +86,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   const listeners = [];
   const root = document.createElement('section');
   root.className = 'piano-practice';
+  root.dataset.keyboardMap = keyboardMap;
   root.innerHTML = `<header class="piano-practice__header"><h2>Piano</h2><div data-reference></div></header>
     <div class="piano-practice__scroll"><div class="piano-practice__keyboard" role="group" aria-label="Piano C3 to C7. Hold a key to sustain; release to stop." tabindex="0"></div></div>
     <div class="piano-practice__transport"><button type="button" data-record>Record</button><button type="button" data-replay>Replay</button><button type="button" data-stop aria-label="Stop sound and finish recording">Stop</button><span data-status role="status" aria-live="polite"></span></div>
@@ -87,8 +98,10 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     <details><summary>Edit this performance</summary><p>Adjust your own note's pitch, entrance or release in seconds. These are recorded timings, not a score or an accuracy grade.</p><div data-editor></div></details>
     <details><summary>What am I hearing?</summary><p>A quiet synthesized tone, not a recorded piano. Higher keys have higher frequencies. Holding a key sustains its tone; releasing it lets the volume fade. Black keys are the pitches between adjacent white keys, except E/F and B/C.</p></details></details>`;
   container.append(root);
+  mountedPianos.push(root);
   const find = selector => root.querySelector(selector);
   const keyboard = find('.piano-practice__keyboard');
+  if (keyboardMap === 'runaway') find('.piano-practice__hint').textContent = 'Runaway keyboard mode: hold physical L for E6. Other letter keys keep their standard mapping. This is our practice shortcut, not the reference website keyboard layout. Typing in a field does not play notes.';
   const status = find('[data-status]');
   const error = find('[data-error]');
   const keyElements = new Map();
@@ -142,21 +155,22 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     if (context.state !== 'running') throw new Error('Audio did not start. Try another explicit key press.');
     error.hidden = true;
   }
-  function voice(midi, start, attack = .012) {
+  function voice(midi, start, attack = .012, peak = .04 / Math.max(1, voices.size + scheduled.length + 1)) {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     oscillator.type = 'triangle';
     oscillator.frequency.setValueAtTime(noteFrequency(midi), start);
     gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(.006, start + attack);
+    gain.gain.linearRampToValueAtTime(peak, start + attack);
     oscillator.connect(gain); gain.connect(context.destination);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    const entry = { oscillator, gain, peak };
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); const index = scheduled.indexOf(entry); if (index !== -1) scheduled.splice(index, 1); };
     oscillator.start(start);
-    return { oscillator, gain };
+    return entry;
   }
   function releaseVoice(v, time) {
     if (v.gain.gain.cancelAndHoldAtTime) v.gain.gain.cancelAndHoldAtTime(time);
-    else { v.gain.gain.cancelScheduledValues(time); v.gain.gain.setValueAtTime(.006, time); }
+    else { v.gain.gain.cancelScheduledValues(time); v.gain.gain.setValueAtTime(v.peak, time); }
     v.gain.gain.linearRampToValueAtTime(0, time + .06);
     v.oscillator.stop(time + .065);
   }
@@ -191,7 +205,14 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     const token = generation;
     try {
       await audioReady();
-      if (disposed || generation !== token || ![...held.values()].includes(midi) || voices.has(midi)) return;
+      if (disposed || generation !== token || voices.has(midi)) return;
+      if (![...held.values()].includes(midi)) {
+        // A real quick tap may end while the browser unlocks audio. Sound a short
+        // tap once ready, without rewriting its recorded input timestamps.
+        const tap = voice(midi, context.currentTime);
+        releaseVoice(tap, context.currentTime + .06); scheduled.push(tap);
+        return;
+      }
       voices.set(midi, voice(midi, context.currentTime));
     } catch (err) { if (!disposed) fail(err); }
   }
@@ -224,6 +245,10 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     button.className = `piano-practice__key ${key.black ? 'is-black' : 'is-white'}`;
     button.style.left = `${key.left}%`; button.style.width = `${key.width}%`;
     button.textContent = noteName(key.midi);
+    if (key.midi === 88 && keyboardMap === 'runaway') {
+      const shortcut = document.createElement('kbd'); shortcut.className = 'piano-practice__shortcut'; shortcut.textContent = 'L';
+      button.append(shortcut); button.setAttribute('aria-keyshortcuts', 'l'); button.title = 'Runaway mode: hold physical L to play E6';
+    }
     button.setAttribute('aria-label', `${noteName(key.midi)}, hold to play`);
     button.setAttribute('aria-pressed', 'false');
     keyElements.set(key.midi, button); keyboard.append(button);
@@ -234,17 +259,25 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) listen(button, type, event => up(`pointer:${event.pointerId}`));
     listen(button, 'keydown', event => {
+      if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.isComposing) return;
       if (![' ', 'Enter'].includes(event.key)) return;
       event.preventDefault(); if (!event.repeat) void down(key.midi, `focus:${event.key}`);
     });
     listen(button, 'keyup', event => { if ([' ', 'Enter'].includes(event.key)) { event.preventDefault(); up(`focus:${event.key}`); } });
   }
-  listen(keyboard, 'keydown', event => {
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
-    const midi = COMPUTER_KEYS[event.key.toLowerCase()];
-    if (midi !== undefined) { event.preventDefault(); if (!event.repeat) void down(midi, `keyboard:${event.key.toLowerCase()}`); }
+  listen(globalThis, 'keydown', event => {
+    const active = mountedPianos.findLast(piano => piano.isConnected !== false && !piano.closest?.('[hidden],[inert]') && (!piano.getClientRects || piano.getClientRects().length > 0));
+    if (active !== root || document.hidden) return;
+    const origin = event.composedPath?.()[0] || event.target;
+    if (origin?.closest?.('button,a,[role="button"],[role="menuitem"]') && !root.contains(origin) && !origin.closest?.('#drawer')) return;
+    const key = physicalPianoKey(event, keyboardMap);
+    if (key) { event.preventDefault(); if (!event.repeat) void down(key.midi, key.source); }
   });
-  listen(globalThis, 'keyup', event => up(`keyboard:${event.key.toLowerCase()}`));
+  listen(globalThis, 'keyup', event => {
+    const code = event.code || (event.key === ';' ? 'Semicolon' : `Key${String(event.key || '').toUpperCase()}`);
+    up(`physical:${code}`);
+    if ([' ', 'Enter'].includes(event.key)) up(`focus:${event.key}`);
+  });
   listen(globalThis, 'blur', stop);
   listen(document, 'visibilitychange', () => { if (document.hidden) stop(); });
   listen(root, 'keydown', event => { if (event.key === 'Escape') { stop(); emit('stop'); } });
@@ -264,9 +297,10 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
       if (disposed || generation !== token) return;
       const start = context.currentTime + .04;
       const notes = performanceNotes(snapshot);
+      const overlap = Math.max(1, ...notes.map(note => notes.filter(other => other.start <= note.start && other.end + .065 > note.start).length));
       for (const note of notes) {
-        const v = voice(note.midi, start + note.start, Math.min(.012, (note.end - note.start) / 2));
-        v.gain.gain.setValueAtTime(.006, start + note.end);
+        const v = voice(note.midi, start + note.start, Math.min(.012, (note.end - note.start) / 2), .04 / overlap);
+        v.gain.gain.setValueAtTime(v.peak, start + note.end);
         v.gain.gain.linearRampToValueAtTime(0, start + note.end + .06);
         v.oscillator.stop(start + note.end + .065); scheduled.push(v);
       }
@@ -294,6 +328,7 @@ export function mountPianoPractice(container, { initialState = {}, onChange = ()
   function cleanup() {
     if (disposed) return;
     stop(); disposed = true; listeners.forEach(remove => remove()); root.remove();
+    const index = mountedPianos.indexOf(root); if (index !== -1) mountedPianos.splice(index, 1);
     if (context) void context.close().catch(() => {});
   }
   cleanup.getState = () => normalizePianoState(state);

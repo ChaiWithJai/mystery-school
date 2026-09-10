@@ -19,6 +19,7 @@ export function mountPianoScene(container,adapter,track,onContinue){
   sourceDetails.innerHTML='<summary>Song & exercise source</summary><p>Two strikes from the published arrangement, played with synthesized tones. Not the original recording or a full-song lesson.</p>';
   sourceDetails.append(referenceButton);
   const sourceLink=document.createElement('a');sourceLink.href=RUNAWAY_OPENING_SOURCE.url;sourceLink.target='_blank';sourceLink.rel='noopener';sourceLink.textContent='Inspect the published opening';sourceDetails.append(sourceLink);
+  const keyboardReference=document.createElement('a');keyboardReference.href='https://virtualpiano.net/music-sheet/runaway-kanye-west-2/';keyboardReference.target='_blank';keyboardReference.rel='noopener noreferrer';keyboardReference.textContent='Open the Virtual Piano arrangement';sourceDetails.append(keyboardReference);
   piano.querySelector('.piano-practice__options').append(sourceDetails);
   const targetKey=piano.querySelector('[aria-label="E6, hold to play"]');targetKey?.classList.add('is-lesson-target');
   const next=document.createElement('button');next.className='universe-next';next.textContent='Keep this. Into the ring →';next.hidden=true;piano.append(next);

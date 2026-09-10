@@ -23,6 +23,7 @@ export function mountSongLab(container, { initialState = {}, onChange = () => {}
   const publish = () => { if (!disposed && !applying) onChange(structuredClone(state)); };
   const piano = mountPianoPractice(pianoHost, {
     autoCapture: true,
+    keyboardMap: 'runaway',
     initialState: state.practice,
     onChange: practice => { state.practice = structuredClone(practice); publish(); },
     onEvent: (type, payload) => onEvent('performance.' + type, payload)
