@@ -1,4 +1,5 @@
 import { validateExperimentProposal, proposedLabState } from './experiment-proposal.js';
+import { normalizeSongState } from './song-lab.js';
 
 const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'cancelling']);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -17,6 +18,7 @@ export function describeExperimentValue(key, value) {
   return typeof value === 'object' ? 'Saved experiment details' : String(value);
 }
 export function experimentDefinition(pathway, state) {
+  if (pathway === 'music') return normalizeSongState(state);
   if (pathway === 'ideas') {
     const { helpOpen, helpSeen, sourceOpened, ...content } = state;
     return structuredClone(content);
