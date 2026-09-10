@@ -58,10 +58,11 @@ export function validateYouTubeReference(urlText = '', timestamp = '', note = ''
 export function validateDecisionScene(value) {
   if (value == null) return null;
   if (value.kind !== 'shared_shelter' || !Array.isArray(value.choices) || value.choices.length !== 2 ||
-    value.choices.some((choice, index) => !choice || choice.id !== ['a', 'b'][index] ||
+    value.choices.some(choice => !choice || !['a', 'b'].includes(choice.id) ||
       typeof choice.label !== 'string' || !choice.label.trim() || choice.label.length > 80 ||
       typeof choice.consequence !== 'string' || !choice.consequence.trim() || choice.consequence.length > 240 ||
       !['shared', 'self'].includes(choice.shelter)) ||
+    new Set(value.choices.map(choice => choice.id)).size !== 2 ||
     new Set(value.choices.map(choice => choice.shelter)).size !== 2) {
     throw new TypeError('A decision scene needs choices a and b, bounded text, and both shelter states.');
   }
@@ -405,9 +406,9 @@ export function mountIdeasLab(container, { initialState = {}, onChange = () => {
     update({ decisionResponses: { ...responses, [comparisonIdentity]: choice } });
     emit('model-comparison.decision', { choice, imagined: true, comparisonIdentity });
   }
-  const decisionButtons = ['a', 'b'].map(id => {
+  const decisionButtons = [0, 1].map(index => {
     const button = node('button', 'ideas-lab__button'); button.type = 'button';
-    listen(button, 'click', () => chooseDecision(id)); decisionChoices.append(button); return button;
+    listen(button, 'click', () => chooseDecision(state.modelComparison?.decision_scene?.choices[index].id)); decisionChoices.append(button); return button;
   });
   const neither = node('button', 'ideas-lab__button', 'Neither fits'); neither.type = 'button';
   listen(neither, 'click', () => chooseDecision('neither'));

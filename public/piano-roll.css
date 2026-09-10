@@ -1,0 +1,10 @@
+.piano-roll{position:fixed;z-index:30;pointer-events:none;color:#d8e7c5;font:13px/1.4 var(--sans,"Avenir Next",sans-serif);box-sizing:border-box}
+.piano-roll__controls{height:46px;display:flex;align-items:center;gap:8px;pointer-events:auto;width:fit-content;max-width:100%;background:#0b211de8;border-radius:24px;padding:4px}
+.piano-roll button{min-width:52px;min-height:38px;border:1px solid #698268;border-radius:22px;background:#16382a;color:#e9efd6;cursor:pointer;font:inherit;padding:6px 14px}
+.piano-roll [data-play]{background:#d4e5b5;color:#163322}.piano-roll button:disabled{opacity:.45;cursor:not-allowed}
+.piano-roll [data-tempo]{font-size:11px;padding:0 8px}.piano-roll [data-feedback]{height:54px;margin:0;padding:10px 4px;font:italic 18px/1.4 var(--serif,Georgia,serif)}
+.piano-roll__track{display:block;width:100%;overflow:hidden;background:linear-gradient(0deg,#3e5b3028,transparent);color:#cdddac;pointer-events:none}
+.piano-roll details{position:absolute;top:0;right:0;pointer-events:auto;max-width:280px;background:#0b211deb;border-radius:8px;font-size:11px;padding:8px}
+.piano-roll details p{padding:0 8px}.piano-roll summary{cursor:pointer;min-height:28px}.piano-roll a{color:#ead6a7}.piano-roll :is(button,summary,a):focus-visible{outline:3px solid #f3d698;outline-offset:3px}
+@media(max-width:640px){.piano-roll [data-tempo]{max-width:90px}.piano-roll details{top:-34px;font-size:10px}.piano-roll button{padding:6px 8px}}
+@media(prefers-reduced-motion:reduce){.piano-roll *{animation:none!important;transition:none!important}}

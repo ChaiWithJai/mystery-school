@@ -18,17 +18,19 @@ test('every playable pitch stays inside the scene, including E6 and C7', () => {
 
 test('scene label, single Hear button and comparison follow the applied target without rewriting take', () => {
   class Element {
-    constructor(tag='div'){this.tag=tag;this.children=[];this.queries=new Map();this.classList={add(){}};}
+    constructor(tag='div'){this.tag=tag;this.children=[];this.queries=new Map();this.classList={add(){}};this.style={};}
     querySelector(key){if(!this.queries.has(key))this.queries.set(key,new Element());return this.queries.get(key);}
     append(...nodes){this.children.push(...nodes);}
     prepend(node){this.children.unshift(node);}
     replaceChildren(...nodes){this.children=nodes;}
     setAttribute(){} remove(){} focus(){}
   }
-  const document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+  const document={head:new Element('head'),createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+  const rollTargets=[],rollEvents=[];let rollDisposed=false;
+  const mountPianoRoll=()=>{const cleanup=()=>{rollDisposed=true;};cleanup.setTarget=value=>rollTargets.push(value);cleanup.event=(type,payload)=>rollEvents.push({type,payload});return cleanup;};
   const source=readFileSync(new URL('../public/piano-scene.js',import.meta.url),'utf8');
   const body=source.slice(source.indexOf('export function mountPianoScene')).replace('export function','function');
-  const mount=vm.runInNewContext(`${body};mountPianoScene`,{document,pianoScenePoint,performanceNotes,noteName,RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel});
+  const mount=vm.runInNewContext(`${body};mountPianoScene`,{document,mountPianoRoll,pianoScenePoint,performanceNotes,noteName,RUNAWAY_OPENING_SOURCE,createOpeningDemoTake,analyzeOpening,openingTempoLabel});
   const container=new Element();const calls=[];const events=[];
   const target={exercise_id:RUNAWAY_OPENING_SOURCE.id,quarter_bpm:60};
   const state={practice:createOpeningDemoTake(target),practice_target:null};
@@ -51,4 +53,8 @@ test('scene label, single Hear button and comparison follow the applied target w
   assert.equal(label.textContent,'80 BPM / published notation');
   assert.equal(invitation.querySelector('p').textContent,'Try the glowing key.');
   view.dispose();
+  assert.equal(rollDisposed,true);
+  assert.deepEqual(rollTargets,[null,target,null]);
+  assert.equal(rollEvents[0].type,'performance.stop');
+  assert.equal(invitation.hidden,true);
 });

@@ -46,12 +46,16 @@ test('actual wrapper target-only apply and undo never reset either instrument', 
     const adapter=()=>{};adapter.calls=[];
     adapter.setState=value=>{adapter.calls.push(value);options.onChange(value);};
     adapter.demonstrate=()=>{};
+    adapter.getPlaybackClock=()=>adapter.clock??null;
     adapter.options=options;mounts.push(adapter);return adapter;
   };
   const source=readFileSync(new URL('../public/song-lab.js',import.meta.url),'utf8');
   const body=source.slice(source.indexOf('export function mountSongLab')).replace('export function','function');
   const run=vm.runInNewContext(`${body}; mountSongLab`,{normalizeSongState,normalizePianoState,normalizeOpeningTarget,normalizeMusicState:value=>({attack:value.attack,tempo:value.tempo,notes:value.notes}),mountPianoPractice:mount,mountMusicLab:mount,structuredClone});
   const changes=[];const api=run(container,{onChange:value=>changes.push(value)});
+  assert.equal(api.getPlaybackClock(),null);
+  const clock=Object.freeze({now:()=>12,startTime:10});mounts[0].clock=clock;
+  assert.equal(api.getPlaybackClock(),clock);
   const original=api.getState();
   const practice={duration:2,events:[{type:'on',midi:88,time:.2},{type:'off',midi:88,time:1.7}],reference:null};
   mounts[0].options.onChange(practice);
@@ -65,5 +69,5 @@ test('actual wrapper target-only apply and undo never reset either instrument', 
   assert.equal(mounts[0].calls.length,0);assert.equal(mounts[1].calls.length,0);
   const before=api.getState();
   assert.throws(()=>api.setState({...before,practice_target:{exercise_id:'bad',quarter_bpm:60}}));
-  assert.deepEqual(api.getState(),before);api();
+  assert.deepEqual(api.getState(),before);api();assert.equal(api.getPlaybackClock(),null);
 });

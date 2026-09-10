@@ -11,7 +11,7 @@ self.onmessage = async ({data:m}) => {
     } catch(e){postMessage({type:'error',message:String(e.message||e)});}
   }
   if(m.type==='frame') {
-    try { const r=pose?.detectForVideo(m.bitmap,m.t);postMessage({type:'landmarks',landmarks:r?.landmarks?.[0]||null,t:m.t}); }
+    try { const r=pose?.detectForVideo(m.bitmap,m.t);postMessage({type:'landmarks',landmarks:r?.landmarks?.[0]||null,t:m.t,provenance:m.provenance}); }
     catch(e){postMessage({type:'error',message:String(e.message||e)});}
     finally {m.bitmap.close();}
   }

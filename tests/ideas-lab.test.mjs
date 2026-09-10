@@ -281,11 +281,12 @@ const decisionComparison = (scenario = 'A stranger waits in the rain.') => ({
 test('decision scenes enforce exact choice IDs, text bounds, and both shelter states', () => {
   const scene = decisionComparison().decision_scene;
   assert.deepEqual(validateDecisionScene(scene), scene);
+  assert.deepEqual(validateDecisionScene({...scene,choices:scene.choices.toReversed()}).choices,scene.choices.toReversed());
   assert.equal(validateDecisionScene(null), null);
   for (const invalid of [
     {}, { ...scene, kind: 'other' }, { ...scene, choices: [] },
     { ...scene, choices: [...scene.choices, scene.choices[0]] },
-    { ...scene, choices: scene.choices.toReversed() },
+    { ...scene, choices: [{...scene.choices[0],id:'b'},scene.choices[1]] },
     ...['label', 'consequence', 'shelter', 'id'].map(key => ({ ...scene, choices: [{ ...scene.choices[0], [key]: '' }, scene.choices[1]] })),
     { ...scene, choices: [{ ...scene.choices[0], label: 'x'.repeat(81) }, scene.choices[1]] },
     { ...scene, choices: [{ ...scene.choices[0], consequence: 'x'.repeat(241) }, scene.choices[1]] },
@@ -306,6 +307,17 @@ test('decision response map is bounded, detached, serializable and scoped to ful
   for (const patch of [{ question: 'Different?' }, { source_ref_index: 1 }, { source_quote: 'Some things' }]) {
     assert.notEqual(ideasComparisonIdentity({ ...decisionComparison(), ...patch }), ideasComparisonIdentity(decisionComparison()));
   }
+});
+
+test('reversed choices retain displayed action identity in the legacy scene',()=>{
+  const {container,elements}=testContainer();
+  const modelComparison=decisionComparison();modelComparison.decision_scene.choices.reverse();
+  const lab=mountIdeasLab(container,{initialState:{modelComparison}});
+  const buttons=elements.find(e=>e.className==='ideas-lab__decision-choices').children;
+  buttons[0].fire('click');
+  assert.equal(lab.getState().decisionResponses[ideasComparisonIdentity(modelComparison)],'b');
+  assert.equal(elements.find(e=>e.className==='ideas-lab__story').attributes['data-shared'],'false');
+  lab();
 });
 
 test('apply foregrounds actual model choices; choices and neither never write learner words', () => {

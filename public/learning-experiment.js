@@ -9,7 +9,8 @@ const MOVEMENT_SETTINGS = ['duration', 'distance', 'shape', 'compare_shape', 'vi
 export function savedExperimentContext(artifact, current) {
   const state=artifact.state,lab=state.lab;
   const frozen={question:state.question.trim(),explanation:state.explanation||'',source_refs:artifact.source_refs||[],
-    reference_draft:[lab.youtubeUrl||'',lab.youtubeTimestamp||'',lab.youtubeNote||'']};
+    reference_draft:[lab.youtubeUrl||'',lab.youtubeTimestamp||'',lab.youtubeNote||''],
+    story_writing:[lab.story_world?.learnerIntent||'',lab.story_world?.learnerStory||'']};
   if(Object.keys(current).some(key=>!Object.hasOwn(frozen,key)))throw Error('This saved proposal has context that cannot be verified. Ask again from this version.');
   return Object.fromEntries(Object.keys(current).map(key=>[key,structuredClone(frozen[key])]));
 }
