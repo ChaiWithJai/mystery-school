@@ -4,10 +4,15 @@ const worlds = [
   ['ideas','Enter a story','WONDER',`<path d="M80 365Q165 320 250 365Q335 320 420 365L402 530Q328 495 250 538Q170 495 98 530Z" fill="#e6d4a9"/><path d="M250 365V538M105 375Q180 342 237 377M263 377Q325 342 400 375" fill="none" stroke="#9d9574" stroke-width="2"/><path d="M120 395Q178 373 226 402M120 414Q175 392 226 421M273 402Q330 373 388 395" fill="none" stroke="#aa9a7977" stroke-width="2"/><path d="M250 359Q80 210 235 75Q430 180 250 359" fill="#82afa922" stroke="#c6d6b177"/><circle cx="235" cy="180" r="44" fill="#bdd4ba33" stroke="#e2dcb1"/><path d="M225 180l10-22 10 22-10 22Z" fill="#f7e6b5"/><path d="M155 250L235 180L332 265" fill="none" stroke="#e9d7aa" stroke-width="1"/><circle cx="155" cy="250" r="6" fill="#f7e6b5"/><circle cx="332" cy="265" r="7" fill="#f7e6b5"/>`]
 ];
 export function showMovieOpening(onSelect) {
-  document.querySelector('.movie-opening')?.remove();
+  document.querySelector('.movie-opening')?.dispatchEvent(new Event('movie:dismiss'));
   const opening=document.createElement('section');opening.className='movie-opening';opening.setAttribute('aria-label','Choose the world you want to enter');
   opening.innerHTML=`<div class="movie-opening__grain" aria-hidden="true"></div><header><span>MYSTERY SCHOOL</span><h1>Follow what moves you.</h1></header><div class="movie-opening__worlds">${worlds.map(([id,label,theme,art])=>`<button class="movie-world movie-world--${id}" data-world="${id}" aria-label="${label}"><svg viewBox="0 0 500 650" aria-hidden="true"><defs><filter id="glow"><feGaussianBlur stdDeviation="4"/></filter><radialGradient id="mist-${id}"><stop stop-color="${id==='music'?'#776344':id==='movement'?'#7c5541':'#466c62'}"/><stop offset="1" stop-color="#0a1916"/></radialGradient></defs><rect width="500" height="650" fill="url(#mist-${id})"/>${Array.from({length:25},(_,i)=>`<circle cx="${(i*137)%500}" cy="${(i*83)%620}" r="${i%3*.5+.4}" fill="#ede0b9" opacity=".35"/>`).join('')}${art}</svg><span class="movie-world__title">${label}<small>↗</small></span></button>`).join('')}</div>`;
   document.body.append(opening);
-  opening.querySelectorAll('[data-world]').forEach(button=>button.onclick=()=>{sessionStorage.setItem('mystery.opening-seen','1');opening.remove();onSelect(button.dataset.world);});
+  opening.setAttribute('role','dialog');opening.setAttribute('aria-modal','true');
+  const background=[...document.body.children].filter(child=>child!==opening).map(child=>({child,inert:child.inert}));background.forEach(({child})=>child.inert=true);
+  const close=()=>{background.forEach(({child,inert})=>child.inert=inert);opening.remove();};opening.addEventListener('movie:dismiss',close,{once:true});
+  const choices=[...opening.querySelectorAll('[data-world]')];
+  opening.addEventListener('keydown',event=>{if(event.key!=='Tab')return;event.preventDefault();const index=choices.indexOf(document.activeElement);choices[(index+(event.shiftKey?-1:1)+choices.length)%choices.length].focus();});
+  choices.forEach(button=>button.onclick=()=>{sessionStorage.setItem('mystery.opening-seen','1');close();onSelect(button.dataset.world);});
   opening.querySelector('button').focus({preventScroll:true});
 }
