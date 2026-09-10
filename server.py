@@ -1047,6 +1047,12 @@ class Handler(SimpleHTTPRequestHandler):
             body = json.loads(self.rfile.read(size), parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Nonfinite JSON")))
             if not isinstance(body, dict) and not (path == "/api/samples" and isinstance(body, list)):
                 raise APIError(400, "Expected JSON object")
+            if path == "/api/coach":
+                from companion import forward_local_coach, Problem
+                try:
+                    return self.json_response(forward_local_coach(body))
+                except Problem as exc:
+                    raise APIError(exc.status, exc.message) from exc
             if path in ("/api/events", "/api/reflections"):
                 return self.json_response(app.record(path.split("/")[-1], body), 201)
             if path == "/api/references":
