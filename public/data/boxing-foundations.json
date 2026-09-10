@@ -1,0 +1,729 @@
+{
+  "schemaVersion": 1,
+  "title": "Jai's five boxing foundations",
+  "scope": "A deeper lesson scaffold behind the 40-second mirror; not a completed boxing course.",
+  "methodology": {
+    "design": "CDF / Gagné-informed objectives, one-cue practice, evidence, reflection and transfer",
+    "teacherAuthority": "Jai owns the mental model and lesson intent; reviewed video provides the technical cue.",
+    "validation": "Structure and source linkage can be checked here. Physical technique and transfer need trainer/learner evidence."
+  },
+  "metaphors": [
+    {
+      "id": "swords",
+      "bodyPart": "hands",
+      "image": "swords",
+      "authorship": "Jai-authored metaphor",
+      "claim": "A way to remember the hands as tools for action; not a literal weapon instruction."
+    },
+    {
+      "id": "shields",
+      "bodyPart": "forearms",
+      "image": "shields",
+      "authorship": "Jai-authored metaphor",
+      "claim": "A memory aid for guard awareness; not proof of protection or a validated catch technique."
+    },
+    {
+      "id": "wheels",
+      "bodyPart": "legs",
+      "image": "wheels",
+      "authorship": "Jai-authored metaphor",
+      "claim": "A memory aid for movement; not a claim that feet should roll or slide in a particular way."
+    },
+    {
+      "id": "helmet",
+      "bodyPart": "head",
+      "image": "helmet",
+      "authorship": "Jai-authored metaphor",
+      "claim": "A memory aid for attention to head position. The head is not protective equipment; this metaphor claims no protection."
+    }
+  ],
+  "foundations": [
+    {
+      "id": "attention",
+      "title": "Calm attention and the body map",
+      "metaphorIds": [
+        "swords",
+        "shields",
+        "wheels",
+        "helmet"
+      ],
+      "prerequisiteIds": [],
+      "objectives": [
+        {
+          "label": "LEARNING_OBJECTIVE",
+          "id": "attention.objective",
+          "verb": "describe",
+          "bloomLevel": 2,
+          "domain": "intellectual_skills",
+          "observableBehavior": "Given Jai’s body-map metaphor, describe one body part you chose to attend to and distinguish what you saw from what you felt.",
+          "assessmentMethod": "learner_observation"
+        }
+      ],
+      "concepts": [
+        {
+          "label": "CONCEPT",
+          "id": "attention.concept",
+          "definition": "A shared metaphor directs attention; your felt state belongs to your report."
+        }
+      ],
+      "cognitiveLoad": {
+        "newConceptsAtOnce": 1,
+        "maxCuesAtOnce": 1,
+        "workedExample": false,
+        "assessment": "design_heuristic_not_measured"
+      },
+      "sources": [],
+      "practice": {
+        "label": "SKILL",
+        "id": "attention.practice",
+        "cue": "Choose one part of your body to notice.",
+        "sourceIds": [],
+        "mode": "authored_reflection",
+        "instructions": "Name one part of the body map. Before and after a brief observation, describe how settled or distracted you felt, in your own words.",
+        "technicalInstructionReady": true,
+        "noContact": true
+      },
+      "assessments": [
+        {
+          "label": "ASSESSMENT_ITEM",
+          "id": "attention.notice",
+          "objectiveIds": [
+            "attention.objective"
+          ],
+          "type": "constructed_response",
+          "prompt": "What did you see, and what did you feel? Keep those as separate observations.",
+          "evidenceKinds": [
+            "learner_report",
+            "visible_2d_observation"
+          ],
+          "judgment": "recorded_observation_not_mastery"
+        }
+      ],
+      "transfer": {
+        "label": "TRANSFER_CONTEXT",
+        "prompt": "Take one observation to your coach and ask what to attend to in the next practice.",
+        "status": "proposed_not_validated"
+      },
+      "learningCircle": {
+        "care": "Choose what you want to notice.",
+        "try": "Name one part of the body map. Before and after a brief observation, describe how settled or distracted you felt, in your own words.",
+        "neededConcept": "A shared metaphor directs attention; your felt state belongs to your report.",
+        "artifact": "Keep your observation and its source or video timestamp.",
+        "share": "Choose whether to show a coach or peer; keep their response separate.",
+        "newQuestion": "What would you like to notice next time?"
+      },
+      "evidencePolicy": {
+        "visible2D": [
+          "visible body-part position in a selected frame"
+        ],
+        "selfReported": [
+          "attention",
+          "felt calmness",
+          "felt breathing",
+          "confidence"
+        ],
+        "notObservable": [
+          "breathing state",
+          "calmness",
+          "force",
+          "torque",
+          "3D distance",
+          "impact effectiveness",
+          "mastery"
+        ],
+        "feedback": "Describe only the recorded evidence. Ask about felt experience; never infer it from pose."
+      },
+      "gaps": [
+        {
+          "id": "attention.breath",
+          "status": "pending_review",
+          "blocks": "extension_only",
+          "detail": "No reviewed breathing protocol or camera-based breath/calm assessment is established."
+        }
+      ],
+      "qualityStatus": "structured_source_review_not_learner_validated",
+      "presentation": {
+        "maxVisibleMetaphors": 1,
+        "maxCuesAtOnce": 1,
+        "reveal": "one_body_part_per_practice",
+        "defaultMetaphorId": "wheels"
+      }
+    },
+    {
+      "id": "feet",
+      "title": "Feet: stick and move",
+      "metaphorIds": [
+        "wheels"
+      ],
+      "prerequisiteIds": [
+        "attention"
+      ],
+      "objectives": [
+        {
+          "label": "LEARNING_OBJECTIVE",
+          "id": "feet.objective",
+          "verb": "describe",
+          "bloomLevel": 2,
+          "domain": "intellectual_skills",
+          "observableBehavior": "Given the reviewed approach-and-exit clip and your own attempt, describe one movement before or after the punch using a timestamp or a clearly labeled felt observation.",
+          "assessmentMethod": "learner_observation"
+        }
+      ],
+      "concepts": [
+        {
+          "label": "CONCEPT",
+          "id": "feet.concept",
+          "definition": "The attempt includes the approach and exit, not only the punch."
+        }
+      ],
+      "cognitiveLoad": {
+        "newConceptsAtOnce": 1,
+        "maxCuesAtOnce": 1,
+        "workedExample": true,
+        "assessment": "design_heuristic_not_measured"
+      },
+      "sources": [
+        {
+          "id": "ghDNbod8B3s",
+          "url": "https://www.youtube.com/watch?v=ghDNbod8B3s&t=8s",
+          "cue": "Move before the punch. Move again after it.",
+          "evidenceTimestampSeconds": 8,
+          "evidenceType": "actual source video and burned-in instructions inspected",
+          "sha256": "d430c1ab7850c65d02188ff02f71770bc856270c4c2fc78da2aa0312b7028a22",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "9gqxqT57qkA",
+          "url": "https://www.youtube.com/watch?v=9gqxqT57qkA&t=10s",
+          "cue": "Pay more attention to your approach and exit than your punches.",
+          "evidenceTimestampSeconds": 10,
+          "evidenceType": "actual source video and burned-in instructions inspected",
+          "sha256": "ba05789cdf64ccc19df55e362db27138a5347ec0ec3d316222e5f7ec558d25e0",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "nyJ14GOUtAo",
+          "url": "https://www.youtube.com/watch?v=nyJ14GOUtAo&t=11s",
+          "cue": "Move without crossing your feet.",
+          "evidenceTimestampSeconds": 11,
+          "evidenceType": "visually inspected burned-in instruction and demonstration",
+          "sha256": "a87b683b14b0c444a2dfdc4dec6e80e0cac0b1043356a1e6df8bd3170a21e6a0",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        }
+      ],
+      "practice": {
+        "label": "SKILL",
+        "id": "feet.practice",
+        "cue": "Move before the punch. Move again after it.",
+        "sourceIds": [
+          "ghDNbod8B3s",
+          "9gqxqT57qkA",
+          "nyJ14GOUtAo"
+        ],
+        "mode": "source_guided_shadowboxing_or_observation",
+        "instructions": "Watch the source approach and exit. In a no-contact shadowboxing adaptation, attend to your movement before and after one imagined touch; then review your own attempt.",
+        "technicalInstructionReady": true,
+        "noContact": true
+      },
+      "assessments": [
+        {
+          "label": "ASSESSMENT_ITEM",
+          "id": "feet.notice",
+          "objectiveIds": [
+            "feet.objective"
+          ],
+          "type": "constructed_response",
+          "prompt": "Where in your attempt did you move before or after the touch? What would you try differently?",
+          "evidenceKinds": [
+            "learner_report",
+            "visible_2d_observation"
+          ],
+          "judgment": "recorded_observation_not_mastery"
+        }
+      ],
+      "transfer": {
+        "label": "TRANSFER_CONTEXT",
+        "prompt": "Show your coach the selected moment and ask whether your approach and exit fit the drill.",
+        "status": "proposed_not_validated"
+      },
+      "learningCircle": {
+        "care": "Choose what you want to notice.",
+        "try": "Watch the source approach and exit. In a no-contact shadowboxing adaptation, attend to your movement before and after one imagined touch; then review your own attempt.",
+        "neededConcept": "The attempt includes the approach and exit, not only the punch.",
+        "artifact": "Keep your observation and its source or video timestamp.",
+        "share": "Choose whether to show a coach or peer; keep their response separate.",
+        "newQuestion": "What would you like to notice next time?"
+      },
+      "evidencePolicy": {
+        "visible2D": [
+          "normalized hip path when visible",
+          "ankle image positions when visible",
+          "visible change before/after a selected moment"
+        ],
+        "selfReported": [
+          "felt balance",
+          "whether the learner tried the movement"
+        ],
+        "notObservable": [
+          "breathing state",
+          "calmness",
+          "force",
+          "torque",
+          "3D distance",
+          "impact effectiveness",
+          "mastery"
+        ],
+        "feedback": "Describe only the recorded evidence. Ask about felt experience; never infer it from pose."
+      },
+      "gaps": [
+        {
+          "id": "feet.range",
+          "status": "pending_review",
+          "blocks": "extension_only",
+          "detail": "No calibrated depth, striking-range test, or automatic foot-crossing correctness assessment is available."
+        }
+      ],
+      "qualityStatus": "structured_source_review_not_learner_validated",
+      "presentation": {
+        "maxVisibleMetaphors": 1,
+        "maxCuesAtOnce": 1,
+        "reveal": "one_body_part_per_practice",
+        "defaultMetaphorId": "wheels"
+      }
+    },
+    {
+      "id": "shields",
+      "title": "Shields: guard, catch and respond",
+      "metaphorIds": [
+        "shields",
+        "swords"
+      ],
+      "prerequisiteIds": [
+        "attention"
+      ],
+      "objectives": [
+        {
+          "label": "LEARNING_OBJECTIVE",
+          "id": "shields.objective",
+          "verb": "describe",
+          "bloomLevel": 2,
+          "domain": "intellectual_skills",
+          "observableBehavior": "Given the reviewed parry/respond demonstration, describe one visible forearm movement and distinguish the shown sequence from a claim that it will protect you.",
+          "assessmentMethod": "learner_observation"
+        }
+      ],
+      "concepts": [
+        {
+          "label": "CONCEPT",
+          "id": "shields.concept",
+          "definition": "The source shows a small deflection followed by a response; Jai’s shields metaphor helps choose what to notice."
+        }
+      ],
+      "cognitiveLoad": {
+        "newConceptsAtOnce": 1,
+        "maxCuesAtOnce": 1,
+        "workedExample": true,
+        "assessment": "design_heuristic_not_measured"
+      },
+      "sources": [
+        {
+          "id": "rV3m-gHRCXw",
+          "url": "https://www.youtube.com/watch?v=rV3m-gHRCXw&t=12s",
+          "cue": "Keep your hands up.",
+          "evidenceTimestampSeconds": 12,
+          "evidenceType": "visually inspected burned-in instruction and demonstration",
+          "sha256": "7edc2a051fa78f72b5c3209df5380bef407c41abd0880c4e56f8b8d349826550",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "EQu3RPrjs6A.parry",
+          "videoId": "EQu3RPrjs6A",
+          "url": "https://www.youtube.com/watch?v=EQu3RPrjs6A&t=1368s",
+          "cue": "Deflect a little, then respond.",
+          "evidenceTimestampSeconds": 1368,
+          "evidenceType": "reviewed video-section frames and automatic captions; audio not independently listened",
+          "sha256": "f3701d01954ab0219fbe17465d057ef4555969471c5231d0fc2ac193c74e2941",
+          "sha256Scope": "trimmed_review_section",
+          "reviewSectionStartSeconds": 1330,
+          "reviewSectionEndSeconds": 1398,
+          "localReviewSection": "/tmp/boxing-foundations-source/defence-catch.mp4",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/library/guides-and-tips/4"
+        }
+      ],
+      "practice": {
+        "label": "SKILL",
+        "id": "shields.practice",
+        "cue": "Deflect a little, then respond.",
+        "sourceIds": [
+          "rV3m-gHRCXw",
+          "EQu3RPrjs6A.parry"
+        ],
+        "mode": "source_guided_shadowboxing_or_observation",
+        "instructions": "Watch the source’s small parry and response. Rehearse a no-contact version while noticing your forearm position; an incoming strike or partner drill needs your coach.",
+        "technicalInstructionReady": false,
+        "noContact": true
+      },
+      "assessments": [
+        {
+          "label": "ASSESSMENT_ITEM",
+          "id": "shields.notice",
+          "objectiveIds": [
+            "shields.objective"
+          ],
+          "type": "constructed_response",
+          "prompt": "How far did your forearm move in the selected frame? What did you notice before your response?",
+          "evidenceKinds": [
+            "learner_report",
+            "visible_2d_observation"
+          ],
+          "judgment": "recorded_observation_not_mastery"
+        }
+      ],
+      "transfer": {
+        "label": "TRANSFER_CONTEXT",
+        "prompt": "Ask a qualified coach to demonstrate and supervise the catch/respond progression before attempting it with a partner.",
+        "status": "proposed_not_validated"
+      },
+      "learningCircle": {
+        "care": "Choose what you want to notice.",
+        "try": "Watch the source’s small parry and response. Rehearse a no-contact version while noticing your forearm position; an incoming strike or partner drill needs your coach.",
+        "neededConcept": "Guard awareness is a starting point; catching and responding require their own demonstration.",
+        "artifact": "Keep your observation and its source or video timestamp.",
+        "share": "Choose whether to show a coach or peer; keep their response separate.",
+        "newQuestion": "What would you like to notice next time?"
+      },
+      "evidencePolicy": {
+        "visible2D": [
+          "hand/forearm image positions when visible"
+        ],
+        "selfReported": [
+          "what the learner intended to protect",
+          "felt readiness"
+        ],
+        "notObservable": [
+          "breathing state",
+          "calmness",
+          "force",
+          "torque",
+          "3D distance",
+          "impact effectiveness",
+          "mastery"
+        ],
+        "feedback": "Describe only the recorded evidence. Ask about felt experience; never infer it from pose."
+      },
+      "gaps": [
+        {
+          "id": "shields.catch",
+          "status": "pending_review",
+          "blocks": "technical_extension",
+          "detail": "Reviewed source sections show catch/parry/respond. Jai’s exact shields progression and supervised partner-contact practice still require trainer confirmation."
+        }
+      ],
+      "qualityStatus": "structured_source_review_not_learner_validated",
+      "presentation": {
+        "maxVisibleMetaphors": 1,
+        "maxCuesAtOnce": 1,
+        "reveal": "one_body_part_per_practice",
+        "defaultMetaphorId": "shields"
+      }
+    },
+    {
+      "id": "eyes_head",
+      "title": "Eyes and head: A/B positions",
+      "metaphorIds": [
+        "helmet"
+      ],
+      "prerequisiteIds": [
+        "attention"
+      ],
+      "objectives": [
+        {
+          "label": "LEARNING_OBJECTIVE",
+          "id": "eyes_head.objective",
+          "verb": "describe",
+          "bloomLevel": 2,
+          "domain": "intellectual_skills",
+          "observableBehavior": "Given the reviewed forward-looking cue, distinguish your reported gaze from a visible head position and identify A/B as undefined until Jai supplies the distinction.",
+          "assessmentMethod": "learner_observation"
+        }
+      ],
+      "concepts": [
+        {
+          "label": "CONCEPT",
+          "id": "eyes_head.concept",
+          "definition": "A visible head position, gaze direction and the learner’s attention are different kinds of evidence."
+        }
+      ],
+      "cognitiveLoad": {
+        "newConceptsAtOnce": 1,
+        "maxCuesAtOnce": 1,
+        "workedExample": true,
+        "assessment": "design_heuristic_not_measured"
+      },
+      "sources": [
+        {
+          "id": "YVpudYmtAGw",
+          "url": "https://www.youtube.com/watch?v=YVpudYmtAGw&t=1s",
+          "cue": "Start with rolls in one spot.",
+          "evidenceTimestampSeconds": 1,
+          "evidenceType": "visually inspected burned-in instruction and demonstration",
+          "sha256": "cddd57b8e8eb9d8efd9166357f623333f155e33d8a5f19b32fe79fe090fc7d90",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "EQu3RPrjs6A.gaze",
+          "videoId": "EQu3RPrjs6A",
+          "url": "https://www.youtube.com/watch?v=EQu3RPrjs6A&t=372s",
+          "cue": "Look forward rather than down or aside.",
+          "evidenceTimestampSeconds": 372,
+          "evidenceType": "reviewed video-section frames and automatic captions; audio not independently listened",
+          "sha256": "6092e7981308e408e605d1e276cddc490ee16b82207416366796812cc539b517",
+          "sha256Scope": "trimmed_review_section",
+          "reviewSectionStartSeconds": 368,
+          "reviewSectionEndSeconds": 415,
+          "localReviewSection": "/tmp/boxing-foundations-source/defence-gaze.mp4",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/library/guides-and-tips/4"
+        }
+      ],
+      "practice": {
+        "label": "SKILL",
+        "id": "eyes_head.practice",
+        "cue": "Look forward rather than down or aside.",
+        "sourceIds": [
+          "YVpudYmtAGw",
+          "EQu3RPrjs6A.gaze"
+        ],
+        "mode": "source_guided_shadowboxing_or_observation",
+        "instructions": "Review the source’s forward-looking cue during defensive movement. Report where you were looking; do not infer gaze from pose. Ask Jai to define and demonstrate A and B before using those as movement commands.",
+        "technicalInstructionReady": false,
+        "noContact": true
+      },
+      "assessments": [
+        {
+          "label": "ASSESSMENT_ITEM",
+          "id": "eyes_head.notice",
+          "objectiveIds": [
+            "eyes_head.objective"
+          ],
+          "type": "constructed_response",
+          "prompt": "Which head-position change can you actually see? What would you need Jai to show to distinguish A from B?",
+          "evidenceKinds": [
+            "learner_report",
+            "visible_2d_observation"
+          ],
+          "judgment": "recorded_observation_not_mastery"
+        }
+      ],
+      "transfer": {
+        "label": "TRANSFER_CONTEXT",
+        "prompt": "Bring the question and source timestamp to Jai or your coach; record their A/B definition before extending practice.",
+        "status": "proposed_not_validated"
+      },
+      "learningCircle": {
+        "care": "Choose what you want to notice.",
+        "try": "Review the source’s forward-looking cue during defensive movement. Report where you were looking; do not infer gaze from pose. Ask Jai to define and demonstrate A and B before using those as movement commands.",
+        "neededConcept": "A visible head position, gaze direction and the learner’s attention are different kinds of evidence.",
+        "artifact": "Keep your observation and its source or video timestamp.",
+        "share": "Choose whether to show a coach or peer; keep their response separate.",
+        "newQuestion": "What would you like to notice next time?"
+      },
+      "evidencePolicy": {
+        "visible2D": [
+          "head image position by manual video review; not current automated hip telemetry"
+        ],
+        "selfReported": [
+          "where the learner says they were looking",
+          "attention"
+        ],
+        "notObservable": [
+          "breathing state",
+          "calmness",
+          "force",
+          "torque",
+          "3D distance",
+          "impact effectiveness",
+          "mastery"
+        ],
+        "feedback": "Describe only the recorded evidence. Ask about felt experience; never infer it from pose."
+      },
+      "gaps": [
+        {
+          "id": "eyes_head.ab",
+          "status": "unresolved_source_gap",
+          "blocks": "ab_instruction",
+          "detail": "A and B are not defined in the supplied, reviewed sources. No angles, gaze targets, transitions or labels may be invented."
+        },
+        {
+          "id": "eyes_head.gaze",
+          "status": "pending_review",
+          "blocks": "extension_only",
+          "detail": "Current pose telemetry does not establish gaze direction or visual attention."
+        }
+      ],
+      "qualityStatus": "structured_source_review_not_learner_validated",
+      "presentation": {
+        "maxVisibleMetaphors": 1,
+        "maxCuesAtOnce": 1,
+        "reveal": "one_body_part_per_practice",
+        "defaultMetaphorId": "helmet"
+      }
+    },
+    {
+      "id": "coordination",
+      "title": "Coordinate hips, shoulders and hands",
+      "metaphorIds": [
+        "wheels",
+        "swords"
+      ],
+      "prerequisiteIds": [
+        "attention",
+        "feet"
+      ],
+      "objectives": [
+        {
+          "label": "LEARNING_OBJECTIVE",
+          "id": "coordination.objective",
+          "verb": "describe",
+          "bloomLevel": 2,
+          "domain": "intellectual_skills",
+          "observableBehavior": "Given the reviewed hip/shoulder progression, describe a visible body change alongside a clearly labeled feeling or question about coordination.",
+          "assessmentMethod": "learner_observation"
+        }
+      ],
+      "concepts": [
+        {
+          "label": "CONCEPT",
+          "id": "coordination.concept",
+          "definition": "A movement can be examined as a relationship among body parts, without treating image changes as force or torque."
+        }
+      ],
+      "cognitiveLoad": {
+        "newConceptsAtOnce": 1,
+        "maxCuesAtOnce": 1,
+        "workedExample": true,
+        "assessment": "design_heuristic_not_measured"
+      },
+      "sources": [
+        {
+          "id": "qUzOrInwIJE",
+          "url": "https://www.youtube.com/watch?v=qUzOrInwIJE&t=1s",
+          "cue": "Shift your weight from one foot to the other.",
+          "evidenceTimestampSeconds": 1,
+          "evidenceType": "visually inspected burned-in instruction and demonstration",
+          "sha256": "ee3220a5a926f6314bff3f79616136439a868c2ce3ca634644d1c3d4cee973bc",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "rV3m-gHRCXw",
+          "url": "https://www.youtube.com/watch?v=rV3m-gHRCXw&t=12s",
+          "cue": "Keep your hands up.",
+          "evidenceTimestampSeconds": 12,
+          "evidenceType": "visually inspected burned-in instruction and demonstration",
+          "sha256": "7edc2a051fa78f72b5c3209df5380bef407c41abd0880c4e56f8b8d349826550",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/program/basic/week/1/day/1"
+        },
+        {
+          "id": "dAZnOeMSk6o.coordination",
+          "videoId": "dAZnOeMSk6o",
+          "url": "https://www.youtube.com/watch?v=dAZnOeMSk6o&t=111s",
+          "cue": "Let one shoulder move back as the other moves forward.",
+          "evidenceTimestampSeconds": 111,
+          "evidenceType": "reviewed video-section frames and automatic captions; audio not independently listened",
+          "sha256": "301540fc8f2a8e5b98a438e34552562fcc2c521b4a57d639f3536c5b40973de8",
+          "sha256Scope": "trimmed_review_section",
+          "reviewSectionStartSeconds": 108,
+          "reviewSectionEndSeconds": 138,
+          "localReviewSection": "/tmp/boxing-foundations-source/punch-coordination.mp4",
+          "reviewStatus": "reviewed_video",
+          "curriculumSource": "https://boxing.dharmicdata.org/library/guides-and-tips"
+        }
+      ],
+      "practice": {
+        "label": "SKILL",
+        "id": "coordination.practice",
+        "cue": "Let one shoulder move back as the other moves forward.",
+        "sourceIds": [
+          "qUzOrInwIJE",
+          "rV3m-gHRCXw",
+          "dAZnOeMSk6o.coordination"
+        ],
+        "mode": "source_guided_shadowboxing_or_observation",
+        "instructions": "Review the source’s hip/heel and shoulder progression before the added punch. In a no-contact attempt, notice one shoulder moving back while the other moves forward; compare a selected moment without inferring force.",
+        "technicalInstructionReady": false,
+        "noContact": true
+      },
+      "assessments": [
+        {
+          "label": "ASSESSMENT_ITEM",
+          "id": "coordination.notice",
+          "objectiveIds": [
+            "coordination.objective"
+          ],
+          "type": "constructed_response",
+          "prompt": "What changed together in the image? What felt connected, and what remains a question for your coach?",
+          "evidenceKinds": [
+            "learner_report",
+            "visible_2d_observation"
+          ],
+          "judgment": "recorded_observation_not_mastery"
+        }
+      ],
+      "transfer": {
+        "label": "TRANSFER_CONTEXT",
+        "prompt": "Ask your coach to review the moment and demonstrate the coordinated punching sequence you are ready to practice.",
+        "status": "proposed_not_validated"
+      },
+      "learningCircle": {
+        "care": "Choose what you want to notice.",
+        "try": "Review the source’s hip/heel and shoulder progression before the added punch. In a no-contact attempt, notice one shoulder moving back while the other moves forward; compare a selected moment without inferring force.",
+        "neededConcept": "A movement can be examined as a relationship among body parts, without treating image changes as force or torque.",
+        "artifact": "Keep your observation and its source or video timestamp.",
+        "share": "Choose whether to show a coach or peer; keep their response separate.",
+        "newQuestion": "What would you like to notice next time?"
+      },
+      "evidencePolicy": {
+        "visible2D": [
+          "visible hip/shoulder/hand image positions and timing"
+        ],
+        "selfReported": [
+          "felt weight transfer",
+          "felt coordination"
+        ],
+        "notObservable": [
+          "breathing state",
+          "calmness",
+          "force",
+          "torque",
+          "3D distance",
+          "impact effectiveness",
+          "mastery"
+        ],
+        "feedback": "Describe only the recorded evidence. Ask about felt experience; never infer it from pose."
+      },
+      "gaps": [
+        {
+          "id": "coordination.sequence",
+          "status": "pending_review",
+          "blocks": "technical_extension",
+          "detail": "A reviewed source shows hip/heel rotation and opposed shoulder movement before adding a punch. Jai’s exact lesson sequencing still needs confirmation; pose cannot validate weight distribution, torque or punching power."
+        }
+      ],
+      "qualityStatus": "structured_source_review_not_learner_validated",
+      "presentation": {
+        "maxVisibleMetaphors": 1,
+        "maxCuesAtOnce": 1,
+        "reveal": "one_body_part_per_practice",
+        "defaultMetaphorId": "wheels"
+      }
+    }
+  ]
+}
