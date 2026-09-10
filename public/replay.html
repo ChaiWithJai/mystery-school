@@ -5,14 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Recorded proposal | Astral School</title>
   <link rel="stylesheet" href="/music-lab.css">
+  <link rel="stylesheet" href="/piano-scene.css">
+  <link rel="stylesheet" href="/piano-lesson.css">
+  <link rel="stylesheet" href="/boxing-game.css">
+  <link rel="stylesheet" href="/ideas-lab.css">
+  <link rel="stylesheet" href="/play-first.css">
   <link rel="stylesheet" href="/replay.css">
   <script type="module" src="/replay.js"></script>
 </head>
 <body>
   <header><a href="/">Return to the school</a><span>Recorded agent QA · No inference</span></header>
   <main>
+    <nav aria-label="Recorded experiments"><a data-path="music" href="?path=music">Piano</a><a data-path="movement" href="?path=movement">Boxing</a><a data-path="ideas" href="?path=ideas">Story</a><a data-path="phrase" href="?path=phrase">Phrase</a></nav>
     <h1>Hear the proposed ending.</h1>
-    <p>Apply the recorded change, play the phrase, then undo it.</p>
+    <p>Play. Apply the recorded change. Try again. Undo.</p>
     <div class="replay-layout"><section id="instrument" aria-label="Recorded music experiment"></section><aside id="proposal" aria-label="Recorded proposal"></aside></div>
     <details><summary>Source and replay events</summary><p>Events below exist only in this page. They are not new model traces or participant results.</p><pre id="provenance"></pre><pre id="events"></pre></details>
     <p id="error" role="alert" hidden></p>

@@ -58,16 +58,16 @@ Without it, the report lists those changes explicitly; its commit identifies the
 base revision, not the complete served worktree. Startup failures include a
 bounded server-log tail before temporary files are removed.
 
-## Recorded music replay
+## Recorded replay
 
 The repository includes `public/replay.html` and
-`public/fixtures/recorded-music-proposal.json`. After starting the server, open
-`http://127.0.0.1:5188/replay.html`. Play the phrase, inspect the recorded
-proposal, apply it, play again, and undo. The source panel shows the fixture's
+`public/fixtures/recorded-*.json`. After starting the server, open
+`http://127.0.0.1:5188/replay.html`. Choose Piano, Boxing, Story, or the older
+Phrase example. Apply the recorded proposal, play, and undo. The source panel shows the fixture's
 provenance and local page events. No model call or new backend record is made.
 
-The fixture covers a recorded music phrase variation, not the piano practice
-target. Movement and ideas have no equivalent bundled replay. The startup check
+Fixtures now include the piano practice target, boxing parameters, source-bound
+story choices, and the older phrase variation. The startup check
 verifies fixture bytes, not the replay's behavior. Record browser results and
 the exact fixture revision separately before claiming reproducible interaction.
 All three pathways remain required for experience acceptance.

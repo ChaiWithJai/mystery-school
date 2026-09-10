@@ -1,0 +1,128 @@
+{
+  "provenance": {
+    "kind": "recorded_model_output",
+    "actor_kind": "agent_review",
+    "model": "gpt-6-astra",
+    "job_id": "e11b1851-fa65-4773-87fb-a714e290b07e",
+    "trace_id": "tr-92d5fde6d461e880906efde3526287a6",
+    "build_id": "977a38fc144df9f1",
+    "artifact_trace_id": "tr-4ade11f7f929ef4003f8efbda31f7f26",
+    "artifact_build_id": "c2c66c2bdb503d9c",
+    "started_at": "2026-09-10T18:45:52.760597+00:00",
+    "finished_at": "2026-09-10T18:46:16.892490+00:00",
+    "input_tokens": 16512,
+    "output_tokens": 592,
+    "usage": {
+      "input_tokens": 16512,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 592,
+      "reasoning_output_tokens": 0,
+      "total_tokens": null
+    },
+    "cost_usd": null,
+    "scope": "Exact experiment proposal and frozen initial lab state from a completed agent-QA job. Replay makes no model call. Synthetic character material is not private learner data, observed learning, physical measurement, or a prediction of human responses.",
+    "sanitization": [
+      "Omitted session identifiers, CLI paths, filesystem paths, raw execution logs, and unrelated records."
+    ]
+  },
+  "artifact": {
+    "id": "32147560-0250-4cc6-bd84-94648dd8904d",
+    "pathway": "movement",
+    "stage": "attempt",
+    "actor_kind": "agent_review",
+    "goal": "[AGENT QA; not learner evidence] More time and space to step back in the on-screen boxing game.",
+    "state": {
+      "character": "Andre",
+      "scenario_kind": "fictional_composite",
+      "lab": {
+        "duration": 2,
+        "distance": 0.4,
+        "shape": "cubic",
+        "compare_shape": "quintic",
+        "view": "velocity",
+        "time": 0,
+        "playing": false,
+        "assistanceOpen": false,
+        "position": 0,
+        "velocity": 0,
+        "acceleration": 0.6000000000000001,
+        "boxing_round": {
+          "prediction": 39,
+          "attempts": [],
+          "question": "Can I get more time to step back?",
+          "params": {
+            "cue": 1.15,
+            "gap": 14
+          }
+        }
+      },
+      "explanation": "Agent verification of a virtual game only, not boxing ability or physical measurement.",
+      "question": "Can I get more time to step back?"
+    },
+    "source_refs": [
+      {
+        "label": "Authored boxing game implementation",
+        "url": "http://127.0.0.1:5188/boxing-game.js",
+        "locator": "Cue timing and initial gap in simulation units; no real-world measurement",
+        "source_kind": "implemented_simulation"
+      },
+      {
+        "label": "England Boxing coaching handbook",
+        "url": "https://www.englandboxing.org/wp-content/uploads/2022/03/EB_Boxing-Coaching-Handbook-Part-1_v8-002.pdf",
+        "locator": "Stance, guard, footwork and shadowboxing; printed pages 66–68 and 94–95",
+        "source_kind": "coaching_reference"
+      }
+    ],
+    "experiment_sources": [],
+    "note": "AGENT QA live boxing proposal; source reference retained, not newly inspected in this check."
+  },
+  "question": "Can I get more time to step back?",
+  "request": {
+    "question": "Can I get more time to step back? Set movement.boxing_params to cue 1.5 seconds and gap 18 simulation units. Preserve all existing physics: duration 2, distance 0.4, shape cubic, compare_shape quintic, view velocity. Do not change my prediction, attempts, or question.",
+    "premise": "One bounded typed proposal for this saved on-screen boxing artifact. Change only the virtual jab cue and starting gap through boxing_params. No physical exercise instruction, boxing ability claim, or physical measurement. Keep all old movement definition fields exactly. This is declared agent QA, not learner evidence."
+  },
+  "initial_state": {
+    "duration": 2,
+    "distance": 0.4,
+    "shape": "cubic",
+    "compare_shape": "quintic",
+    "view": "velocity",
+    "time": 0,
+    "playing": false,
+    "assistanceOpen": false,
+    "position": 0,
+    "velocity": 0,
+    "acceleration": 0.6000000000000001,
+    "boxing_round": {
+      "prediction": 39,
+      "attempts": [],
+      "question": "Can I get more time to step back?",
+      "params": {
+        "cue": 1.15,
+        "gap": 14
+      }
+    }
+  },
+  "experiment_sources": [],
+  "proposal": {
+    "version": 1,
+    "pathway": "movement",
+    "base_artifact_id": "32147560-0250-4cc6-bd84-94648dd8904d",
+    "status": "supported",
+    "reason": "Propose increasing the virtual cue from 1.15 to 1.5 seconds and starting gap from 14 to 18 simulation units, giving the on-screen scenario more time and space. Preserve duration, distance, shapes, velocity view, prediction 39, empty attempts, and the existing question. This is an unapplied agent QA proposal, not observed learning or physical performance.",
+    "music": null,
+    "movement": {
+      "boxing_params": {
+        "cue": 1.5,
+        "gap": 18
+      },
+      "duration": 2,
+      "distance": 0.4,
+      "shape": "cubic",
+      "compare_shape": "quintic",
+      "view": "velocity"
+    },
+    "ideas": null
+  }
+}

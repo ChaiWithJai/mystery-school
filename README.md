@@ -115,21 +115,22 @@ npm test
 This verifies installation, startup and served files. It does not establish a
 fluid experience or replay a live model result. See
 [reproducible delivery](docs/reproducible-delivery.md) for the measured checkpoint
-and the separate recorded music replay.
+and the separate recorded replay.
 
-## Recorded music replay
+## Recorded replay
 
 After starting the local server, open `http://127.0.0.1:5188/replay.html`.
-Play the initial phrase, inspect the recorded proposal, apply it, play again,
-and undo. Open "Source and replay events" to inspect its provenance and local
-page events. The bundled input and output are in
-`public/fixtures/recorded-music-proposal.json`.
+Choose Piano, Boxing, or Story. Play, apply the captured proposal, try again,
+and undo. Phrase retains the earlier music-editor replay. Open "Source and
+replay events" for the original job/trace IDs and local page events.
+Bundled inputs and outputs are in `public/fixtures/recorded-*.json`.
 
 The page reuses recorded agent QA output without making a model request or
-saving new backend records. It covers a music phrase variation only. It does
-not replay the piano practice target, movement, or ideas. Serving the fixture
-successfully is not proof that the replay interaction or learning experience
-works in a browser.
+saving new backend records. Piano changes the opening practice tempo; Boxing
+changes the simulated jab timing and distance; Story offers source-bound,
+model-imagined choices. These are captured examples, not fresh inference or
+proof of learning. Events disappear on reload. Opening external references is
+optional and contacts those sites.
 
 ## Checkpoint: September 10, 2026
 

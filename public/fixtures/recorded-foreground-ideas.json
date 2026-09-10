@@ -1,0 +1,137 @@
+{
+  "provenance": {
+    "kind": "recorded_model_output",
+    "actor_kind": "agent_review",
+    "model": "gpt-6-astra",
+    "job_id": "cd93f642-389d-4e72-aeb7-2f5c1c2a1403",
+    "trace_id": "tr-ed7191ff58218581b40f1943f91b75b1",
+    "build_id": "6485c6ccd23d33bb",
+    "artifact_trace_id": "tr-b021188c80009c0f9d354416e9cacbe6",
+    "artifact_build_id": "6485c6ccd23d33bb",
+    "started_at": "2026-09-10T19:07:48.513385+00:00",
+    "finished_at": "2026-09-10T19:08:26.295395+00:00",
+    "input_tokens": 16888,
+    "output_tokens": 1067,
+    "usage": {
+      "input_tokens": 16888,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1067,
+      "reasoning_output_tokens": 0,
+      "total_tokens": null
+    },
+    "cost_usd": null,
+    "scope": "Exact experiment proposal and frozen initial lab state from a completed agent-QA job. Replay makes no model call. Synthetic character material is not private learner data, observed learning, physical measurement, or a prediction of human responses.",
+    "sanitization": [
+      "Omitted session identifiers, CLI paths, filesystem paths, raw execution logs, and unrelated records."
+    ]
+  },
+  "artifact": {
+    "id": "d91c5841-c2f0-440a-9520-f040efdefbf9",
+    "pathway": "ideas",
+    "stage": "attempt",
+    "actor_kind": "agent_review",
+    "goal": "[SYNTHETIC AGENT QA, not learner evidence] Explore disagreement through an imagined rain scene.",
+    "state": {
+      "character": "Leena",
+      "scenario_kind": "fictional_composite",
+      "lab": {
+        "version": 1,
+        "sourceId": "epictetus-enchiridion-1",
+        "interpretation": "[SYNTHETIC AGENT QA] I can offer care without deciding whether my friend agrees.",
+        "revisedInterpretation": "[SYNTHETIC AGENT QA] I am unsure whether keeping my shelter means refusing care.",
+        "helpOpen": false,
+        "helpSeen": false,
+        "sourceOpened": false,
+        "unchanged": false,
+        "storyChoice": "offer_shelter",
+        "comparisonChoice": null,
+        "youtubeUrl": "",
+        "youtubeTimestamp": "",
+        "youtubeNote": "",
+        "modelComparison": null,
+        "decisionResponses": {}
+      },
+      "explanation": "Synthetic words authored by the testing agent, not a learner account.",
+      "question": "Reinterpret this disagreement in the rain as a playable shared_shelter decision: exactly choices a and b, one sharing shelter and one keeping shelter for self. Preserve my exact words. Quote Some things are in our control and others not. exactly from source index 0. Label every consequence imagined, not a prediction of another person."
+    },
+    "source_refs": [
+      {
+        "label": "Epictetus, The Enchiridion (Elizabeth Carter translation)",
+        "url": "https://classics.mit.edu/Epictetus/epicench.html",
+        "locator": "Section 1"
+      }
+    ],
+    "experiment_sources": [
+      {
+        "source_ref_index": 0,
+        "url": "https://classics.mit.edu/Epictetus/epicench.html",
+        "locator": "Section 1",
+        "content": "Some things are in our control and others not."
+      }
+    ],
+    "note": "Declared agent QA. Use the indexed Epictetus excerpt; no human outcome or prediction is claimed."
+  },
+  "question": "Reinterpret this disagreement in the rain as a playable shared_shelter decision: exactly choices a and b, one sharing shelter and one keeping shelter for self. Preserve my exact words. Quote Some things are in our control and others not. exactly from source index 0. Label every consequence imagined, not a prediction of another person.",
+  "request": {
+    "question": "Reinterpret this disagreement in the rain as a playable shared_shelter decision: exactly choices a and b, one sharing shelter and one keeping shelter for self. Preserve my exact words. Quote Some things are in our control and others not. exactly from source index 0. Label every consequence imagined, not a prediction of another person.",
+    "premise": "One bounded agent QA proposal. Use ideas.decision_scene kind shared_shelter with exactly choices a and b and both shared/self shelter values. The scene should concern disagreeing friends in rain. Consequences are imagined possibilities, not human predictions or source facts. Preserve both synthetic learner drafts and do not auto-write an interpretation."
+  },
+  "initial_state": {
+    "version": 1,
+    "sourceId": "epictetus-enchiridion-1",
+    "interpretation": "[SYNTHETIC AGENT QA] I can offer care without deciding whether my friend agrees.",
+    "revisedInterpretation": "[SYNTHETIC AGENT QA] I am unsure whether keeping my shelter means refusing care.",
+    "helpOpen": false,
+    "helpSeen": false,
+    "sourceOpened": false,
+    "unchanged": false,
+    "storyChoice": "offer_shelter",
+    "comparisonChoice": null,
+    "youtubeUrl": "",
+    "youtubeTimestamp": "",
+    "youtubeNote": "",
+    "modelComparison": null,
+    "decisionResponses": {}
+  },
+  "experiment_sources": [
+    {
+      "source_ref_index": 0,
+      "url": "https://classics.mit.edu/Epictetus/epicench.html",
+      "locator": "Section 1",
+      "content": "Some things are in our control and others not."
+    }
+  ],
+  "proposal": {
+    "version": 1,
+    "pathway": "ideas",
+    "base_artifact_id": "d91c5841-c2f0-440a-9520-f040efdefbf9",
+    "status": "supported",
+    "reason": "Proposes two playable shelter choices for disagreeing friends in rain, bound to the captured quote at source index 0. Both synthetic drafts remain verbatim; no interpretation, response, or outcome is supplied on the learner’s behalf.",
+    "music": null,
+    "movement": null,
+    "ideas": {
+      "decision_scene": {
+        "kind": "shared_shelter",
+        "choices": [
+          {
+            "id": "a",
+            "label": "Share the shelter",
+            "consequence": "Model-imagined possibility: the scene places both friends beneath the shelter while their disagreement remains unresolved. This does not predict either person’s response.",
+            "shelter": "shared"
+          },
+          {
+            "id": "b",
+            "label": "Keep the shelter for yourself",
+            "consequence": "Model-imagined possibility: the scene keeps shelter over Leena alone, leaving open whether she offers care another way. This does not predict either person’s response.",
+            "shelter": "self"
+          }
+        ]
+      },
+      "scenario": "In an imagined forest clearing, Leena and a friend disagree as rain begins. Leena holds a shelter. Choose its placement, then consider the captured quote alongside both unchanged synthetic drafts:\n\n[SYNTHETIC AGENT QA] I can offer care without deciding whether my friend agrees.\n\n[SYNTHETIC AGENT QA] I am unsure whether keeping my shelter means refusing care.",
+      "question": "For your chosen shelter placement, what would you place within Leena’s control, and what would you leave undecided? You may keep both drafts unchanged.",
+      "source_quote": "Some things are in our control and others not.",
+      "source_ref_index": 0
+    }
+  }
+}

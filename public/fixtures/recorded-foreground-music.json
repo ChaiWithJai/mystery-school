@@ -1,0 +1,310 @@
+{
+  "provenance": {
+    "kind": "recorded_model_output",
+    "actor_kind": "agent_review",
+    "model": "gpt-6-astra",
+    "job_id": "cd267992-426c-4c01-8787-ecd7e2f2cbe7",
+    "trace_id": "tr-494ca4fe2bb64814d960dcb82163b954",
+    "artifact_id": "01b70468-fe0b-4902-9fe2-19e199251b66",
+    "artifact_trace_id": "tr-694afe9e36d93c1f79e4429f7e716436",
+    "build_id": "6485c6ccd23d33bb",
+    "input_tokens": 17016,
+    "output_tokens": 832,
+    "cost_usd": null,
+    "scope": "Exact completed model output and frozen synthetic agent-QA starting take. Replaying makes no model call. Not a human performance, full-song transcription, or evidence of learning. Cost is unknown.",
+    "sanitization": "Omitted browser session ID, artifact event IDs, CLI invocation and local filesystem paths. Source references and controller context are unchanged. The loopback source URL is historical module provenance, not a required fetch."
+  },
+  "artifact": {
+    "pathway": "music",
+    "stage": "new_question",
+    "actor_kind": "agent_review",
+    "goal": "Find and play the opening of Runaway, then make a musical idea of my own.",
+    "state": {
+      "character": "Maya",
+      "scenario_kind": "fictional_composite",
+      "circle_stage": "next",
+      "lab": {
+        "attack": 0.35,
+        "tempo": 100,
+        "notes": [
+          {
+            "midi": 60,
+            "beats": 2
+          },
+          {
+            "midi": 64,
+            "beats": 2
+          },
+          {
+            "midi": 67,
+            "beats": 2
+          },
+          {
+            "midi": 72,
+            "beats": 2
+          }
+        ],
+        "practice": {
+          "events": [
+            {
+              "type": "on",
+              "midi": 88,
+              "time": 0.4
+            },
+            {
+              "type": "off",
+              "midi": 88,
+              "time": 1.2
+            },
+            {
+              "type": "on",
+              "midi": 88,
+              "time": 2.1
+            },
+            {
+              "type": "off",
+              "midi": 88,
+              "time": 3.6
+            }
+          ],
+          "duration": 3.6,
+          "reference": null
+        },
+        "practice_target": null
+      },
+      "explanation": "Synthetic authored agent-QA test take, not user playing.",
+      "question": "Slow this opening practice to60 BPM; keep my recordedtake andvariation unchanged.",
+      "telemetry": {
+        "status": "recorded",
+        "failed_events": 0,
+        "omitted_events": 0,
+        "unlinked_draft_history": false
+      }
+    },
+    "source_refs": [
+      {
+        "label": "Music / calculus diagram",
+        "url": "http://127.0.0.1:5188/song-lab.js",
+        "locator": "Implemented mathematical model; not a real-world measurement"
+      },
+      {
+        "label": "Runaway by Kanye West; Musicnotes piano/vocal/chords arrangement",
+        "url": "https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069",
+        "locator": "Original E-major arrangement, page 1, first two right-hand strikes including the tied continuation",
+        "source_kind": "notation_exercise"
+      }
+    ],
+    "note": "Slow this opening practice to60 BPM; keep my recordedtake andvariation unchanged.",
+    "parent_id": "ec12ab48-93d0-4cb3-9722-096ab08e6cc4",
+    "id": "01b70468-fe0b-4902-9fe2-19e199251b66",
+    "created_at": "2026-09-10T19:08:38.640153+00:00",
+    "timestamp": "2026-09-10T19:08:38.640153+00:00",
+    "trace_id": "tr-694afe9e36d93c1f79e4429f7e716436",
+    "build_id": "6485c6ccd23d33bb",
+    "capture_scope": "One submitted learning artifact version: pathway, goal, state, note, source links, stage and declared actor kind, with an optional parent version. Actor kind is explicitly supplied, not inferred or verified identity. Scripted character actions, staged peer responses and agent reviews are not human learning evidence. No model call.",
+    "usage": null,
+    "cost_usd": null
+  },
+  "initial_state": {
+    "attack": 0.35,
+    "tempo": 100,
+    "notes": [
+      {
+        "midi": 60,
+        "beats": 2
+      },
+      {
+        "midi": 64,
+        "beats": 2
+      },
+      {
+        "midi": 67,
+        "beats": 2
+      },
+      {
+        "midi": 72,
+        "beats": 2
+      }
+    ],
+    "practice": {
+      "events": [
+        {
+          "type": "on",
+          "midi": 88,
+          "time": 0.4
+        },
+        {
+          "type": "off",
+          "midi": 88,
+          "time": 1.2
+        },
+        {
+          "type": "on",
+          "midi": 88,
+          "time": 2.1
+        },
+        {
+          "type": "off",
+          "midi": 88,
+          "time": 3.6
+        }
+      ],
+      "duration": 3.6,
+      "reference": null
+    },
+    "practice_target": null
+  },
+  "request_context": {
+    "question": "Slow this opening practice to60 BPM; keep my recordedtake andvariation unchanged.",
+    "explanation": "Synthetic authored agent-QA test take, not user playing.",
+    "source_refs": [
+      {
+        "label": "Music / calculus diagram",
+        "url": "http://127.0.0.1:5188/song-lab.js",
+        "locator": "Implemented mathematical model; not a real-world measurement"
+      },
+      {
+        "label": "Runaway by Kanye West; Musicnotes piano/vocal/chords arrangement",
+        "url": "https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069",
+        "locator": "Original E-major arrangement, page 1, first two right-hand strikes including the tied continuation",
+        "source_kind": "notation_exercise"
+      }
+    ],
+    "reference_draft": [
+      "",
+      "",
+      ""
+    ]
+  },
+  "experiment_sources": [
+    {
+      "source_ref_index": 1,
+      "url": "https://www.musicnotes.com/sheetmusic/kanye-west/runaway/MN0103069",
+      "source_id": "MusicnotesMN0103069",
+      "exercise_id": "runaway-mn0103069-opening-two-strikes",
+      "target_pitch": "E6",
+      "target_midi": 88,
+      "quarter_bpm": 80,
+      "onsets": [
+        0.75,
+        2.25
+      ],
+      "basis": "authored_notation_derived_exercise"
+    }
+  ],
+  "proposal": {
+    "version": 1,
+    "pathway": "music",
+    "base_artifact_id": "01b70468-fe0b-4902-9fe2-19e199251b66",
+    "status": "supported",
+    "reason": "Propose a separate opening practice target at quarter BPM 60 for the captured MusicnotesMN0103069 exercise. Preserve the frozen variation's attack, tempo, and notes exactly, and preserve the recorded practice events unchanged. This is a proposed target, not an applied edit or an observed performance.",
+    "music": {
+      "practice_target": {
+        "exercise_id": "runaway-mn0103069-opening-two-strikes",
+        "quarter_bpm": 60
+      },
+      "attack": 0.35,
+      "tempo": 100,
+      "notes": [
+        {
+          "midi": 60,
+          "beats": 2
+        },
+        {
+          "midi": 64,
+          "beats": 2
+        },
+        {
+          "midi": 67,
+          "beats": 2
+        },
+        {
+          "midi": 72,
+          "beats": 2
+        }
+      ]
+    },
+    "movement": null,
+    "ideas": null
+  },
+  "result": {
+    "experiment": {
+      "version": 1,
+      "pathway": "music",
+      "base_artifact_id": "01b70468-fe0b-4902-9fe2-19e199251b66",
+      "status": "supported",
+      "reason": "Propose a separate opening practice target at quarter BPM 60 for the captured MusicnotesMN0103069 exercise. Preserve the frozen variation's attack, tempo, and notes exactly, and preserve the recorded practice events unchanged. This is a proposed target, not an applied edit or an observed performance.",
+      "music": {
+        "practice_target": {
+          "exercise_id": "runaway-mn0103069-opening-two-strikes",
+          "quarter_bpm": 60
+        },
+        "attack": 0.35,
+        "tempo": 100,
+        "notes": [
+          {
+            "midi": 60,
+            "beats": 2
+          },
+          {
+            "midi": 64,
+            "beats": 2
+          },
+          {
+            "midi": 67,
+            "beats": 2
+          },
+          {
+            "midi": 72,
+            "beats": 2
+          }
+        ]
+      },
+      "movement": null,
+      "ideas": null
+    },
+    "title": "Room Between Two Strikes",
+    "premise": "An imagined forest music room offers a slower opening practice target beside the saved take and variation.",
+    "story": "In an imagined clearing, two hanging lights mark the opening E6 strikes. At quarter BPM 60, they would glow at 1 and 3 seconds, scaling the captured notation target. A nearby listening bench holds the saved take, while a separate instrument holds the unchanged variation at tempo 100.",
+    "surprise": "The opening target can slow down independently of the recorded take and the variation.",
+    "question": "Slow this opening practice to60 BPM; keep my recordedtake andvariation unchanged.",
+    "choices": [
+      {
+        "label": "Try the proposed 60 BPM target",
+        "consequence": "Practice two E6 strikes against the slower notation target; the saved take and variation remain separate."
+      },
+      {
+        "label": "Listen to the saved variation",
+        "consequence": "Revisit the existing four-note idea at tempo 100 and attack 0.35."
+      }
+    ],
+    "assumptions": [
+      "The captured notation exercise identifies the intended opening practice.",
+      "The supplied take is explicitly described as synthetic agent-QA data, not evidence of a human performance.",
+      "The forest room and lights are imagined; no playback, edit, or learning outcome is claimed."
+    ],
+    "visual": {
+      "tree_density": 0.45,
+      "connection_strength": 0.65,
+      "light": 0.75,
+      "openness": 0.8
+    },
+    "evidence": [
+      {
+        "label": "Requested revision",
+        "basis": "user_statement",
+        "detail": "The supplied request says: “Slow this opening practice to60 BPM; keep my recordedtake andvariation unchanged.”"
+      },
+      {
+        "label": "Captured exercise and baseline",
+        "basis": "reference_observation",
+        "detail": "The supplied artifact records attack 0.35, tempo 100, and four two-beat notes at MIDI 60, 64, 67, and 72. The supplied exercise identifies MusicnotesMN0103069 with E6/MIDI88 and notation-derived onsets at 0.75 and 2.25 seconds at quarter BPM80. These are supplied structured data, not image observations or verified recording timing."
+      },
+      {
+        "label": "Forest practice room",
+        "basis": "imagined",
+        "detail": "The clearing, listening bench, and hanging lights are invented learning scenery. The proposed light times scale the supplied notation target to 60 BPM."
+      }
+    ]
+  }
+}
