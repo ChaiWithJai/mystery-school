@@ -4,9 +4,14 @@ const ACTIVE = new Set(['queued', 'running', 'pending', 'cancel_requested', 'can
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const MOVEMENT_SETTINGS = ['duration', 'distance', 'shape', 'compare_shape', 'view'];
 export function experimentDefinition(pathway, state) {
+  if (pathway === 'ideas') {
+    const { helpOpen, helpSeen, sourceOpened, ...content } = state;
+    return structuredClone(content);
+  }
   return pathway === 'movement' ? Object.fromEntries(MOVEMENT_SETTINGS.map(key => [key, state[key]])) : structuredClone(state);
 }
 function restoreDefinition(pathway, target, current) {
+  if (pathway === 'ideas') return { ...current, ...experimentDefinition(pathway, target) };
   if (pathway !== 'movement') return structuredClone(target);
   return { ...current, ...experimentDefinition(pathway, target), time: Math.min(current.time || 0, target.duration), playing: false };
 }

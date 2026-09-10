@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mountLearningExperiment } from '../public/learning-experiment.js';
+import { mountLearningExperiment, experimentDefinition } from '../public/learning-experiment.js';
+
+test('ideas reading navigation is separate from substantive learner and source content', () => {
+  const state = { interpretation: 'My words', revisedInterpretation: '', youtubeUrl: 'draft', modelComparison: null, helpOpen: false, helpSeen: false, sourceOpened: false };
+  const navigating = { ...state, helpOpen: true, helpSeen: true, sourceOpened: true };
+  assert.deepEqual(experimentDefinition('ideas', state), experimentDefinition('ideas', navigating));
+  assert.notDeepEqual(experimentDefinition('ideas', state), experimentDefinition('ideas', { ...state, interpretation: 'New words' }));
+  assert.notDeepEqual(experimentDefinition('ideas', state), experimentDefinition('ideas', { ...state, youtubeUrl: 'different' }));
+});
 
 // Synthetic response and DOM doubles test lifecycle, not live Astra or browser rendering.
 function element() {
