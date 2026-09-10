@@ -1,6 +1,41 @@
 # Mystery School
 
-Mystery School is a desktop-first demo contract for Jai Bhagat's school on a computer: a sandbox for intuition.
+Mystery School is a sandbox for intuition: immersive learning experiences that teachers can shape around the students they know and care about.
+
+> A good teacher can change the course of someone's life.
+
+The teacher is the human in the loop: an advocate who notices what a student
+cares about, chooses a worthwhile challenge, and helps them make sense of what
+happened. AI helps create and adapt the experience. The teacher remains
+responsible for its purpose, interpretation, and next step.
+
+Some students need another way into a subject. Others need more depth than the
+usual lesson offers. Start with something that matters to them: a piano phrase,
+a boxing movement, or a question from a book. Let them try, notice, explain,
+and make something of their own.
+
+## Teacher-led learning, demonstrated through three experiences
+
+The demo moves from a playable piano simulation, to a movement mirror, to a
+shared world of ideas and reflections. The intended teacher workflow is to
+choose an objective, shape an experience around a student's interests, review
+their attempts and explanations, and choose the next challenge together.
+The current prototype demonstrates the learner experiences and saved
+trajectories; it does not yet provide a complete teacher authoring or classroom
+management workflow.
+
+For example, a teacher could use boxing to help a student investigate physics:
+predict how changing a movement changes its path, compare observations, and
+explain the result. The current boxing demo includes source-based movement
+cues and camera-estimated punch shapes. Those features alone do not establish
+that a student understands physics. A physics lesson also needs an explicit
+conceptual task and evidence in the student's own explanation.
+
+Our promise is to help a teacher find a way in, and help a student discover
+what they can do. Saved activity is evidence for a conversation with the
+teacher, not an automatic judgment of mastery.
+
+## Prototype scope
 
 The goal is to build a local app where a person can:
 
