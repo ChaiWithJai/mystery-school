@@ -39,6 +39,8 @@ export function mountDemoSoundtrack(track = () => {}) {
     .demo-soundtrack label{display:flex;align-items:center;gap:5px;flex:1}
     .demo-soundtrack p{margin:0;padding:8px 12px}
     .demo-soundtrack a{color:inherit}
+    .demo-soundtrack[data-compact="true"]{width:auto;background:#12241ecc;box-shadow:none;border-radius:24px}
+    .demo-soundtrack [data-disclosure]{margin:8px;border:0}
   </style><div data-video></div><p role="status">Loading the seven-second opening...</p><footer><button data-play>Play opening</button><label><input type="checkbox" data-keep>Keep playing</label><button data-stop>Stop</button></footer><p data-fallback hidden><a href="https://www.youtube.com/watch?v=Bm5iA4Zupek" target="_blank" rel="noopener noreferrer">Open the official recording</a></p>`;
   (document.querySelector('#drawer') || document.body).append(root);
   root.querySelector('[data-fallback] a').href = `https://www.youtube.com/watch?v=${RUNAWAY_VIDEO}`;
@@ -46,6 +48,27 @@ export function mountDemoSoundtrack(track = () => {}) {
   localSetup.innerHTML = '<summary>Use local audio</summary><p>Choose a recording you have permission to use. It stays in this browser and is not uploaded.</p><input type="file" accept="audio/*" aria-label="Choose local soundtrack">';
   localSetup.style.padding = '8px 12px';
   root.append(localSetup);
+  const controls = document.createElement('div');
+  for (const child of [...root.children]) if (child.tagName !== 'STYLE') controls.append(child);
+  const disclosure = document.createElement('button');
+  disclosure.type = 'button';
+  disclosure.dataset.disclosure = '';
+  disclosure.hidden = true;
+  disclosure.setAttribute('aria-expanded', 'false');
+  root.append(disclosure, controls);
+  function collapseUnavailable() {
+    disclosure.hidden = false;
+    disclosure.textContent = 'Soundtrack unavailable';
+    disclosure.setAttribute('aria-expanded', 'false');
+    controls.hidden = true;
+    root.dataset.compact = 'true';
+  }
+  disclosure.onclick = () => {
+    controls.hidden = !controls.hidden;
+    root.dataset.compact = String(controls.hidden);
+    disclosure.setAttribute('aria-expanded', String(!controls.hidden));
+    disclosure.textContent = controls.hidden ? 'Soundtrack unavailable' : 'Soundtrack options';
+  };
   const q = selector => root.querySelector(selector);
   let player, disposed = false, ready = false, continuous = false, local = null, localURL = null;
   const drawer = document.querySelector('#drawer');
@@ -84,6 +107,10 @@ export function mountDemoSoundtrack(track = () => {}) {
     local?.dispose();
     if (localURL) URL.revokeObjectURL(localURL);
     localURL = URL.createObjectURL(file);
+    root.dataset.state = 'loading';
+    root.dataset.compact = 'false';
+    controls.hidden = false;
+    disclosure.hidden = true;
     const audio = new Audio(localURL);
     local = createLocalSoundtrack(audio, { onState(state) {
       if (disposed) return;
@@ -128,7 +155,7 @@ export function mountDemoSoundtrack(track = () => {}) {
           play();
         },
         onAutoplayBlocked() { if (!disposed && !local) { status('Press Play opening to turn the sound on.'); emit('autoplay_blocked'); } },
-        onError(event) { if (!disposed && !local) { root.dataset.state='error';status('YouTube blocked this recording here.'); q('[data-fallback]').hidden = false; q('[data-play]').hidden = true; q('[data-keep]').closest('label').hidden = true; player.getIframe().hidden = true; emit('error', { code: event.data }); } },
+        onError(event) { if (!disposed && !local) { root.dataset.state='error';status('YouTube blocked this recording here.'); q('[data-fallback]').hidden = false; q('[data-play]').hidden = true; q('[data-keep]').closest('label').hidden = true; player.getIframe().hidden = true; collapseUnavailable(); emit('error', { code: event.data }); } },
         onStateChange(event) {
           if (disposed || local) return;
           if (event.data === 1) { root.dataset.state='playing';status(continuous ? 'Runaway / playing across the demo' : 'Runaway / first seven seconds'); emit('playing', { continuous }); }
@@ -136,6 +163,6 @@ export function mountDemoSoundtrack(track = () => {}) {
         }
       }
     });
-  }).catch(() => { if (!disposed && !local) { status('Player unavailable. Piano keys still work.'); q('[data-fallback]').hidden = false; emit('unavailable'); } });
+  }).catch(() => { if (!disposed && !local) { status('Player unavailable. Piano keys still work.'); q('[data-fallback]').hidden = false; collapseUnavailable(); emit('unavailable'); } });
   return active;
 }

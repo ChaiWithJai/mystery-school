@@ -43,6 +43,18 @@ Verified in BrowserOS Neo on localhost:5188:
 The fixture is `/tmp/astral-soundtrack-qa.mp3`, generated from the bundled
 Alexander Holm sample. It is not a product soundtrack and is not committed.
 
+## Desktop disclosure
+
+An unavailable embed now collapses to a 166 by 47 pixel control instead of the
+356-pixel-wide error card. Opening it reveals the failure, source link and local
+audio setup. Actual playback retains visible transport controls.
+
+Browser review at 1440 by 900 and 1280 by 720 confirmed separated title and
+practice controls, an unobstructed keyboard, and an on-screen continuation
+button. At 1280 by 720, the title ends at y=149, controls start at y=173, keys
+end at y=572 and continuation ends at y=695. This is a layout check, not final
+human acceptance of the demo.
+
 ## Checks
 
 270 JavaScript tests pass. Local-media tests cover the seven-second boundary,
