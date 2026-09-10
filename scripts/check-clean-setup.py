@@ -18,11 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=5196)
+    parser.add_argument("--require-clean", action="store_true",
+                        help="Refuse tracked changes and nonignored untracked files")
     args = parser.parse_args()
+    worktree_status = subprocess.check_output(
+        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=ROOT, text=True).splitlines()
+    if args.require_clean and worktree_status:
+        raise RuntimeError("Clean checkout required:\n" + "\n".join(worktree_status))
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", args.port))
     report = {"scope": "empty-data startup and served-file integrity; no inference",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+              "worktree_status": worktree_status,
               "checks": [], "public_replay": "BLOCKED: published replay fixtures and verifier are not supplied by this check",
               "experience_acceptance": "NOT VERIFIED: visual quality, audio response, preview/apply/undo and learner understanding"}
     with tempfile.TemporaryDirectory(prefix="mystery-clean-") as temporary:
@@ -72,6 +79,12 @@ def main():
                 report["checks"].append("three pathway documents and Three.js dependency served")
                 report["served_sha256"] = hashes
                 report["result"] = "STARTUP_CHECKS_PASSED; replay and product acceptance remain open"
+            except Exception as error:
+                log.flush()
+                log.seek(0, 2)
+                log.seek(max(0, log.tell() - 8000))
+                tail = log.read()
+                raise RuntimeError(f"{error}\nServer log (last 8000 characters):\n{tail}") from error
             finally:
                 process.terminate()
                 try:

@@ -27,7 +27,7 @@ Run:
 npm run check
 npm test
 .venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python scripts/check-clean-setup.py --port 5196
+.venv/bin/python scripts/check-clean-setup.py --port 5196 --require-clean
 ```
 
 The setup check refuses an occupied port, creates temporary empty data, selects
@@ -35,13 +35,18 @@ a nonexistent model executable and local temporary MLflow database, starts its
 own server, and checks empty API collections. It compares served tracked HTML,
 JavaScript, CSS, PNG and GLB bytes with the checkout, opens all three pathway
 documents, and verifies Three.js is served. It prints the Git commit and file
-hashes, shuts down only its own server, and removes its temporary data. It makes
+hashes and Git worktree status, shuts down only its own server, and removes its temporary data. It makes
 GET requests only. This is an HTTP startup check, not a browser interaction test.
 
 Use another free `--port` when needed. The normal README server retains local
 data; this check intentionally does not. The historical `verify_demo.mjs`,
 `verify_capture.mjs`, and linked live-projection checks require previous local
 walkthroughs and must not be counted as fresh-clone passes.
+
+`--require-clean` refuses tracked modifications and nonignored untracked files.
+Without it, the report lists those changes explicitly; its commit identifies the
+base revision, not the complete served worktree. Startup failures include a
+bounded server-log tail before temporary files are removed.
 
 ## Public replay is a separate delivery gate
 

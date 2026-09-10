@@ -102,7 +102,7 @@ model executable discovery:
 npm run check
 npm test
 .venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python scripts/check-clean-setup.py --port 5196
+.venv/bin/python scripts/check-clean-setup.py --port 5196 --require-clean
 ```
 
 This verifies installation, startup and served files. It does not establish a
