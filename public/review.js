@@ -255,7 +255,7 @@
       return;
     }
     const header = el('div', 'trajectory-heading');
-    header.append(el('p', 'eyebrow', modelJob(sample) ? 'Observable trajectory / model run' : 'Observable trajectory / saved record'), el('h1', '', sampleTitle(sample)));
+    header.append(el('p', 'eyebrow', sample.actor_kind === 'agent_review' && sample.world === 'evaluator_sidecar' ? 'Imported evaluator review / agent-authored / not learner evidence' : modelJob(sample) ? 'Observable trajectory / model run' : 'Observable trajectory / saved record'), el('h1', '', sampleTitle(sample)));
     const metadata = el('div', 'trajectory-metadata');
     const world = typeof sample.world === 'string' ? sample.world : sample.world?.title || sample.world?.name;
     for (const value of [sample.model, world, dateLabel(sample.created_at), `${messages(sample).length} ${messages(sample).length === 1 ? 'message' : 'messages'}`]) if (value) metadata.append(el('span', '', value));

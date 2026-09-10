@@ -17,9 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PIL import Image
 from server import App, ACTIVE, make_server, codex_diagnostics, job_view
 from tracing import normalize_usage
+from review_import_cases import ReviewImportChecks
 
 
-class BackendTests(unittest.TestCase):
+class BackendTests(ReviewImportChecks, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()

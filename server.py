@@ -21,6 +21,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
 import jsonschema
+from imported_reviews import ReviewImports, ImportErrorResponse
 from PIL import Image
 from tracing import APP_CAPTURE_SCOPE, ARTIFACT_CAPTURE_SCOPE, PROJECTION_CAPTURE_SCOPE, Tracing, normalize_usage
 
@@ -59,7 +60,7 @@ def atomic_bytes(path, value):
 
 def build_metadata():
     files = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-             for name in ("server.py", "tracing.py", "schema.json", "requirements.txt")}
+             for name in ("server.py", "tracing.py", "imported_reviews.py", "schema.json", "requirements.txt")}
     build_id = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:16]
     return {"id": build_id, "source_sha256": files, "python": sys.version.split()[0],
             "mlflow": version("mlflow"), "model": MODEL, "scope": "backend source at process startup"}
@@ -117,6 +118,7 @@ class App:
         self.tracing = Tracing(tracking_uri or os.environ.get("MLFLOW_TRACKING_URI") or
                                "sqlite:///" + str(self.data / "mlflow.db"), artifact_location=(self.data / "mlartifacts").as_uri(),
                                build_id=self.build["id"])
+        self.imported_reviews = ReviewImports(self.data / "imported_reviews.json", self.tracing, atomic_json, self.lock)
         self.command_builder = command_builder or self.codex_command
         self.timeout = min(job_timeout, 240)
         self.processes = {}
@@ -548,6 +550,7 @@ class App:
                                 "messages": [{"id": artifact["id"] + ":artifact", "role": "user" if artifact["actor_kind"] == "user_action" else "system",
                                               "actor_kind": artifact["actor_kind"], "metadata": metadata,
                                               "content": artifact["actor_kind"] + "\n" + json.dumps(artifact, ensure_ascii=False)}]})
+            records.extend(self.imported_reviews.samples())
             return copy.deepcopy(records)
 
     def artifact(self, job_id, filename):
@@ -676,6 +679,10 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlsplit(self.path).path)
         app = self.server.app
         try:
+            if path == "/api/imported-reviews":
+                return self.json_response(app.imported_reviews.get())
+            if path.startswith("/api/imported-reviews/"):
+                return self.json_response(app.imported_reviews.get(path.split("/")[-1]))
             if path == "/api/state":
                 return self.json_response(app.snapshot())
             if path == "/api/diagnostics":
@@ -729,7 +736,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
-        except APIError as exc:
+        except (APIError, ImportErrorResponse) as exc:
             self.json_response({"error": exc.message}, exc.status)
         except Exception as exc:
             self.json_response({"error": str(exc)}, 500)
@@ -751,6 +758,8 @@ class Handler(SimpleHTTPRequestHandler):
             body = json.loads(self.rfile.read(size), parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Nonfinite JSON")))
             if not isinstance(body, dict) and not (path == "/api/samples" and isinstance(body, list)):
                 raise APIError(400, "Expected JSON object")
+            if path == "/api/imported-reviews":
+                return self.json_response(app.imported_reviews.ingest(body))
             if path in ("/api/events", "/api/reflections"):
                 return self.json_response(app.record(path.split("/")[-1], body), 201)
             if path == "/api/references":
@@ -764,7 +773,7 @@ class Handler(SimpleHTTPRequestHandler):
             if path in ("/api/samples", "/api/annotations", "/api/patterns", "/api/suggestions"):
                 return self.json_response(app.review_write(path.split("/")[-1], body))
             raise APIError(404, "Unknown API")
-        except APIError as exc:
+        except (APIError, ImportErrorResponse) as exc:
             self.json_response({"error": exc.message}, exc.status)
         except (ValueError, TypeError) as exc:
             self.json_response({"error": str(exc)}, 400)
