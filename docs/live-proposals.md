@@ -48,4 +48,61 @@ Apply and undo identify the original model job. Playback contains the scheduled
 notes and their durations. Browser status and scheduling do not prove speaker
 output quality, perceived latency, or learning. Saving and reopening the applied
 artifact still needs verification. The numeric proposal preview also needs visual
-improvement. None of this establishes the newer goal of teaching Runaway.
+improvement at that checkpoint. Commit `18992c1` replaced the numeric preview
+with note and rhythm wording. None of this establishes the newer goal of teaching Runaway.
+
+## Recorded performance
+
+Commit `05f50bc` integrates a chromatic piano with held keys, recording and replay.
+Main recorded two pointer-played notes in Neo and invoked replay. The saved
+artifact `389cecd4-6648-4653-86a0-daf87a59f6fd` contains four note events and a
+16.633-second take. API readback confirmed pitches 64 and 67 and retained release
+times. Its trace is `tr-2b4e352902d62e589e38ca9132fa27f3`.
+
+The artifact declares agent QA and incomplete earlier draft history. No speaker
+capture, song comparison, timing accuracy or learner result is claimed.
+
+## Public replay check
+
+`public/fixtures/recorded-music-proposal.json` contains the exact experiment field
+from the completed music job, its starting phrase and provenance. It omits the
+rest of the job and private runtime paths. `npm test` validates the recorded
+proposal and retained performance state without network access or inference.
+The preservation test uses a labeled synthetic take. `/replay.html` loads the
+bundled output through the real lab and proposal controller with a read-only
+local adapter. It cannot submit inference or save a backend artifact. Its event
+log stays on the page and is explicitly separate from MLflow model traces.
+Main Neo page 103 applied the bundled proposal, invoked playback, and undid it.
+The page event log recorded the five-note candidate and four-note restoration
+without a model call or displayed error. Speaker output was not captured.
+Fresh-checkout replay passed on detached commit `a58485e`, served with
+`python3 -m http.server 5194 --bind 127.0.0.1 --directory public`.
+Neo page 104 loaded `/replay.html`, applied the proposal, invoked playback and
+undid it. The local event log recorded preview, resume, apply, play, stop and
+undo, each with `model_called: false`. Four keys were restored and no error
+was displayed. The isolated checkout remained clean. No app backend, saved
+database, credentials or model process was used by the replay page.
+
+## Ideas, September 10, 2026
+
+- Starting artifact: `c93965f0-1f46-4fd7-8d6f-3e33f77e403c`.
+- Job: `370e6041-30ef-4946-8e87-17ae65bffa9d`.
+- Trace: `tr-f3c49523ae4c69c5d2be23d7327a4053`.
+- Reported input tokens: 16,428. Reported output tokens: 918. Cost unknown.
+
+The agent-QA request asked for a story about a friend excluded by a club rule.
+Astra returned a comparison between accepting the outcome and challenging the
+rule together. It quoted only the captured Epictetus sentence and did not claim
+video understanding. The artifact, invocation, output and review record passed
+the GET-only integrity verifier.
+
+Neo page 102 exposed a replay defect: a legacy artifact without `modelComparison`
+was rejected because mounting adds a null default. The controller now normalizes
+ideas state before comparing it. A regression retains checks for changed words
+and changed comparisons. After the fix, the same recorded output previewed and
+applied in the browser. The scenario appeared in the existing lab. Undo removed
+the model comparison. No additional model call was made for replay.
+
+The current comparison is still text. It does not establish the requested
+playable story, a completed classics curriculum, or a learning result. The visual
+renderer must make the choice actionable rather than merely restyle the prose.
